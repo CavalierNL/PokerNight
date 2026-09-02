@@ -120,3 +120,21 @@
 .chip-editor input[type='number'] {
   width: 5.5rem;
 }
+
+.setup__kop {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.setup__kaart {
+  width: 34px;
+  height: auto;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+  transform: rotate(-8deg);
+}
+
+.setup__kaart--twee {
+  transform: rotate(7deg) translateX(-14px);
+  margin-right: 0.25rem;
+}

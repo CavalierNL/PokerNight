@@ -12,6 +12,7 @@ import {
   playersLeft,
   remainingMs,
 } from '../domain/tournament'
+import { sprite } from '../sprites'
 import './TournamentScreen.css'
 
 function formatteerTijd(ms: number): string {
@@ -55,7 +56,10 @@ export function TournamentScreen() {
           <span>
             Level {tournament.levelIndex + 1} · {playersLeft(tournament)} spelers
           </span>
-          <span>Pot € {pot}</span>
+          <span className="tafel__pot">
+            <img src={sprite('fiche.png')} alt="" width={18} height={18} />
+            Pot € {pot}
+          </span>
         </div>
 
         <div className="tafel__midden">

@@ -8,6 +8,7 @@ import { distributeChips } from '../domain/distribution'
 import { calculatePayouts } from '../domain/payout'
 import { setupWarnings } from '../domain/warnings'
 import type { Settings, Trigger } from '../domain/tournament'
+import { sprite } from '../sprites'
 import './SetupScreen.css'
 
 const STANDAARD_NAMEN = 'Sam\nIlse\nJoost\nMax\nNadia\nRavi'
@@ -75,7 +76,11 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
 
   return (
     <div className="setup">
-      <h1 className="setup__titel">PokerNight</h1>
+      <header className="setup__kop">
+        <img className="setup__kaart" src={sprite('kaartrug.png')} alt="" />
+        <img className="setup__kaart setup__kaart--twee" src={sprite('kaartrug.png')} alt="" />
+        <h1 className="setup__titel">PokerNight</h1>
+      </header>
 
       {meldingen.map((melding, i) => (
         <div key={i} className={`melding melding--${melding.level}`}>
