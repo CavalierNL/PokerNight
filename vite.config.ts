@@ -7,6 +7,6 @@ export default defineConfig({
   plugins: [react()],
   base: '/poker-night/',
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })
