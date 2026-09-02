@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chipFontSize, chipRimColor, chipTextColor } from './ChipIcon'
+import { chipFontSize, chipRimColor, chipTextColor, chipTextY } from './ChipIcon'
 import { TOERNOOI_DOOS, HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
 
 describe('chipFontSize', () => {
@@ -13,11 +13,23 @@ describe('chipFontSize', () => {
   })
 
   it('blijft leesbaar bij korte waardes en past bij lange', () => {
-    expect(chipFontSize(1)).toBe(17)
+    expect(chipFontSize(1)).toBe(16)
     expect(chipFontSize(5)).toBeGreaterThanOrEqual(8)
-    // Vijf cijfers moeten binnen het vrije midden blijven: de randstippen liggen
-    // op straal 16,2 van een tekenvlak van 40, dus tot 30 breed is er ruimte.
-    expect(chipFontSize(5) * 5 * 0.6).toBeLessThanOrEqual(30)
+  })
+
+  it('houdt elke lengte los van de inkepingen', () => {
+    // De inkepingen lopen tot straal 14,6; met marge mag de tekst tot 25 breed.
+    for (const cijfers of [1, 2, 3, 4, 5]) {
+      const breedte = chipFontSize(cijfers) * cijfers * 0.6
+      expect(breedte, `${cijfers} cijfers`).toBeLessThanOrEqual(25)
+    }
+  })
+
+  it('kiest bij zes cijfers leesbaarheid boven passen', () => {
+    // Vanaf zes cijfers wint de ondergrens en loopt de tekst tot tegen de rand.
+    // Dat is een bewuste keuze: kleiner dan acht is op een fiche niet meer te
+    // lezen, en fichewaardes boven de honderdduizend komen niet voor.
+    expect(chipFontSize(6)).toBe(8)
   })
 })
 
@@ -79,5 +91,21 @@ describe('chipRimColor', () => {
   it('houdt lichte stippen op een donker fiche', () => {
     expect(chipRimColor('#22262b')).toContain('255,255,255')
     expect(chipRimColor('#2e6da4')).toContain('255,255,255')
+  })
+})
+
+describe('chipTextY', () => {
+  it('schuift de basislijn mee met de lettergrootte', () => {
+    // Kleine cijfers hangen anders onder het midden.
+    expect(chipTextY(8)).toBeLessThan(chipTextY(16))
+  })
+
+  it('zet elke lettergrootte optisch in het midden van het fiche', () => {
+    for (const grootte of [8, 10, 13, 16]) {
+      // Bovenkant en onderkant van een cijfer van 0,7 em rond de basislijn.
+      const boven = chipTextY(grootte) - grootte * 0.7
+      const onder = chipTextY(grootte)
+      expect((boven + onder) / 2, `${grootte}`).toBeCloseTo(20, 1)
+    }
   })
 })

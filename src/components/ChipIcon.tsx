@@ -3,11 +3,23 @@
  * de doos. Eén maat voor de hele doos: fiches naast elkaar met verschillend
  * grote cijfers lezen als losse plaatjes in plaats van als één set.
  *
- * De maat is afgestemd op de binnenring van het fiche (diameter 24 in een
- * tekenvlak van 40). Vijf cijfers passen daar nog net in.
+ * De deler volgt uit de ruimte binnen de inkepingen: die lopen tot straal 14,6
+ * in een tekenvlak van 40, en een cijfer is ongeveer 0,6 em breed. Bij vijf
+ * cijfers komt de tekst zo op 24 breed en blijft er aan weerskanten ruimte over.
+ * Ruimer afgesteld liepen 500 en 10000 tegen de rand aan.
  */
 export function chipFontSize(digits: number): number {
-  return Math.max(8, Math.min(17, 50 / Math.max(1, digits)))
+  return Math.max(8, Math.min(16, 40 / Math.max(1, digits)))
+}
+
+/**
+ * De basislijn van de waarde. Op één vaste hoogte zetten laat kleine cijfers
+ * onder het midden hangen: een basislijn ligt ónder de tekst, dus hoe kleiner de
+ * letter, hoe hoger die lijn moet liggen om optisch te kloppen. Een cijfer is
+ * ongeveer 0,7 em hoog; de helft daarvan is de correctie.
+ */
+export function chipTextY(fontSize: number): number {
+  return 20 + fontSize * 0.35
 }
 
 /**
@@ -30,11 +42,12 @@ export function chipTextColor(hex: string): string {
 }
 
 /**
- * De randstippen. Dezelfde afweging als bij de tekst: wit op een wit fiche is
- * geen versiering maar een onzichtbare rand.
+ * De inkepingen op de rand. Dezelfde afweging als bij de tekst: wit op een wit
+ * fiche is geen versiering maar een onzichtbare rand. Op een licht fiche bijna
+ * zwart, zoals de inzetstukken van een echt fiche.
  */
 export function chipRimColor(hex: string): string {
-  return isLichtFiche(hex) ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.45)'
+  return isLichtFiche(hex) ? 'rgba(0,0,0,.82)' : 'rgba(255,255,255,.55)'
 }
 
 /**
@@ -44,7 +57,7 @@ export function chipRimColor(hex: string): string {
 export function ChipIcon({
   color,
   value,
-  size = 38,
+  size = 46,
   digits,
 }: {
   color: string
@@ -66,23 +79,24 @@ export function ChipIcon({
     >
       <circle cx="20" cy="20" r="18" fill={color} stroke="rgba(0,0,0,.35)" strokeWidth="2" />
       {/*
-        De stippen liggen op de rand, zoals de gekleurde blokjes op een echt
-        fiche. Een ring midden op het fiche zou dwars door een waarde als 10000
-        heen lopen; daar moet juist niets in de weg zitten.
+        De inkepingen liggen op de rand, zoals de inzetstukken van een echt
+        fiche: de buitenkant van de streek valt samen met de rand van het fiche.
+        Een ring midden op het fiche zou dwars door een waarde als 10000 heen
+        lopen, en juist daar moet niets in de weg zitten.
       */}
       <circle
         cx="20"
         cy="20"
-        r="16.2"
+        r="16.3"
         fill="none"
         stroke={randkleur}
-        strokeWidth="2.4"
-        strokeDasharray="4 5"
+        strokeWidth="3.4"
+        strokeDasharray="5 6"
       />
       {value !== undefined && (
         <text
           x="20"
-          y="25"
+          y={chipTextY(lettergrootte)}
           textAnchor="middle"
           fontSize={lettergrootte}
           fontWeight="700"

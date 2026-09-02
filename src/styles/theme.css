@@ -1,4 +1,12 @@
 :root {
+  /*
+   * Firefox tekent de openklappende lijst van een select als systeemwidget. Die
+   * volgt color-scheme en niet de kleuren die je op de opties zet — zonder dit
+   * krijg je een lichtgrijze lijst midden op het vilt. Zet meteen de goede
+   * scrollbars en focusringen voor de rest van de app.
+   */
+  color-scheme: dark;
+
   --felt-diep: #0d2c20;
   --felt: #123a2a;
   --felt-licht: #1c5240;
