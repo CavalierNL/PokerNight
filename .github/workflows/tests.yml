@@ -1,8 +1,8 @@
 name: Tests
 
-# De deploy-workflow test pas ná publicatie. Deze draait op elke andere branch
-# en op elke pull request, zodat een padfout of een gebroken bundel al vóór de
-# merge zichtbaar is in plaats van pas op de live site.
+# Voor werk dat niet rechtstreeks naar main gaat. De deploy-workflow draait op
+# main dezelfde tests en laat een gebroken bundel niet door naar de site, dus
+# main staat hier bewust niet bij: dat zou alles dubbel draaien.
 on:
   push:
     branches-ignore: [main]

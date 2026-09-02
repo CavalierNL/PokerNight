@@ -26,6 +26,20 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # De rooktest tegen een eigen previewserver, vóór publicatie. De variant
+      # onderaan draait tegen de echte site en is daarmee pas ná de deploy; deze
+      # houdt een gebroken bundel of een verkeerde base van de site af.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-vooraf
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/configure-pages@v5
         with:
           # Zet Pages zelf aan als dat nog niet handmatig gedaan is.
