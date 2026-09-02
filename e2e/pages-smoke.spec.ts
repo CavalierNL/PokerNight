@@ -1,33 +1,91 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 /**
- * Rookttest tegen de gepubliceerde site, niet tegen een lokale build. Vangt de
+ * Rooktest tegen de gepubliceerde site, niet tegen een lokale build. Vangt de
  * fouten die alleen op GitHub Pages opduiken: een verkeerde base waardoor de
- * bundel of de sprites 404 geven, of een deploy die halverwege is blijven staan.
+ * bundel of de sprites 404 geven, of een deploy die wel slaagt maar een oude
+ * versie blijft serveren.
+ *
+ * Draait ná de deploy, dus een kapotte site staat op dat moment al live. De
+ * winst is dat het zichtbaar wordt in plaats van stil te blijven; het houdt de
+ * publicatie niet tegen.
  */
-test('de gepubliceerde site laadt het setupscherm zonder ontbrekende bestanden', async ({
-  page,
-}) => {
+
+/**
+ * Verzamelt alles wat er tijdens het laden misgaat. Drie bronnen, want ze
+ * dekken elk iets anders af:
+ *  - `response` vangt 404's op assets die er wel doorheen komen;
+ *  - `requestfailed` vangt verzoeken die nooit een antwoord krijgen (DNS,
+ *    verbroken verbinding, een CSP-blokkade) en dus geen response opleveren;
+ *  - `console` met type error vangt de crash die de ErrorBoundary opslikt —
+ *    die vangt render-fouten af en logt ze, waardoor `pageerror` juist níét
+ *    afgaat.
+ */
+function verzamelProblemen(page: Page): string[] {
   const problemen: string[] = []
   page.on('response', (respons) => {
     if (respons.status() >= 400) problemen.push(`${respons.status()} ${respons.url()}`)
   })
+  page.on('requestfailed', (verzoek) => {
+    problemen.push(`mislukt verzoek: ${verzoek.url()} (${verzoek.failure()?.errorText})`)
+  })
+  page.on('console', (bericht) => {
+    if (bericht.type() === 'error') problemen.push(`consolefout: ${bericht.text()}`)
+  })
   page.on('pageerror', (fout) => problemen.push(`scriptfout: ${fout.message}`))
+  return problemen
+}
 
-  await page.goto('./', { waitUntil: 'networkidle' })
+// Serieel: slaat de site nog de vorige versie op, dan zeggen de tests daarna
+// niets zinnigs meer en kunnen ze beter overgeslagen worden.
+test.describe.serial('de gepubliceerde site', () => {
+  test('serveert de commit die zojuist gebouwd is', async ({ page }) => {
+    const sha = process.env.GITHUB_SHA
+    test.skip(!sha, 'Alleen zinvol in CI, waar GITHUB_SHA de gedeployde commit is.')
 
-  await expect(page).toHaveTitle('PokerNight')
-  await expect(page.getByRole('heading', { name: 'PokerNight' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Start het toernooi' })).toBeVisible()
+    // Pages heeft na een deploy soms even nodig voordat de nieuwe versie overal
+    // via de CDN te zien is. Hier wachten we daar echt op, in plaats van te
+    // hopen dat een retry zonder wachttijd het oplost.
+    await expect
+      .poll(
+        async () => {
+          await page.goto('./', { waitUntil: 'domcontentloaded' })
+          return page.locator('meta[name="build-sha"]').getAttribute('content')
+        },
+        { timeout: 120_000, intervals: [2_000] },
+      )
+      .toBe(sha)
+  })
 
-  expect(problemen).toEqual([])
-})
+  test('laadt het setupscherm zonder ontbrekende bestanden', async ({ page }) => {
+    const problemen = verzamelProblemen(page)
 
-test('de blindstructuur wordt op de live site berekend', async ({ page }) => {
-  await page.goto('./', { waitUntil: 'networkidle' })
+    await page.goto('./')
 
-  // De tabel vult zich alleen als de domeinlogica in de bundel echt draait.
-  const eersteLevel = page.locator('tbody tr').first()
-  await expect(eersteLevel).toBeVisible()
-  await expect(eersteLevel).toContainText('/')
+    await expect(page).toHaveTitle('PokerNight')
+    await expect(page.getByRole('heading', { name: 'PokerNight' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Start het toernooi' })).toBeVisible()
+    // De blinds komen uit de rekenkern; cijfers bewijzen dat die echt gedraaid
+    // heeft en niet alleen de tabelopmaak is gerenderd.
+    await expect(page.locator('tbody tr').first()).toContainText(/\d+\s*\/\s*\d+/)
+
+    expect(problemen).toEqual([])
+  })
+
+  test('start een toernooi en laadt daarbij de fiche-sprite', async ({ page }) => {
+    const problemen = verzamelProblemen(page)
+
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    // Het toernooischerm is een tweede laadpad: een eigen sprite plus de
+    // opslag in localStorage, die geen van beide in het setupscherm langskomen.
+    // naturalWidth bewijst dat de afbeelding ook echt gedecodeerd is en niet
+    // als kapot element blijft staan.
+    const fiche = page.locator('img[src$="fiche.png"]').first()
+    await expect(fiche).toBeVisible()
+    expect(await fiche.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+
+    expect(problemen).toEqual([])
+  })
 })

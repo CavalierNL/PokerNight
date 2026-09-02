@@ -31,6 +31,7 @@ nodig — geen backend, geen account, werkt offline.
 npm install
 npm run dev      # ontwikkelserver
 npm test         # unit tests op de rekenkern
+npm run test:e2e # rooktest in een echte browser tegen een previewbuild
 npm run build    # statische build in dist/
 ```
 

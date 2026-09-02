@@ -46,8 +46,9 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-  # Draait tegen de zojuist gepubliceerde site, zodat een kapotte deploy niet
-  # groen kan blijven omdat de unit tests lokaal wel slagen.
+  # Draait tegen de zojuist gepubliceerde site. Let op de volgorde: dit gebeurt
+  # ná publicatie, dus het houdt een kapotte deploy niet tegen — het maakt hem
+  # zichtbaar in plaats van stil, iets wat de unit tests niet kunnen.
   rooktest:
     needs: deploy
     runs-on: ubuntu-latest
@@ -66,5 +67,9 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: playwright-report
+          # test-results bevat de traces; playwright-report de html-rapportage.
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: error
           retention-days: 7
