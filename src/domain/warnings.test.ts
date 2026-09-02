@@ -26,7 +26,7 @@ const rustigeStructuur: Structure = {
 }
 
 const goedeVerdeling: Distribution = {
-  perPlayer: [{ name: 'wit', color: '#fff', value: 1, count: 100 }],
+  perPlayer: [{ color: '#fff', value: 1, count: 100 }],
   stackValue: 100,
   shortages: [],
   maxPlayers: 4,

@@ -13,8 +13,15 @@ export type ColorUp = {
   /** Het level waarop deze kleur uit het spel mag. */
   levelIndex: number
   retiredValue: number
+  /**
+   * De hex-kleuren die uit het spel gaan, en die je ervoor terugkrijgt. Ze staan
+   * hier in plaats van dat het scherm ze bij de chipset ophaalt: een lopend
+   * toernooi moet de fiches kunnen tonen zoals ze bij de start waren, ook als de
+   * doos daarna is aangepast of verwijderd.
+   */
   retiredColors: string[]
   nextValue: number
+  nextColors: string[]
 }
 
 export type StructureInput = {
@@ -147,8 +154,9 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
       colorUps.push({
         levelIndex: index,
         retiredValue: d,
-        retiredColors: chipsWithValue(chipset, d).map((c) => c.name),
+        retiredColors: chipsWithValue(chipset, d).map((c) => c.color),
         nextValue: denoms[denomIndex + 1],
+        nextColors: chipsWithValue(chipset, denoms[denomIndex + 1]).map((c) => c.color),
       })
       denomIndex += 1
       // Gaat deze kleur op level 0 al weg, dan begint het toernooi zonder hem en

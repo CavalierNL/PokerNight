@@ -47,7 +47,7 @@ describe('chipsets', () => {
         id: 'x',
         name: 'Mijn doos',
         colorUp: true,
-        chips: [{ name: 'wit', color: '#fff', value: 1, count: 10 }],
+        chips: [{ color: '#fff', value: 1, count: 10 }],
       },
     ]
     saveChipsets(eigen)

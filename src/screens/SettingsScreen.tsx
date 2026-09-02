@@ -33,7 +33,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const voegToe = () =>
     vervang({
       ...chipset,
-      chips: [...chipset.chips, { name: 'nieuw', color: '#cccccc', value: 1, count: 50 }],
+      chips: [...chipset.chips, { color: '#cccccc', value: 1, count: 50 }],
     })
 
   const verwijder = (index: number) =>
@@ -60,14 +60,6 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             <div className="chip-rij__fiche">
               <ChipIcon color={chip.color} value={chip.value} digits={cijfers} />
             </div>
-            <label className="veld chip-rij__naam">
-              <span>Kleurnaam</span>
-              <input
-                type="text"
-                value={chip.name}
-                onChange={(e) => wijzig(index, 'name', e.target.value)}
-              />
-            </label>
             <label className="veld chip-rij__kleur">
               <span>Kleur</span>
               <input

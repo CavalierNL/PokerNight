@@ -154,10 +154,13 @@ input[type='checkbox'] {
  * Elk veld houdt zijn eigen label. Een kopregel boven de tabel zou smaller zijn,
  * maar valt bij het omklappen naar één kolom weg — en dan is juist niet meer te
  * zien welk getal de waarde is en welk het aantal.
+ *
+ * De twee getalvelden delen de vrije ruimte, zodat een waarde van 10000 ook op
+ * een telefoon in zijn veld past.
  */
 .chip-rij {
   display: grid;
-  grid-template-columns: auto minmax(6rem, 1fr) auto 9.5rem 10.5rem auto;
+  grid-template-columns: auto auto minmax(5rem, 1fr) minmax(5rem, 1fr) auto;
   gap: 0.5rem;
   align-items: end;
   margin-bottom: 0.75rem;
@@ -174,12 +177,14 @@ input[type='checkbox'] {
 }
 
 @media (max-width: 40rem) {
+  /* De knop naar een eigen regel: anders knijpt hij de getalvelden dicht. */
   .chip-rij {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto auto 1fr 1fr;
   }
 
-  .chip-rij__naam {
-    grid-column: 2 / -1;
+  .chip-rij .knop--gevaar {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 }
 

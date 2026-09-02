@@ -115,6 +115,23 @@ describe('tafelscherm', () => {
     expect(html).toContain('Pauze')
   })
 
+  it('toont de color-up als fiches, niet als kleurnamen', () => {
+    // Grote startstack met de 500-set: de kleinste kleur is meteen op level 0
+    // overbodig, dus de melding staat er vanaf het begin.
+    bewaarToernooi({ startingStack: 10_000, chipsetId: STANDARD_500.id }, STANDARD_500)
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('Color-up: haal')
+    // De fiches die uit het spel gaan, als svg met hun eigen kleur.
+    expect(html).toContain(STANDARD_500.chips[0].color)
+    for (const kleurnaam of ['wit', 'rood', 'groen', 'zwart', 'paars']) {
+      expect(html, kleurnaam).not.toContain(`>${kleurnaam}<`)
+    }
+  })
+
   it('toont wanneer het toernooi naar verwachting klaar is', () => {
     bewaarToernooi({ trigger: 'time' })
     const html = renderToStaticMarkup(

@@ -4,7 +4,7 @@ import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { useAppState } from '../state/AppState'
 import { prepareSetup } from '../domain/setup'
-import { chipsWithValue, longestValueDigits } from '../domain/chipset'
+import { longestValueDigits } from '../domain/chipset'
 import type { StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import { sprite } from '../sprites'
@@ -166,12 +166,24 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
         {structuur.colorUps.map((colorUp) => (
           <p key={colorUp.levelIndex} className="uitleg uitleg--fiches">
             Vanaf level {colorUp.levelIndex + 1}:
-            {chipsWithValue(chipset, colorUp.retiredValue).map((chip) => (
-              <ChipIcon key={chip.name} color={chip.color} value={chip.value} size={22} digits={cijfers} />
+            {colorUp.retiredColors.map((kleur) => (
+              <ChipIcon
+                key={kleur}
+                color={kleur}
+                value={colorUp.retiredValue}
+                size={22}
+                digits={cijfers}
+              />
             ))}
             uit het spel, wisselen naar
-            {chipsWithValue(chipset, colorUp.nextValue).map((chip) => (
-              <ChipIcon key={chip.name} color={chip.color} value={chip.value} size={22} digits={cijfers} />
+            {colorUp.nextColors.map((kleur) => (
+              <ChipIcon
+                key={kleur}
+                color={kleur}
+                value={colorUp.nextValue}
+                size={22}
+                digits={cijfers}
+              />
             ))}
           </p>
         ))}
@@ -180,7 +192,7 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
       <div className="setup__raster">
         <Panel title="Fiches per speler">
           {verdeling.perPlayer.map((allocatie) => (
-            <div key={allocatie.name} className="fiche-regel">
+            <div key={`${allocatie.color}-${allocatie.value}`} className="fiche-regel">
               <span className="fiche-regel__aantal">{allocatie.count}×</span>
               <ChipIcon color={allocatie.color} value={allocatie.value} digits={cijfers} />
             </div>

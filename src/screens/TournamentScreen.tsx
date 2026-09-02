@@ -4,6 +4,7 @@ import { useNow } from '../hooks/useNow'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
 import { useAppState } from '../state/AppState'
+import { ChipIcon } from '../components/ChipIcon'
 import {
   averageStackInBigBlinds,
   colorUpAt,
@@ -85,8 +86,14 @@ export function TournamentScreen() {
           </div>
           {colorUp && (
             <div className="tafel__colorup">
-              Color-up: haal {colorUp.retiredColors.join(', ')} uit het spel en wissel naar{' '}
-              {colorUp.nextValue}.
+              Color-up: haal
+              {colorUp.retiredColors.map((kleur) => (
+                <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} size={26} />
+              ))}
+              uit het spel en wissel naar
+              {colorUp.nextColors.map((kleur) => (
+                <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} size={26} />
+              ))}
             </div>
           )}
         </div>

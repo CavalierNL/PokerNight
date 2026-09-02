@@ -8,8 +8,8 @@ const kleineDoos: Chipset = {
   name: 'Kleine doos',
   colorUp: true,
   chips: [
-    { name: 'wit', color: '#fff', value: 1, count: 40 },
-    { name: 'groen', color: '#0a0', value: 5, count: 20 },
+    { color: '#fff', value: 1, count: 40 },
+    { color: '#0a0', value: 5, count: 20 },
   ],
 }
 
@@ -30,7 +30,7 @@ describe('distributeChips — huisregel', () => {
 
   it('deelt nooit meer fiches uit dan er in de doos zitten', () => {
     for (const allocatie of verdeling.perPlayer) {
-      const chip = HOUSE_RULES.chips.find((c) => c.name === allocatie.name)!
+      const chip = HOUSE_RULES.chips.find((c) => c.color === allocatie.color)!
       expect(allocatie.count * 6).toBeLessThanOrEqual(chip.count)
     }
   })
@@ -61,8 +61,8 @@ describe('distributeChips — invariant', () => {
       name: 'Twee kleuren',
       colorUp: true,
       chips: [
-        { name: 'a', color: '#111', value: 1, count: 5 },
-        { name: 'b', color: '#222', value: 1, count: 5 },
+        { color: '#111', value: 1, count: 5 },
+        { color: '#222', value: 1, count: 5 },
       ],
     }
     const v = distributeChips(twee, 2, 100, 1, 1)

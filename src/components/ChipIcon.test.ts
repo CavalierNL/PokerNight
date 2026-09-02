@@ -29,7 +29,7 @@ describe('longestValueDigits', () => {
   it('gaat om met een doos die tot in de tienduizenden loopt', () => {
     const groot = {
       ...STANDARD_500,
-      chips: [...STANDARD_500.chips, { name: 'oranje', color: '#e67e22', value: 10000, count: 20 }],
+      chips: [...STANDARD_500.chips, { color: '#e67e22', value: 10000, count: 20 }],
     }
     expect(longestValueDigits(groot)).toBe(5)
   })
@@ -63,7 +63,7 @@ describe('de grote set', () => {
 
   it('geeft elke fiche in deze doos leesbare tekst', () => {
     for (const chip of GROTE_SET.chips) {
-      expect(chipTextColor(chip.color), chip.name).toMatch(/rgba\(/)
+      expect(chipTextColor(chip.color), chip.color).toMatch(/rgba\(/)
     }
   })
 })

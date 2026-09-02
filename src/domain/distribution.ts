@@ -1,7 +1,6 @@
 import { chipsWithValue, denominations, totalCountForValue, type Chipset } from './chipset'
 
 export type Allocation = {
-  name: string
   color: string
   value: number
   /** Aantal fiches van deze kleur per speler. */
@@ -54,7 +53,7 @@ function spreadOverColors(
     const beschikbaarPerSpeler = Math.floor(chip.count / players)
     const aantal = Math.min(teVerdelen, beschikbaarPerSpeler)
     if (aantal > 0) {
-      allocaties.push({ name: chip.name, color: chip.color, value, count: aantal })
+      allocaties.push({ color: chip.color, value, count: aantal })
       teVerdelen -= aantal
     }
   }

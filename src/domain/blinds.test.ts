@@ -112,8 +112,8 @@ describe('buildStructure — betaalbaarheid', () => {
       name: 'Doos met vreemde waardes',
       colorUp: true,
       chips: [
-        { name: 'a', color: '#111', value: 3, count: 200 },
-        { name: 'b', color: '#222', value: 20, count: 200 },
+        { color: '#111', value: 3, count: 200 },
+        { color: '#222', value: 20, count: 200 },
       ],
     }
     for (const chipset of [HOUSE_RULES, STANDARD_500, eigenaardig]) {
@@ -143,9 +143,9 @@ describe('buildStructure — betaalbaarheid', () => {
       name: 'Vreemde waardes',
       colorUp: true,
       chips: [
-        { name: 'a', color: '#111', value: 1, count: 200 },
-        { name: 'b', color: '#222', value: 5, count: 200 },
-        { name: 'c', color: '#333', value: 20, count: 200 },
+        { color: '#111', value: 1, count: 200 },
+        { color: '#222', value: 5, count: 200 },
+        { color: '#333', value: 20, count: 200 },
       ],
     }
     for (const chipset of [HOUSE_RULES, STANDARD_500, vreemd]) {
@@ -207,11 +207,10 @@ describe('color-up', () => {
     expect(structuur.levels[eerste.levelIndex].smallBlind).toBeGreaterThanOrEqual(10)
   })
 
-  it('noemt de kleuren die uit het spel gaan', () => {
+  it('draagt de kleuren mee die uit het spel gaan en wat ervoor terugkomt', () => {
     const structuur = buildStructure(huisregel, metColorUp)
-    expect(structuur.colorUps[0].retiredColors).toEqual(
-      expect.arrayContaining(['wit', 'rood', 'blauw']),
-    )
+    expect(structuur.colorUps[0].retiredColors).toEqual(['#f2efe6', '#c0392b', '#2e6da4'])
+    expect(structuur.colorUps[0].nextColors).toEqual(['#2e8b57'])
   })
 
   it('doet geen color-up als de hoogste denominatie bereikt is', () => {
@@ -254,9 +253,9 @@ describe('buildStructure — de 1-2-5 ladder', () => {
       name: 'Grof',
       colorUp: true,
       chips: [
-        { name: 'groen', color: '#0f0', value: 25, count: 100 },
-        { name: 'zwart', color: '#000', value: 100, count: 100 },
-        { name: 'paars', color: '#a0f', value: 500, count: 50 },
+        { color: '#0f0', value: 25, count: 100 },
+        { color: '#000', value: 100, count: 100 },
+        { color: '#a0f', value: 500, count: 50 },
       ],
     }
     const grof = buildStructure(

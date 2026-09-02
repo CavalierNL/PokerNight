@@ -1,7 +1,9 @@
 export type Chip = {
-  /** Naam van de kleur zoals aan tafel gebruikt, bijv. "wit". */
-  name: string
-  /** Hex-kleur voor weergave. */
+  /**
+   * Hex-kleur voor weergave. Meteen ook de identiteit van de rij: een naam als
+   * "wit" stond nergens meer op het scherm, want overal waar hij stond wordt nu
+   * het fiche zelf getoond.
+   */
   color: string
   /** Waarde in fiche-eenheden. Meerdere kleuren mogen dezelfde waarde hebben. */
   value: number
@@ -58,10 +60,10 @@ export const HOUSE_RULES: Chipset = {
   name: 'Huisregel (5 en 1)',
   colorUp: false,
   chips: [
-    { name: 'wit', color: '#f2efe6', value: 1, count: 150 },
-    { name: 'rood', color: '#c0392b', value: 1, count: 100 },
-    { name: 'blauw', color: '#2e6da4', value: 1, count: 100 },
-    { name: 'groen', color: '#2e8b57', value: 5, count: 150 },
+    { color: '#f2efe6', value: 1, count: 150 },
+    { color: '#c0392b', value: 1, count: 100 },
+    { color: '#2e6da4', value: 1, count: 100 },
+    { color: '#2e8b57', value: 5, count: 150 },
   ],
 }
 
@@ -71,11 +73,11 @@ export const STANDARD_500: Chipset = {
   name: 'Standaardset (500 fiches)',
   colorUp: true,
   chips: [
-    { name: 'wit', color: '#f2efe6', value: 1, count: 150 },
-    { name: 'rood', color: '#c0392b', value: 5, count: 150 },
-    { name: 'groen', color: '#2e8b57', value: 25, count: 100 },
-    { name: 'zwart', color: '#22262b', value: 100, count: 75 },
-    { name: 'paars', color: '#6b4fa0', value: 500, count: 25 },
+    { color: '#f2efe6', value: 1, count: 150 },
+    { color: '#c0392b', value: 5, count: 150 },
+    { color: '#2e8b57', value: 25, count: 100 },
+    { color: '#22262b', value: 100, count: 75 },
+    { color: '#6b4fa0', value: 500, count: 25 },
   ],
 }
 
@@ -85,13 +87,13 @@ export const GROTE_SET: Chipset = {
   name: 'Mijn set (25 tot 10.000)',
   colorUp: true,
   chips: [
-    { name: 'groen', color: '#2e8b57', value: 25, count: 75 },
-    { name: 'blauw', color: '#2e6da4', value: 50, count: 75 },
-    { name: 'zwart', color: '#22262b', value: 100, count: 125 },
-    { name: 'paars', color: '#6b4fa0', value: 500, count: 75 },
-    { name: 'geel', color: '#e9c31f', value: 1000, count: 75 },
-    { name: 'roze', color: '#d96a9a', value: 5000, count: 50 },
-    { name: 'bruin', color: '#7a4a26', value: 10000, count: 25 },
+    { color: '#2e8b57', value: 25, count: 75 },
+    { color: '#2e6da4', value: 50, count: 75 },
+    { color: '#22262b', value: 100, count: 125 },
+    { color: '#6b4fa0', value: 500, count: 75 },
+    { color: '#e9c31f', value: 1000, count: 75 },
+    { color: '#d96a9a', value: 5000, count: 50 },
+    { color: '#7a4a26', value: 10000, count: 25 },
   ],
 }
 
