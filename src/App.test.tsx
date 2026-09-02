@@ -64,7 +64,7 @@ describe('App', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('PokerNight')
     expect(html).toContain('Nieuw toernooi')
-    expect(html).toContain('Chipsets')
+    expect(html).toContain('Pokerdozen')
     expect(html).toContain('Instellingen')
     // De instellingen van het toernooi komen pas na "Nieuw toernooi".
     expect(html).not.toContain('Blindstructuur')

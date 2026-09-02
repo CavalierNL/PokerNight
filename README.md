@@ -12,7 +12,7 @@ account, werkt offline. Er komt geen geld aan te pas: geen inleg, geen pot.
   schaalt mee met de kleinste fichewaarde in je doos.
 - **Twee manieren om levels op te schuiven** — op de klok, als er iemand uit gaat,
   of allebei. Die laatste is de huisregel.
-- **Chipsets** — vrij in te stellen: kleur, waarde, aantal in de doos. Meerdere
+- **Pokerdozen** — vrij in te stellen: kleur, waarde, aantal in de doos. Meerdere
   kleuren mogen dezelfde waarde hebben, dus het systeem "één kleur is 5, de rest
   is 1" werkt gewoon. De app rekent uit wat iedereen bij aanvang krijgt en
   waarschuwt als de doos te klein is.

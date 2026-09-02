@@ -113,7 +113,7 @@ export function SetupScreen({
             </select>
           </label>
           <label className="veld">
-            <span>Chipset</span>
+            <span>Pokerdoos</span>
             <select value={chipsetId} onChange={(e) => setChipsetId(e.target.value)}>
               {chipsets.map((c) => (
                 <option key={c.id} value={c.id}>

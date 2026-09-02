@@ -16,6 +16,10 @@ import './SetupScreen.css'
 /**
  * De dozen met fiches, los van de overige instellingen. Dit was het grootste
  * paneel van het instellingenscherm en heeft er inhoudelijk niets mee te maken.
+ *
+ * In de code heet zo'n doos een `Chipset` — de gangbare Engelse term voor een
+ * set fiches. Op het scherm staat "pokerdoos": "chipset" leest in het Nederlands
+ * als iets uit een computer.
  */
 export function ChipsetScreen({ onClose }: { onClose: () => void }) {
   const { chipsets, setChipsets } = useAppState()
@@ -65,9 +69,9 @@ export function ChipsetScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="setup">
-      <h1 className="setup__titel">Chipsets</h1>
+      <h1 className="setup__titel">Pokerdozen</h1>
 
-      <Panel title="Chipset">
+      <Panel title="Pokerdoos">
         <label className="veld">
           <span>Welke doos</span>
           <select value={geselecteerd} onChange={(e) => setGeselecteerd(e.target.value)}>

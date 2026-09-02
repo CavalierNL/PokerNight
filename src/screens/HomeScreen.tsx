@@ -23,7 +23,7 @@ export function HomeScreen({
       <div className="home__knoppen">
         <Button onClick={onNieuw}>Nieuw toernooi</Button>
         <Button variant="ghost" onClick={onChipsets}>
-          Chipsets
+          Pokerdozen
         </Button>
         <Button variant="ghost" onClick={onInstellingen}>
           Instellingen
