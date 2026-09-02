@@ -5,7 +5,7 @@ import { ChipIcon } from '../components/ChipIcon'
 import { Kop } from '../components/Kop'
 import { useAppState } from '../state/AppState'
 import { prepareSetup } from '../domain/setup'
-import { longestValueDigits } from '../domain/chipset'
+import { kanColorUp, longestValueDigits } from '../domain/chipset'
 import type { StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import './SetupScreen.css'
@@ -31,11 +31,15 @@ export function SetupScreen({
   const [durationMinutes, setDurationMinutes] = useState(settings?.durationMinutes ?? 180)
   const [structure, setStructure] = useState<StructureKind>(settings?.structure ?? 'ladder')
   const [trigger, setTrigger] = useState<Trigger>(settings?.trigger ?? 'both')
+  const [colorUp, setColorUp] = useState(settings?.colorUp ?? true)
   const [chipsetId, setChipsetId] = useState(settings?.chipsetId ?? chipsets[0].id)
 
   const chipset = chipsets.find((c) => c.id === chipsetId) ?? chipsets[0]
   // Eén lettergrootte voor alle fiches van deze doos.
   const cijfers = longestValueDigits(chipset)
+  // Met twee waardes hou je na een color-up één soort fiche over; dan is er
+  // niets meer te wisselen en heeft de keuze geen betekenis.
+  const colorUpMogelijk = kanColorUp(chipset)
 
   const huidigeSettings: Settings = useMemo(
     () => ({
@@ -48,9 +52,20 @@ export function SetupScreen({
       durationMinutes,
       structure,
       trigger,
+      colorUp: colorUp && colorUpMogelijk,
       chipsetId: chipset.id,
     }),
-    [namenTekst, startingStack, levelMinutes, durationMinutes, structure, trigger, chipset],
+    [
+      namenTekst,
+      startingStack,
+      levelMinutes,
+      durationMinutes,
+      structure,
+      trigger,
+      colorUp,
+      colorUpMogelijk,
+      chipset,
+    ],
   )
 
   const setup = useMemo(() => prepareSetup(huidigeSettings, chipset), [huidigeSettings, chipset])
@@ -107,6 +122,22 @@ export function SetupScreen({
               ))}
             </select>
           </label>
+
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
+              checked={colorUp && colorUpMogelijk}
+              disabled={!colorUpMogelijk}
+              onChange={(e) => setColorUp(e.target.checked)}
+            />
+            <span>Color-up: de kleinste kleur gaat onderweg uit het spel</span>
+          </label>
+          {!colorUpMogelijk && (
+            <p className="uitleg">
+              Kan niet met deze doos: er zijn maar twee waardes, dus na een color-up hou je één
+              soort fiche over en valt er niets meer te wisselen.
+            </p>
+          )}
         </Panel>
         <Panel title="Toernooi">
           <label className="veld">

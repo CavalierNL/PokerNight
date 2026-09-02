@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { buildStructure, levelCount, targetEndBigBlind } from './blinds'
-import { denominations, HOUSE_RULES, STANDARD_500 } from './chipset'
+import { denominations, kanColorUp, HOUSE_RULES, STANDARD_500 } from './chipset'
 import type { StructureInput } from './blinds'
 
 const huisregel: StructureInput = {
   kind: 'doubling',
+  colorUp: true,
   players: 6,
   startingStack: 100,
   durationMinutes: 180,
@@ -110,7 +111,6 @@ describe('buildStructure — betaalbaarheid', () => {
     const eigenaardig = {
       id: 'eigenaardig',
       name: 'Doos met vreemde waardes',
-      colorUp: true,
       chips: [
         { color: '#111', value: 3, count: 200 },
         { color: '#222', value: 20, count: 200 },
@@ -141,7 +141,6 @@ describe('buildStructure — betaalbaarheid', () => {
     const vreemd = {
       id: 'vreemd',
       name: 'Vreemde waardes',
-      colorUp: true,
       chips: [
         { color: '#111', value: 1, count: 200 },
         { color: '#222', value: 5, count: 200 },
@@ -194,9 +193,12 @@ describe('buildStructure — handmatig', () => {
 })
 
 describe('color-up', () => {
-  // De huisregel heeft color-up uit staan; voor deze regels is een doos nodig die
-  // hem aan heeft. Verder dezelfde waardes, zodat 1 naar 5 te volgen blijft.
-  const metColorUp = { ...HOUSE_RULES, colorUp: true }
+  // De huisregel heeft maar twee waardes en doet dus nooit een color-up. Voor
+  // deze regels is een doos met drie waardes nodig; 1 naar 5 blijft te volgen.
+  const metColorUp = {
+    ...HOUSE_RULES,
+    chips: [...HOUSE_RULES.chips, { color: '#6b4fa0', value: 25, count: 50 }],
+  }
 
   it('haalt de kleinste denominatie eruit zodra de kleine blind tien keer zo groot is', () => {
     const structuur = buildStructure(huisregel, metColorUp)
@@ -251,7 +253,6 @@ describe('buildStructure — de 1-2-5 ladder', () => {
     const grofeDoos = {
       id: 'grof',
       name: 'Grof',
-      colorUp: true,
       chips: [
         { color: '#0f0', value: 25, count: 100 },
         { color: '#000', value: 100, count: 100 },
@@ -278,21 +279,29 @@ describe('buildStructure — de 1-2-5 ladder', () => {
   })
 })
 
-describe('color-up per doos', () => {
-  it('doet geen color-up bij een doos die dat uit heeft staan', () => {
-    const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, HOUSE_RULES)
-    expect(HOUSE_RULES.colorUp).toBe(false)
+describe('color-up is een keuze per toernooi', () => {
+  it('doet geen color-up als het toernooi hem uit heeft staan', () => {
+    const structuur = buildStructure(
+      { ...huisregel, kind: 'ladder', colorUp: false },
+      STANDARD_500,
+    )
     expect(structuur.colorUps).toEqual([])
   })
 
-  it('houdt de kleinste fiche in het spel als er geen color-up is', () => {
-    const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, HOUSE_RULES)
+  it('doet hem wel als het toernooi hem aan heeft staan', () => {
+    const structuur = buildStructure({ ...huisregel, kind: 'ladder', colorUp: true }, STANDARD_500)
+    expect(structuur.colorUps.length).toBeGreaterThan(0)
+  })
+
+  it('slaat hem over bij een doos met maar twee waardes, ook als je hem aanzet', () => {
+    // Bij 5 en 1 hou je na een color-up één soort fiche over: niets te wisselen.
+    expect(kanColorUp(HOUSE_RULES)).toBe(false)
+    const structuur = buildStructure({ ...huisregel, kind: 'ladder', colorUp: true }, HOUSE_RULES)
+    expect(structuur.colorUps).toEqual([])
     expect(structuur.startDenomination).toBe(denominations(HOUSE_RULES)[0])
   })
 
-  it('doet wel een color-up bij een doos die dat aan heeft staan', () => {
-    const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, STANDARD_500)
-    expect(STANDARD_500.colorUp).toBe(true)
-    expect(structuur.colorUps.length).toBeGreaterThan(0)
+  it('staat hem toe vanaf drie waardes', () => {
+    expect(kanColorUp(STANDARD_500)).toBe(true)
   })
 })

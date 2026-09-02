@@ -23,6 +23,7 @@ const basis: Settings = {
   durationMinutes: 120,
   structure: 'doubling',
   trigger: 'both',
+  colorUp: true,
   chipsetId: HOUSE_RULES.id,
 }
 

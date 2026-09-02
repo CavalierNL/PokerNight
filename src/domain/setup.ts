@@ -32,6 +32,7 @@ export function prepareSetup(settings: Settings, chipset: Chipset): Setup {
       durationMinutes: settings.durationMinutes,
       levelMinutes: settings.levelMinutes,
       manualBigBlinds: settings.manualBigBlinds,
+      colorUp: settings.colorUp,
     },
     chipset,
   )

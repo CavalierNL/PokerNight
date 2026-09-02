@@ -18,12 +18,23 @@ export function chipFontSize(digits: number): number {
  * De drempel ligt op 0,6 in plaats van 0,5: bij een middentint leest lichte
  * tekst prettiger dan donkere.
  */
-export function chipTextColor(hex: string): string {
+export function isLichtFiche(hex: string): boolean {
   const schoon = hex.replace('#', '')
-  if (schoon.length !== 6) return 'rgba(0,0,0,.7)'
+  if (schoon.length !== 6) return true
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(schoon.slice(i, i + 2), 16))
-  const helderheid = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return helderheid > 0.6 ? 'rgba(0,0,0,.75)' : 'rgba(255,255,255,.92)'
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6
+}
+
+export function chipTextColor(hex: string): string {
+  return isLichtFiche(hex) ? 'rgba(0,0,0,.75)' : 'rgba(255,255,255,.92)'
+}
+
+/**
+ * De randstippen. Dezelfde afweging als bij de tekst: wit op een wit fiche is
+ * geen versiering maar een onzichtbare rand.
+ */
+export function chipRimColor(hex: string): string {
+  return isLichtFiche(hex) ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.45)'
 }
 
 /**
@@ -44,6 +55,7 @@ export function ChipIcon({
 }) {
   const lettergrootte = chipFontSize(digits ?? String(value ?? '').length)
   const tekstkleur = chipTextColor(color)
+  const randkleur = chipRimColor(color)
   return (
     <svg
       width={size}
@@ -63,7 +75,7 @@ export function ChipIcon({
         cy="20"
         r="16.2"
         fill="none"
-        stroke="rgba(255,255,255,.45)"
+        stroke={randkleur}
         strokeWidth="2.4"
         strokeDasharray="4 5"
       />

@@ -11,6 +11,7 @@ const settings: Settings = {
   durationMinutes: 120,
   structure: 'doubling',
   trigger: 'both',
+  colorUp: true,
   chipsetId: 'huisregel',
 }
 

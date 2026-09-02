@@ -33,6 +33,7 @@ const settings: Settings = {
   durationMinutes: 180,
   structure: 'doubling',
   trigger: 'both',
+  colorUp: true,
   chipsetId: HOUSE_RULES.id,
 }
 
@@ -46,7 +47,6 @@ describe('chipsets', () => {
       {
         id: 'x',
         name: 'Mijn doos',
-        colorUp: true,
         chips: [{ color: '#fff', value: 1, count: 10 }],
       },
     ]

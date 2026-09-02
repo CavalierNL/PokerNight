@@ -31,6 +31,8 @@ export type StructureInput = {
   durationMinutes: number
   levelMinutes: number
   manualBigBlinds?: number[]
+  /** Of de kleinste kleur onderweg uit het spel mag. */
+  colorUp: boolean
 }
 
 export type Structure = {
@@ -129,6 +131,9 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
   let startDenomination = kleinste
 
   const start = Math.max(input.startingStack / 100, kleinste * 2)
+  // Met twee waardes hou je na een color-up één soort fiche over; dan valt er
+  // niets meer te wisselen en heeft het geen zin.
+  const colorUpMogelijk = input.colorUp && denoms.length >= 3
 
   for (const ruweBb of ruw) {
     const index = levels.length
@@ -150,7 +155,7 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // Is de kleinste kleur nog nuttig? Zodra de kleine blind tien keer die
     // waarde is, kun je hem uit het spel halen.
     const isLaatsteDenominatie = denomIndex >= denoms.length - 1
-    if (chipset.colorUp && !isLaatsteDenominatie && smallBlind >= 10 * d) {
+    if (colorUpMogelijk && !isLaatsteDenominatie && smallBlind >= 10 * d) {
       colorUps.push({
         levelIndex: index,
         retiredValue: d,

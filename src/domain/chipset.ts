@@ -15,13 +15,15 @@ export type Chipset = {
   id: string
   name: string
   chips: Chip[]
-  /**
-   * Of de kleinste kleur onderweg uit het spel gehaald mag worden. Bij een doos
-   * met maar twee waardes, zoals de huisregel, levert dat niets op: je speelt
-   * daarna met één soort fiche en kunt niets meer wisselen. Per doos in te
-   * stellen, want of het de moeite is hangt af van wat er in de doos zit.
-   */
-  colorUp: boolean
+}
+
+/**
+ * Of een color-up in deze doos überhaupt zin heeft. Met twee waardes, zoals de
+ * huisregel met 5 en 1, hou je na het weghalen van de kleinste één soort fiche
+ * over en valt er niets meer te wisselen. Vanaf drie waardes wel.
+ */
+export function kanColorUp(chipset: Chipset): boolean {
+  return denominations(chipset).length >= 3
 }
 
 /**
@@ -58,7 +60,6 @@ export function longestValueDigits(chipset: Chipset): number {
 export const HOUSE_RULES: Chipset = {
   id: 'huisregel',
   name: 'Huisregel (5 en 1)',
-  colorUp: false,
   chips: [
     { color: '#f2efe6', value: 1, count: 150 },
     { color: '#c0392b', value: 1, count: 100 },
@@ -71,7 +72,6 @@ export const HOUSE_RULES: Chipset = {
 export const STANDARD_500: Chipset = {
   id: 'standaard-500',
   name: 'Standaardset (500 fiches)',
-  colorUp: true,
   chips: [
     { color: '#f2efe6', value: 1, count: 150 },
     { color: '#c0392b', value: 5, count: 150 },
@@ -85,7 +85,6 @@ export const STANDARD_500: Chipset = {
 export const TOERNOOI_DOOS: Chipset = {
   id: 'grote-set',
   name: 'Toernooi doos',
-  colorUp: true,
   chips: [
     { color: '#2e8b57', value: 25, count: 75 },
     { color: '#2e6da4', value: 50, count: 75 },
@@ -115,8 +114,7 @@ export function legeChipset(bestaand: Chipset[]): Chipset {
   return {
     id: nieuwChipsetId(bestaand),
     name: 'Nieuwe doos',
-    colorUp: true,
-    chips: [{ color: '#cccccc', value: 1, count: 50 }],
+      chips: [{ color: '#cccccc', value: 1, count: 50 }],
   }
 }
 

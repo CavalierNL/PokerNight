@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chipFontSize, chipTextColor } from './ChipIcon'
+import { chipFontSize, chipRimColor, chipTextColor } from './ChipIcon'
 import { TOERNOOI_DOOS, HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
 
 describe('chipFontSize', () => {
@@ -66,5 +66,18 @@ describe('de toernooidoos', () => {
     for (const chip of TOERNOOI_DOOS.chips) {
       expect(chipTextColor(chip.color), chip.color).toMatch(/rgba\(/)
     }
+  })
+})
+
+describe('chipRimColor', () => {
+  it('zet donkere stippen op een licht fiche', () => {
+    // Wit op wit is geen versiering maar een onzichtbare rand.
+    expect(chipRimColor('#f2efe6')).toContain('0,0,0')
+    expect(chipRimColor('#e9c31f')).toContain('0,0,0')
+  })
+
+  it('houdt lichte stippen op een donker fiche', () => {
+    expect(chipRimColor('#22262b')).toContain('255,255,255')
+    expect(chipRimColor('#2e6da4')).toContain('255,255,255')
   })
 })

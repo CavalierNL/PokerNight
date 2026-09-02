@@ -10,6 +10,12 @@ export type Settings = {
   durationMinutes: number
   structure: StructureKind
   trigger: Trigger
+  /**
+   * Of de kleinste kleur onderweg uit het spel mag. Een keuze per toernooi en
+   * niet per doos: dezelfde doos speel je de ene avond met en de andere zonder.
+   * Bij een doos met minder dan drie waardes gebeurt het sowieso niet.
+   */
+  colorUp: boolean
   manualBigBlinds?: number[]
   chipsetId: string
 }
@@ -69,6 +75,7 @@ export function createTournament(settings: Settings, chipset: Chipset, now: numb
       durationMinutes: settings.durationMinutes,
       levelMinutes: settings.levelMinutes,
       manualBigBlinds: settings.manualBigBlinds,
+      colorUp: settings.colorUp,
     },
     chipset,
   )

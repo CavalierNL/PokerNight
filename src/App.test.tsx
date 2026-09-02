@@ -37,6 +37,7 @@ const settings: Settings = {
   durationMinutes: 180,
   structure: 'doubling',
   trigger: 'both',
+  colorUp: true,
   chipsetId: HOUSE_RULES.id,
 }
 
@@ -90,9 +91,18 @@ describe('App', () => {
     }
   })
 
+  it('biedt de color-up aan, maar niet bij een doos met twee waardes', () => {
+    const html = opgezetScherm()
+    expect(html).toContain('Color-up: de kleinste kleur gaat onderweg uit het spel')
+    // De huisregel staat voorgeselecteerd en heeft er maar twee.
+    expect(html).toContain('disabled')
+    expect(html).toContain('er zijn maar twee waardes')
+  })
+
   it('doet bij de huisregel geen color-up', () => {
     const html = opgezetScherm()
-    expect(html).not.toContain('uit het spel')
+    // De melding onder de blindstructuur begint met "Vanaf level N:".
+    expect(html).not.toContain('Vanaf level')
   })
 
   it('vraagt om te hervatten als er een toernooi in de opslag staat', () => {
@@ -234,12 +244,4 @@ describe('instellingen', () => {
     expect(html).toContain('Doos verwijderen')
   })
 
-  it('laat de color-up per doos schakelen', () => {
-    const html = renderToStaticMarkup(
-      <AppStateProvider>
-        <ChipsetScreen onClose={() => {}} />
-      </AppStateProvider>,
-    )
-    expect(html).toContain('Color-up gebruiken')
-  })
 })

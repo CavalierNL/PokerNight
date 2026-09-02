@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
+import { TrashIcon } from '../components/TrashIcon'
 import { useAppState } from '../state/AppState'
 import {
   kopieerChipset,
@@ -118,24 +119,16 @@ export function ChipsetScreen({ onClose }: { onClose: () => void }) {
                 onChange={(e) => wijzig(index, 'count', e.target.value)}
               />
             </label>
-            <Button variant="danger" onClick={() => verwijder(index)}>
-              Weg
+            <Button
+              variant="danger"
+              onClick={() => verwijder(index)}
+              title="Deze kleur uit de doos halen"
+            >
+              <TrashIcon />
+              <span className="alleen-schermlezer">Deze kleur uit de doos halen</span>
             </Button>
           </div>
         ))}
-
-        <label className="veld veld--schakelaar">
-          <input
-            type="checkbox"
-            checked={chipset.colorUp}
-            onChange={(e) => vervang({ ...chipset, colorUp: e.target.checked })}
-          />
-          <span>Color-up gebruiken: de kleinste kleur mag onderweg uit het spel</span>
-        </label>
-        <p className="uitleg">
-          Bij een doos met maar twee waardes, zoals de huisregel, levert dat niets op — je speelt
-          daarna met één soort fiche en kunt niets meer wisselen.
-        </p>
 
         <div className="knoppenrij">
           <Button variant="ghost" onClick={voegToe}>

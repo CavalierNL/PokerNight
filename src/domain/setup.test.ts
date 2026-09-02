@@ -10,6 +10,7 @@ const basis: Settings = {
   durationMinutes: 180,
   structure: 'doubling',
   trigger: 'both',
+  colorUp: true,
   chipsetId: HOUSE_RULES.id,
 }
 
@@ -76,7 +77,6 @@ describe('prepareSetup — ongeldige invoer wordt vóór de start gevangen', () 
     const stuk = {
       id: 'stuk',
       name: 'Stuk',
-      colorUp: true,
       chips: [{ color: '#fff', value: 0, count: 100 }],
     }
     const setup = prepareSetup(basis, stuk)
