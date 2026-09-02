@@ -84,15 +84,24 @@ Blinds mogen alleen bedragen zijn die zonder wisselen te leggen zijn en die er a
 tafel netjes uitzien.
 
 Laat `d` de kleinste **actieve** denominatie zijn (actief = nog niet uit het spel
-gehaald door een color-up). De kandidaatbedragen zijn `d` vermenigvuldigd met de
-1-2-5-ladder: `d × {1, 2, 5, 10, 20, 50, 100, 200, 500, …}`.
+gehaald door een color-up). Een bedrag is betaalbaar als het een veelvoud van `d`
+is; het is bovendien *netjes* als het op een ronde stap ligt die met de grootte
+van het bedrag meeschaalt.
 
-Afronden gebeurt naar de dichtstbijzijnde kandidaat, met de harde eis dat elk
-level strikt hoger is dan het vorige. Levert afronden een gelijk of lager bedrag
-op, dan wordt de eerstvolgende kandidaat genomen.
+De afrondstap is een tiende van de eigen grootteorde van het bedrag, met `d` als
+ondergrens: `stap = max(d, 10^(⌊log10(bedrag)⌋ − 1))`. Afronden gebeurt naar het
+dichtstbijzijnde veelvoud van die stap, met de harde eis dat elk level strikt
+hoger is dan het vorige; komt de afronding niet boven het vorige level uit, dan
+gaat er een stap bij tot dat wel zo is.
 
-De kleine blind is het grootste kandidaatbedrag kleiner dan of gelijk aan de helft
-van de big blind, met een minimum van `d`.
+Zo wordt 124 afgerond op 120 en 2677 op 2700. Een vaste 1-2-5-ladder — een eerdere
+versie van deze spec — voldoet niet: bij fiches van 1 en blinds rond de 100 laat
+die alleen 100, 200 en 500 toe, waardoor een berekende structuur binnen drie
+levels ontspoort.
+
+De big blind van het eerste level is minstens `2d`, anders bestaat er geen kleine
+blind die er strikt onder ligt. De kleine blind is het grootste veelvoud van `d`
+dat niet boven de helft van de big blind uitkomt, met een minimum van `d`.
 
 ## Blindstructuur: structuur × trigger
 
@@ -103,8 +112,8 @@ codepaden.
 
 **Berekend.** Vloeiende groei met een vast eindpunt.
 
-- `levels = floor(duur / levellengte)`
-- `startBB = startstack / 100` (honderd big blinds diep beginnen)
+- `levels = floor(duur / levellengte)`, minimaal 2
+- `startBB = max(startstack / 100, 2d)` (honderd big blinds diep beginnen)
 - `eindBB = (spelers × startstack / 3) / 10` (bij drie spelers over is de
   gemiddelde stack ongeveer 10 BB)
 - `factor = (eindBB / startBB) ^ (1 / (levels − 1))` — in de praktijk 1,2–1,4
