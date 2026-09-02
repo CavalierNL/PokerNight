@@ -208,6 +208,18 @@ describe('instellingen', () => {
     expect(html).toContain('Beluister')
   })
 
+  it('laat de doos hernoemen en beheren', () => {
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SettingsScreen onClose={() => {}} />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('Naam van deze doos')
+    expect(html).toContain('Doos kopiëren')
+    expect(html).toContain('Nieuwe doos')
+    expect(html).toContain('Doos verwijderen')
+  })
+
   it('laat de color-up per doos schakelen', () => {
     const html = renderToStaticMarkup(
       <AppStateProvider>

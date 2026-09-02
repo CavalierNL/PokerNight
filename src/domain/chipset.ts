@@ -82,9 +82,9 @@ export const STANDARD_500: Chipset = {
 }
 
 /** De doos die hier aan tafel ligt: 500 fiches, van 25 tot 10.000. */
-export const GROTE_SET: Chipset = {
+export const TOERNOOI_DOOS: Chipset = {
   id: 'grote-set',
-  name: 'Mijn set (25 tot 10.000)',
+  name: 'Toernooi doos',
   colorUp: true,
   chips: [
     { color: '#2e8b57', value: 25, count: 75 },
@@ -97,4 +97,45 @@ export const GROTE_SET: Chipset = {
   ],
 }
 
-export const PRESETS: Chipset[] = [HOUSE_RULES, STANDARD_500, GROTE_SET]
+export const PRESETS: Chipset[] = [HOUSE_RULES, STANDARD_500, TOERNOOI_DOOS]
+
+/**
+ * Een id dat niet botst met een bestaande doos. Oplopend geteld in plaats van
+ * willekeurig: dat is te volgen in de opslag en levert in een test elke keer
+ * hetzelfde op.
+ */
+export function nieuwChipsetId(bestaand: Chipset[]): string {
+  let nummer = bestaand.length + 1
+  while (bestaand.some((c) => c.id === `doos-${nummer}`)) nummer += 1
+  return `doos-${nummer}`
+}
+
+/** Een verse doos om zelf op te bouwen: één kleur, de rest voeg je toe. */
+export function legeChipset(bestaand: Chipset[]): Chipset {
+  return {
+    id: nieuwChipsetId(bestaand),
+    name: 'Nieuwe doos',
+    colorUp: true,
+    chips: [{ color: '#cccccc', value: 1, count: 50 }],
+  }
+}
+
+/** Een kopie om vanaf te beginnen; een doos van zeven kleuren natypen is werk. */
+export function kopieerChipset(bron: Chipset, bestaand: Chipset[]): Chipset {
+  return {
+    ...bron,
+    id: nieuwChipsetId(bestaand),
+    name: `${bron.name} (kopie)`,
+    chips: bron.chips.map((chip) => ({ ...chip })),
+  }
+}
+
+/**
+ * Zet ontbrekende presets terug zonder eigen dozen weg te gooien. De oude versie
+ * verving de hele lijst — dat was ongevaarlijk zolang je niets eigens kon maken,
+ * en is dat nu niet meer.
+ */
+export function metPresets(huidig: Chipset[]): Chipset[] {
+  const ontbrekend = PRESETS.filter((preset) => !huidig.some((c) => c.id === preset.id))
+  return [...huidig, ...ontbrekend]
+}

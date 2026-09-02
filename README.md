@@ -51,4 +51,5 @@ laptop hem niet verstoort.
 
 - Ontwerp: `docs/superpowers/specs/2026-09-02-poker-night-design.md`
 - Implementatieplan: `docs/superpowers/plans/2026-09-02-poker-night.md`
-- Herkomst van de afbeeldingen: `public/sprites/HERKOMST.md` (Kenney, CC0)
+- Herkomst van de afbeeldingen: [`public/sprites/HERKOMST.md`](public/sprites/HERKOMST.md)
+  — het favicon komt van [Kenney](https://kenney.nl), CC0

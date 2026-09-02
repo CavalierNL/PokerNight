@@ -36,13 +36,6 @@ function verzamelProblemen(page: Page): string[] {
   return problemen
 }
 
-/** Faalt als de afbeelding er niet is of niet gedecodeerd kon worden. */
-async function verwachtGeladenAfbeelding(page: Page, bestand: string) {
-  const afbeelding = page.locator(`img[src$="${bestand}"]`).first()
-  await expect(afbeelding).toBeVisible()
-  expect(await afbeelding.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
-}
-
 // Serieel: slaat de site nog de vorige versie op, dan zeggen de tests daarna
 // niets zinnigs meer en kunnen ze beter overgeslagen worden.
 test.describe.serial('de gepubliceerde site', () => {
@@ -64,7 +57,7 @@ test.describe.serial('de gepubliceerde site', () => {
       .toBe(sha)
   })
 
-  test('laadt het setupscherm zonder ontbrekende bestanden', async ({ page }) => {
+  test('laadt het setupscherm zonder ontbrekende bestanden', async ({ page, baseURL }) => {
     const problemen = verzamelProblemen(page)
 
     await page.goto('./')
@@ -72,10 +65,11 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page).toHaveTitle('PokerNight')
     await expect(page.getByRole('heading', { name: 'PokerNight' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Start het toernooi' })).toBeVisible()
-    // De sprite komt via BASE_URL uit TypeScript; Vite herschrijft dat pad niet,
-    // dus alleen zo'n plaatje legt een base-fout in de bundel bloot.
-    // naturalWidth bewijst dat het ook echt gedecodeerd is.
-    await verwachtGeladenAfbeelding(page, 'kaartrug.png')
+    // Een bestand uit public/ los opvragen. De browser haalt het favicon in
+    // headless niet op, dus zonder deze controle blijft een verkeerde base voor
+    // statische bestanden onopgemerkt.
+    const favicon = await page.request.get(new URL('sprites/fiche.png', baseURL).href)
+    expect(favicon.status(), 'favicon onder de juiste base').toBe(200)
     // De blinds komen uit de rekenkern; cijfers bewijzen dat die echt gedraaid
     // heeft en niet alleen de tabelopmaak is gerenderd.
     await expect(page.locator('tbody tr').first()).toContainText(/\d+\s*\/\s*\d+/)

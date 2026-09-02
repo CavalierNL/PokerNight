@@ -7,7 +7,7 @@
  * tekenvlak van 40). Vijf cijfers passen daar nog net in.
  */
 export function chipFontSize(digits: number): number {
-  return Math.max(7, Math.min(15, 44 / Math.max(1, digits)))
+  return Math.max(8, Math.min(17, 50 / Math.max(1, digits)))
 }
 
 /**
@@ -33,7 +33,7 @@ export function chipTextColor(hex: string): string {
 export function ChipIcon({
   color,
   value,
-  size = 30,
+  size = 38,
   digits,
 }: {
   color: string
@@ -53,14 +53,19 @@ export function ChipIcon({
       aria-label={value === undefined ? 'fiche' : `fiche van ${value}`}
     >
       <circle cx="20" cy="20" r="18" fill={color} stroke="rgba(0,0,0,.35)" strokeWidth="2" />
+      {/*
+        De stippen liggen op de rand, zoals de gekleurde blokjes op een echt
+        fiche. Een ring midden op het fiche zou dwars door een waarde als 10000
+        heen lopen; daar moet juist niets in de weg zitten.
+      */}
       <circle
         cx="20"
         cy="20"
-        r="12"
+        r="16.2"
         fill="none"
-        stroke="rgba(255,255,255,.5)"
-        strokeWidth="3"
-        strokeDasharray="5 4"
+        stroke="rgba(255,255,255,.45)"
+        strokeWidth="2.4"
+        strokeDasharray="4 5"
       />
       {value !== undefined && (
         <text

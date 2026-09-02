@@ -3,8 +3,15 @@ import { Button } from '../components/Button'
 import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { useAppState } from '../state/AppState'
-import { longestValueDigits, PRESETS, type Chipset } from '../domain/chipset'
+import {
+  kopieerChipset,
+  legeChipset,
+  longestValueDigits,
+  metPresets,
+  type Chipset,
+} from '../domain/chipset'
 import { speelBlindToon } from '../audio/blindToon'
+import { SoundIcon } from '../components/SoundIcon'
 import './SetupScreen.css'
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
@@ -15,6 +22,20 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
 
   const vervang = (nieuw: Chipset) =>
     setChipsets(chipsets.map((c) => (c.id === chipset.id ? nieuw : c)))
+
+  const voegDoosToe = (nieuw: Chipset) => {
+    setChipsets([...chipsets, nieuw])
+    setGeselecteerd(nieuw.id)
+  }
+
+  // De laatste doos mag niet weg: zonder doos is er niets om mee te rekenen en
+  // valt het setupscherm terug op een lijst die er niet is.
+  const verwijderDoos = () => {
+    if (chipsets.length <= 1) return
+    const rest = chipsets.filter((c) => c.id !== chipset.id)
+    setChipsets(rest)
+    setGeselecteerd(rest[0].id)
+  }
 
   const wijzig = (index: number, veld: 'name' | 'color' | 'value' | 'count', waarde: string) => {
     // Een leeggemaakt getalveld geeft Number('') === 0. Een fichewaarde van nul
@@ -53,6 +74,15 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="veld">
+          <span>Naam van deze doos</span>
+          <input
+            type="text"
+            value={chipset.name}
+            onChange={(e) => vervang({ ...chipset, name: e.target.value })}
+          />
         </label>
 
         {chipset.chips.map((chip, index) => (
@@ -109,8 +139,17 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           <Button variant="ghost" onClick={voegToe}>
             Kleur toevoegen
           </Button>
-          <Button variant="ghost" onClick={() => setChipsets(PRESETS)}>
-            Terug naar de presets
+          <Button variant="ghost" onClick={() => voegDoosToe(kopieerChipset(chipset, chipsets))}>
+            Doos kopiëren
+          </Button>
+          <Button variant="ghost" onClick={() => voegDoosToe(legeChipset(chipsets))}>
+            Nieuwe doos
+          </Button>
+          <Button variant="danger" disabled={chipsets.length <= 1} onClick={verwijderDoos}>
+            Doos verwijderen
+          </Button>
+          <Button variant="ghost" onClick={() => setChipsets(metPresets(chipsets))}>
+            Presets terugzetten
           </Button>
         </div>
       </Panel>
@@ -125,9 +164,11 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             />
             <span>Geluid bij een blindverhoging</span>
           </label>
-          {/* Ook bruikbaar met het vinkje uit: juist dan wil je horen wat je aanzet. */}
-          <Button variant="ghost" onClick={speelBlindToon}>
-            Beluister
+          {/* Ook bruikbaar met het vinkje uit: juist dan wil je horen wat je aanzet.
+              Speelt de toon één keer; aan tafel herhaalt hij tot iemand reageert. */}
+          <Button variant="ghost" onClick={speelBlindToon} title="Beluister de toon">
+            <SoundIcon />
+            <span className="alleen-schermlezer">Beluister de toon</span>
           </Button>
         </div>
         <label className="veld veld--schakelaar">

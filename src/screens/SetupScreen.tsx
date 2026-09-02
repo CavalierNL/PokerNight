@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react'
 import { Button } from '../components/Button'
 import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
+import { kiesHand, PlayingCard } from '../components/PlayingCard'
 import { useAppState } from '../state/AppState'
 import { prepareSetup } from '../domain/setup'
 import { longestValueDigits } from '../domain/chipset'
 import type { StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
-import { sprite } from '../sprites'
 import './SetupScreen.css'
 
 // Acht genummerde spelers: een naam wegstrepen gaat sneller dan er een
@@ -16,6 +16,9 @@ const STANDAARD_NAMEN = Array.from({ length: 8 }, (_, i) => `Speler ${i + 1}`).j
 
 export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { chipsets, settings, start, storageOk } = useAppState()
+
+  // Eén hand per keer dat het scherm opent; niet opnieuw trekken bij elke render.
+  const [hand] = useState(kiesHand)
 
   const [namenTekst, setNamenTekst] = useState(
     settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
@@ -53,8 +56,8 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
   return (
     <div className="setup">
       <header className="setup__kop">
-        <img className="setup__kaart" src={sprite('kaartrug.png')} alt="" />
-        <img className="setup__kaart setup__kaart--twee" src={sprite('kaartrug.png')} alt="" />
+        <PlayingCard kaart={hand[0]} className="setup__kaart" />
+        <PlayingCard kaart={hand[1]} className="setup__kaart setup__kaart--twee" />
         <h1 className="setup__titel">PokerNight</h1>
       </header>
 
@@ -171,7 +174,7 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
                 key={kleur}
                 color={kleur}
                 value={colorUp.retiredValue}
-                size={22}
+                size={26}
                 digits={cijfers}
               />
             ))}
@@ -181,7 +184,7 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
                 key={kleur}
                 color={kleur}
                 value={colorUp.nextValue}
-                size={22}
+                size={26}
                 digits={cijfers}
               />
             ))}

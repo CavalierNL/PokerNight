@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chipFontSize, chipTextColor } from './ChipIcon'
-import { GROTE_SET, HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
+import { TOERNOOI_DOOS, HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
 
 describe('chipFontSize', () => {
   it('krimpt naarmate de waardes langer worden', () => {
@@ -13,10 +13,11 @@ describe('chipFontSize', () => {
   })
 
   it('blijft leesbaar bij korte waardes en past bij lange', () => {
-    expect(chipFontSize(1)).toBe(15)
-    expect(chipFontSize(5)).toBeGreaterThanOrEqual(7)
-    // Vijf cijfers moeten binnen de binnenring van 24 breed blijven.
-    expect(chipFontSize(5) * 5 * 0.6).toBeLessThanOrEqual(28)
+    expect(chipFontSize(1)).toBe(17)
+    expect(chipFontSize(5)).toBeGreaterThanOrEqual(8)
+    // Vijf cijfers moeten binnen het vrije midden blijven: de randstippen liggen
+    // op straal 16,2 van een tekenvlak van 40, dus tot 30 breed is er ruimte.
+    expect(chipFontSize(5) * 5 * 0.6).toBeLessThanOrEqual(30)
   })
 })
 
@@ -50,19 +51,19 @@ describe('chipTextColor', () => {
   })
 })
 
-describe('de grote set', () => {
+describe('de toernooidoos', () => {
   it('telt 500 fiches', () => {
-    expect(GROTE_SET.chips.reduce((som, c) => som + c.count, 0)).toBe(500)
+    expect(TOERNOOI_DOOS.chips.reduce((som, c) => som + c.count, 0)).toBe(500)
   })
 
   it('loopt van 25 tot 10.000 en dwingt dus de kleinste cijfers af', () => {
-    const waardes = GROTE_SET.chips.map((c) => c.value)
+    const waardes = TOERNOOI_DOOS.chips.map((c) => c.value)
     expect(waardes).toEqual([25, 50, 100, 500, 1000, 5000, 10000])
-    expect(longestValueDigits(GROTE_SET)).toBe(5)
+    expect(longestValueDigits(TOERNOOI_DOOS)).toBe(5)
   })
 
   it('geeft elke fiche in deze doos leesbare tekst', () => {
-    for (const chip of GROTE_SET.chips) {
+    for (const chip of TOERNOOI_DOOS.chips) {
       expect(chipTextColor(chip.color), chip.color).toMatch(/rgba\(/)
     }
   })

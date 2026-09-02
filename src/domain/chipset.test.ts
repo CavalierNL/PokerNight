@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   denominations,
   chipsWithValue,
+  kopieerChipset,
+  legeChipset,
+  metPresets,
+  nieuwChipsetId,
   totalCountForValue,
   HOUSE_RULES,
+  PRESETS,
   STANDARD_500,
 } from './chipset'
 
@@ -40,5 +45,42 @@ describe('totalCountForValue', () => {
       .filter((c) => c.value === 1)
       .reduce((som, c) => som + c.count, 0)
     expect(totalCountForValue(HOUSE_RULES, 1)).toBe(verwacht)
+  })
+})
+
+describe('dozen beheren', () => {
+  it('geeft een id dat nog niet bestaat', () => {
+    const bestaand = [{ ...HOUSE_RULES, id: 'doos-2' }]
+    const id = nieuwChipsetId(bestaand)
+    expect(bestaand.some((c) => c.id === id)).toBe(false)
+  })
+
+  it('kopieert de fiches los van het origineel', () => {
+    const kopie = kopieerChipset(HOUSE_RULES, PRESETS)
+    kopie.chips[0].value = 999
+
+    expect(kopie.id).not.toBe(HOUSE_RULES.id)
+    expect(kopie.name).toBe('Huisregel (5 en 1) (kopie)')
+    expect(HOUSE_RULES.chips[0].value).toBe(1)
+  })
+
+  it('begint een nieuwe doos met één kleur', () => {
+    const nieuw = legeChipset(PRESETS)
+    expect(nieuw.chips).toHaveLength(1)
+    expect(PRESETS.some((c) => c.id === nieuw.id)).toBe(false)
+  })
+
+  it('zet presets terug zonder eigen dozen weg te gooien', () => {
+    const eigen = { ...legeChipset(PRESETS), name: 'Van mij' }
+    const hersteld = metPresets([eigen])
+
+    expect(hersteld.some((c) => c.name === 'Van mij')).toBe(true)
+    for (const preset of PRESETS) {
+      expect(hersteld.some((c) => c.id === preset.id), preset.name).toBe(true)
+    }
+  })
+
+  it('voegt een preset niet nog een keer toe als hij er al is', () => {
+    expect(metPresets(PRESETS)).toHaveLength(PRESETS.length)
   })
 })
