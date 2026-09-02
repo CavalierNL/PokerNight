@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   loadChipsets,
+  OPSLAG_VERSIE,
   loadPreferences,
   loadTournament,
   saveChipsets,
@@ -27,7 +28,6 @@ beforeEach(() => {
 
 const settings: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost'],
-  buyIn: 10,
   startingStack: 100,
   levelMinutes: 15,
   durationMinutes: 180,
@@ -55,7 +55,7 @@ describe('chipsets', () => {
   })
 
   it('negeert opslag van een andere versie', () => {
-    opslag.set('pokernight.chipsets', JSON.stringify({ version: 99, data: [{ id: 'oud' }] }))
+    opslag.set('pokernight.chipsets', JSON.stringify({ version: OPSLAG_VERSIE + 1, data: [{ id: 'oud' }] }))
     expect(loadChipsets()).toEqual(PRESETS)
   })
 })
@@ -73,7 +73,7 @@ describe('voorkeuren', () => {
   it('negeert waardes van het verkeerde type', () => {
     opslag.set(
       'pokernight.preferences',
-      JSON.stringify({ version: 1, data: { sound: 'ja', wakeLock: false } }),
+      JSON.stringify({ version: OPSLAG_VERSIE, data: { sound: 'ja', wakeLock: false } }),
     )
     expect(loadPreferences()).toEqual({ sound: true, wakeLock: false })
   })
@@ -120,14 +120,14 @@ describe('toernooi', () => {
       [],
     ]
     for (const waarde of onzin) {
-      opslag.set('pokernight.tournament', JSON.stringify({ version: 1, data: waarde }))
+      opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE, data: waarde }))
       expect(loadTournament(), JSON.stringify(waarde)).toBeNull()
     }
   })
 
   it('negeert een toernooi uit een oudere versie van de app', () => {
     const t = createTournament(settings, HOUSE_RULES, 1_000_000)
-    opslag.set('pokernight.tournament', JSON.stringify({ version: 0, data: t }))
+    opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE - 1, data: t }))
     expect(loadTournament()).toBeNull()
   })
 })

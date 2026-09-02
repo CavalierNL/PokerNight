@@ -13,8 +13,6 @@ import {
   playersLeft,
   remainingMs,
 } from '../domain/tournament'
-import { calculatePayouts } from '../domain/payout'
-import { sprite } from '../sprites'
 import './TournamentScreen.css'
 
 function formatteerTijd(ms: number): string {
@@ -47,7 +45,6 @@ export function TournamentScreen() {
 
   const volgende = nextLevel(tournament)
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
-  const pot = calculatePayouts(tournament.settings.buyIn, tournament.players.length).pot
   const telAfOpTijd = tournament.settings.trigger !== 'elimination'
   const eindtijd = expectedEndAt(tournament, now)
 
@@ -70,10 +67,6 @@ export function TournamentScreen() {
         <div className="tafel__balk">
           <span>
             Level {tournament.levelIndex + 1} · {playersLeft(tournament)} spelers
-          </span>
-          <span className="tafel__pot">
-            <img src={sprite('fiche.png')} alt="" width={18} height={18} />
-            Pot € {pot}
           </span>
         </div>
 

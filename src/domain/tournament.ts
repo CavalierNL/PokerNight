@@ -5,8 +5,6 @@ export type Trigger = 'time' | 'elimination' | 'both'
 
 export type Settings = {
   playerNames: string[]
-  /** Inleg per speler in euro's. */
-  buyIn: number
   startingStack: number
   levelMinutes: number
   durationMinutes: number

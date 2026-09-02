@@ -5,7 +5,6 @@ import type { Settings } from './tournament'
 
 const basis: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost', 'Max', 'Nadia', 'Ravi'],
-  buyIn: 10,
   startingStack: 100,
   levelMinutes: 15,
   durationMinutes: 180,
@@ -28,11 +27,6 @@ describe('prepareSetup — de gebruikelijke speelwijze', () => {
   it('levert een oplopende structuur en een volle startstack', () => {
     expect(setup.structure.levels.length).toBeGreaterThan(2)
     expect(setup.distribution.stackValue).toBe(100)
-  })
-
-  it('verdeelt de hele pot', () => {
-    expect(setup.payouts.pot).toBe(60)
-    expect(setup.payouts.places.reduce((s, p) => s + p.amount, 0)).toBe(60)
   })
 })
 

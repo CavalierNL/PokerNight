@@ -17,7 +17,6 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [namenTekst, setNamenTekst] = useState(
     settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
   )
-  const [buyIn, setBuyIn] = useState(settings?.buyIn ?? 10)
   const [startingStack, setStartingStack] = useState(settings?.startingStack ?? 100)
   const [levelMinutes, setLevelMinutes] = useState(settings?.levelMinutes ?? 15)
   const [durationMinutes, setDurationMinutes] = useState(settings?.durationMinutes ?? 180)
@@ -33,7 +32,6 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
         .split('\n')
         .map((n) => n.trim())
         .filter(Boolean),
-      buyIn,
       startingStack,
       levelMinutes,
       durationMinutes,
@@ -41,11 +39,11 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
       trigger,
       chipsetId: chipset.id,
     }),
-    [namenTekst, buyIn, startingStack, levelMinutes, durationMinutes, structure, trigger, chipset],
+    [namenTekst, startingStack, levelMinutes, durationMinutes, structure, trigger, chipset],
   )
 
   const setup = useMemo(() => prepareSetup(huidigeSettings, chipset), [huidigeSettings, chipset])
-  const { structure: structuur, distribution: verdeling, payouts, warnings, canStart } = setup
+  const { structure: structuur, distribution: verdeling, warnings, canStart } = setup
 
   return (
     <div className="setup">
@@ -73,16 +71,6 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
           <label className="veld">
             <span>Namen, één per regel</span>
             <textarea rows={7} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
-          </label>
-          <label className="veld">
-            <span>Inleg per speler (€)</span>
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              value={buyIn}
-              onChange={(e) => setBuyIn(Number(e.target.value))}
-            />
           </label>
         </Panel>
 
@@ -188,19 +176,6 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
             </div>
           ))}
           <p className="uitleg">Samen {verdeling.stackValue} fiches per speler.</p>
-        </Panel>
-
-        <Panel title="Prijzenpot">
-          {payouts.places.map((uitbetaling) => (
-            <div key={uitbetaling.place}>
-              {uitbetaling.place}e plaats: € {uitbetaling.amount}
-            </div>
-          ))}
-          <p className="uitleg">
-            Samen € {payouts.pot}. De pot ligt vast zodra het toernooi begint. Er zijn geen rebuys —
-            een rebuy is opnieuw inleggen nadat je al je fiches kwijt bent, en die rekent deze app
-            niet mee.
-          </p>
         </Panel>
       </div>
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App from './App'
 import { AppStateProvider } from './state/AppState'
+import { OPSLAG_VERSIE } from './state/storage'
 import { TournamentScreen } from './screens/TournamentScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { createTournament, type Settings } from './domain/tournament'
@@ -29,7 +30,6 @@ beforeEach(() => {
 
 const settings: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost', 'Max'],
-  buyIn: 10,
   startingStack: 100,
   levelMinutes: 15,
   durationMinutes: 180,
@@ -45,7 +45,7 @@ function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = HOUSE_RULES
     chipset,
     Date.now(),
   )
-  opslag.set('pokernight.tournament', JSON.stringify({ version: 1, data: core }))
+  opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE, data: core }))
 }
 
 describe('App', () => {
@@ -55,11 +55,10 @@ describe('App', () => {
     expect(html).toContain('Start het toernooi')
   })
 
-  it('toont de blindstructuur, de fiches en de prijzenpot', () => {
+  it('toont de blindstructuur en de fiches', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('Blindstructuur')
     expect(html).toContain('Fiches per speler')
-    expect(html).toContain('Prijzenpot')
   })
 
   it('vraagt om te hervatten als er een toernooi in de opslag staat', () => {
@@ -72,7 +71,10 @@ describe('App', () => {
   it('valt terug op de setup bij een onbruikbaar opgeslagen toernooi', () => {
     // Een oud opslagformaat crashte het tafelscherm, en omdat het record bleef
     // staan gaf elke volgende refresh opnieuw een wit scherm.
-    opslag.set('pokernight.tournament', JSON.stringify({ version: 1, data: { levels: [] } }))
+    opslag.set(
+      'pokernight.tournament',
+      JSON.stringify({ version: OPSLAG_VERSIE, data: { levels: [] } }),
+    )
     const html = renderToStaticMarkup(<App />)
     expect(html).not.toContain('Er loopt nog een toernooi')
     expect(html).toContain('Start het toernooi')
@@ -92,7 +94,6 @@ describe('tafelscherm', () => {
     expect(html).toContain('volgende 2 / 4')
     expect(html).toContain('Sam')
     expect(html).toContain('Pauze')
-    expect(html).toContain('Pot € 40')
   })
 
   it('toont wanneer het toernooi naar verwachting klaar is', () => {
@@ -133,7 +134,7 @@ function SetupMetInstellingen() {
   opslag.set(
     'pokernight.settings',
     JSON.stringify({
-      version: 1,
+      version: OPSLAG_VERSIE,
       data: { ...settings, startingStack: 2000, chipsetId: STANDARD_500.id },
     }),
   )

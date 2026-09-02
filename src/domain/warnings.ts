@@ -57,10 +57,6 @@ export function setupWarnings(
     warnings.push({ level: 'error', message: 'Vul een startstack in.' })
   }
 
-  if (settings.buyIn < 0) {
-    warnings.push({ level: 'error', message: 'De inleg kan niet negatief zijn.' })
-  }
-
   if (settings.levelMinutes <= 0) {
     warnings.push({ level: 'error', message: 'Een level moet langer dan nul minuten duren.' })
   } else if (settings.durationMinutes < settings.levelMinutes * 2) {

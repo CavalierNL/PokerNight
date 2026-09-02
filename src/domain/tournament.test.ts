@@ -18,7 +18,6 @@ const MINUUT = 60_000
 
 const basis: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost', 'Max'],
-  buyIn: 10,
   startingStack: 100,
   levelMinutes: 15,
   durationMinutes: 120,

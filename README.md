@@ -1,8 +1,8 @@
 # PokerNight
 
-Tooling voor een pokeravond met vrienden: blinds timer, blindstructuur, fiches
-verdelen en de prijzenpot verdelen. Eén scherm midden op tafel, verder niets
-nodig — geen backend, geen account, werkt offline.
+Tooling voor een pokeravond met vrienden: blinds timer, blindstructuur en fiches
+verdelen. Eén scherm midden op tafel, verder niets nodig — geen backend, geen
+account, werkt offline. Er komt geen geld aan te pas: geen inleg, geen pot.
 
 ## Wat het doet
 
@@ -16,8 +16,6 @@ nodig — geen backend, geen account, werkt offline.
   is 1" werkt gewoon. De app rekent uit wat iedereen bij aanvang krijgt en
   waarschuwt als de doos te klein is.
 - **Color-up** — meldt op welk level de kleinste kleur uit het spel mag.
-- **Prijzenpot** — verdeling naar groepsgrootte, in hele euro's, altijd exact de
-  pot.
 - **Aan tafel** — pauzeknop, ongedaan maken, gemiddelde stack in big blinds,
   hoe laat je naar verwachting klaar bent, geluid bij een blindverhoging, en het
   scherm blijft aan.

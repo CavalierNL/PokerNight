@@ -36,6 +36,13 @@ function verzamelProblemen(page: Page): string[] {
   return problemen
 }
 
+/** Faalt als de afbeelding er niet is of niet gedecodeerd kon worden. */
+async function verwachtGeladenAfbeelding(page: Page, bestand: string) {
+  const afbeelding = page.locator(`img[src$="${bestand}"]`).first()
+  await expect(afbeelding).toBeVisible()
+  expect(await afbeelding.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+}
+
 // Serieel: slaat de site nog de vorige versie op, dan zeggen de tests daarna
 // niets zinnigs meer en kunnen ze beter overgeslagen worden.
 test.describe.serial('de gepubliceerde site', () => {
@@ -65,6 +72,10 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page).toHaveTitle('PokerNight')
     await expect(page.getByRole('heading', { name: 'PokerNight' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Start het toernooi' })).toBeVisible()
+    // De sprite komt via BASE_URL uit TypeScript; Vite herschrijft dat pad niet,
+    // dus alleen zo'n plaatje legt een base-fout in de bundel bloot.
+    // naturalWidth bewijst dat het ook echt gedecodeerd is.
+    await verwachtGeladenAfbeelding(page, 'kaartrug.png')
     // De blinds komen uit de rekenkern; cijfers bewijzen dat die echt gedraaid
     // heeft en niet alleen de tabelopmaak is gerenderd.
     await expect(page.locator('tbody tr').first()).toContainText(/\d+\s*\/\s*\d+/)
@@ -72,19 +83,17 @@ test.describe.serial('de gepubliceerde site', () => {
     expect(problemen).toEqual([])
   })
 
-  test('start een toernooi en laadt daarbij de fiche-sprite', async ({ page }) => {
+  test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 
     await page.goto('./')
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
-    // Het toernooischerm is een tweede laadpad: een eigen sprite plus de
-    // opslag in localStorage, die geen van beide in het setupscherm langskomen.
-    // naturalWidth bewijst dat de afbeelding ook echt gedecodeerd is en niet
-    // als kapot element blijft staan.
-    const fiche = page.locator('img[src$="fiche.png"]').first()
-    await expect(fiche).toBeVisible()
-    expect(await fiche.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+    // Het toernooischerm is een tweede laadpad met een eigen render en een
+    // schrijfactie naar localStorage, die geen van beide in het setupscherm
+    // langskomen. De klok telt af, dus alleen de vorm is te vastleggen.
+    await expect(page.locator('.tafel__klok')).toHaveText(/^\d+:\d{2}$/)
+    await expect(page.locator('.tafel__blinds')).toHaveText(/^\d+ \/ \d+$/)
 
     expect(problemen).toEqual([])
   })

@@ -13,7 +13,7 @@ const SLEUTELS = {
  * ander versienummer wordt genegeerd in plaats van als geldig aangenomen — anders
  * krijgt iedereen met een lopend toernooi na een deploy een gecrashte app.
  */
-const OPSLAG_VERSIE = 1
+export const OPSLAG_VERSIE = 2
 
 export type Preferences = { sound: boolean; wakeLock: boolean }
 

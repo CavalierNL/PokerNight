@@ -1,14 +1,12 @@
 import { buildStructure, type Structure } from './blinds'
 import type { Chipset } from './chipset'
 import { distributeChips, type Distribution } from './distribution'
-import { calculatePayouts, type Payouts } from './payout'
 import { setupWarnings, type Warning } from './warnings'
 import type { Settings } from './tournament'
 
 export type Setup = {
   structure: Structure
   distribution: Distribution
-  payouts: Payouts
   warnings: Warning[]
   /** Of de startknop ingedrukt mag worden. */
   canStart: boolean
@@ -16,7 +14,7 @@ export type Setup = {
 
 /**
  * De hele setup-berekening in één pure functie: van instellingen naar
- * blindstructuur, chipverdeling, prijzenpot en meldingen.
+ * blindstructuur, chipverdeling en meldingen.
  *
  * Deze keten stond eerst in het setupscherm zelf. Daar was hij alleen via
  * renderen te bereiken, terwijl juist de samenhang tussen de vier modules de
@@ -46,13 +44,11 @@ export function prepareSetup(settings: Settings, chipset: Chipset): Setup {
     structure.startDenomination,
   )
 
-  const payouts = calculatePayouts(settings.buyIn, Math.max(settings.playerNames.length, 1))
   const warnings = setupWarnings(settings, structure, distribution)
 
   return {
     structure,
     distribution,
-    payouts,
     warnings,
     canStart: !warnings.some((w) => w.level === 'error'),
   }
