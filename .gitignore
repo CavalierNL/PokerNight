@@ -3,3 +3,5 @@ dist/
 .superpowers/
 .DS_Store
 *.tsbuildinfo
+playwright-report/
+test-results/
