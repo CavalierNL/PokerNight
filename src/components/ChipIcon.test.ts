@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { chipFontSize } from './ChipIcon'
-import { HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
+import { chipFontSize, chipTextColor } from './ChipIcon'
+import { GROTE_SET, HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
 
 describe('chipFontSize', () => {
   it('krimpt naarmate de waardes langer worden', () => {
@@ -32,5 +32,38 @@ describe('longestValueDigits', () => {
       chips: [...STANDARD_500.chips, { name: 'oranje', color: '#e67e22', value: 10000, count: 20 }],
     }
     expect(longestValueDigits(groot)).toBe(5)
+  })
+})
+
+describe('chipTextColor', () => {
+  it('zet donkere tekst op een lichte fiche en lichte tekst op een donkere', () => {
+    expect(chipTextColor('#f2efe6')).toContain('0,0,0')
+    expect(chipTextColor('#e9c31f')).toContain('0,0,0')
+    expect(chipTextColor('#22262b')).toContain('255,255,255')
+    expect(chipTextColor('#7a4a26')).toContain('255,255,255')
+    expect(chipTextColor('#6b4fa0')).toContain('255,255,255')
+  })
+
+  it('valt terug op donkere tekst bij een onbruikbare kleur', () => {
+    expect(chipTextColor('rood')).toContain('0,0,0')
+    expect(chipTextColor('#fff')).toContain('0,0,0')
+  })
+})
+
+describe('de grote set', () => {
+  it('telt 500 fiches', () => {
+    expect(GROTE_SET.chips.reduce((som, c) => som + c.count, 0)).toBe(500)
+  })
+
+  it('loopt van 25 tot 10.000 en dwingt dus de kleinste cijfers af', () => {
+    const waardes = GROTE_SET.chips.map((c) => c.value)
+    expect(waardes).toEqual([25, 50, 100, 500, 1000, 5000, 10000])
+    expect(longestValueDigits(GROTE_SET)).toBe(5)
+  })
+
+  it('geeft elke fiche in deze doos leesbare tekst', () => {
+    for (const chip of GROTE_SET.chips) {
+      expect(chipTextColor(chip.color), chip.name).toMatch(/rgba\(/)
+    }
   })
 })

@@ -11,6 +11,22 @@ export function chipFontSize(digits: number): number {
 }
 
 /**
+ * De tekstkleur op een fiche: donker op een lichte kleur, licht op een donkere.
+ * Zonder deze keuze verdwijnt de waarde op zwart, paars of bruin — precies de
+ * kleuren die in een doos de hoogste bedragen dragen.
+ *
+ * De drempel ligt op 0,6 in plaats van 0,5: bij een middentint leest lichte
+ * tekst prettiger dan donkere.
+ */
+export function chipTextColor(hex: string): string {
+  const schoon = hex.replace('#', '')
+  if (schoon.length !== 6) return 'rgba(0,0,0,.7)'
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(schoon.slice(i, i + 2), 16))
+  const helderheid = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return helderheid > 0.6 ? 'rgba(0,0,0,.75)' : 'rgba(255,255,255,.92)'
+}
+
+/**
  * Een fiche als SVG. Bewust geen sprite: de kleuren komen uit de chipset die de
  * gebruiker zelf instelt, en een vaste afbeelding kan die niet volgen.
  */
@@ -27,6 +43,7 @@ export function ChipIcon({
   digits?: number
 }) {
   const lettergrootte = chipFontSize(digits ?? String(value ?? '').length)
+  const tekstkleur = chipTextColor(color)
   return (
     <svg
       width={size}
@@ -52,7 +69,7 @@ export function ChipIcon({
           textAnchor="middle"
           fontSize={lettergrootte}
           fontWeight="700"
-          fill="rgba(0,0,0,.7)"
+          fill={tekstkleur}
         >
           {value}
         </text>

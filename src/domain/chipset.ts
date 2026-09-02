@@ -79,4 +79,20 @@ export const STANDARD_500: Chipset = {
   ],
 }
 
-export const PRESETS: Chipset[] = [HOUSE_RULES, STANDARD_500]
+/** De doos die hier aan tafel ligt: 500 fiches, van 25 tot 10.000. */
+export const GROTE_SET: Chipset = {
+  id: 'grote-set',
+  name: 'Mijn set (25 tot 10.000)',
+  colorUp: true,
+  chips: [
+    { name: 'groen', color: '#2e8b57', value: 25, count: 75 },
+    { name: 'blauw', color: '#2e6da4', value: 50, count: 75 },
+    { name: 'zwart', color: '#22262b', value: 100, count: 125 },
+    { name: 'paars', color: '#6b4fa0', value: 500, count: 75 },
+    { name: 'geel', color: '#e9c31f', value: 1000, count: 75 },
+    { name: 'roze', color: '#d96a9a', value: 5000, count: 50 },
+    { name: 'bruin', color: '#7a4a26', value: 10000, count: 25 },
+  ],
+}
+
+export const PRESETS: Chipset[] = [HOUSE_RULES, STANDARD_500, GROTE_SET]
