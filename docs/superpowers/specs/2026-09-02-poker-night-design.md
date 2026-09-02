@@ -26,7 +26,7 @@ bediend door de organisator.
 
 In scope: blinds timer, blindstructuur-calculator, chipsetbeheer, chipverdeling,
 color-up-signalering, prijzenpotverdeling, live spelersbeheer (in/uit), gemiddelde
-stack, pauzes, wake lock, volgende-blind-preview, geluidssignaal bij verhoging.
+stack, pauzeknop, wake lock, volgende-blind-preview, geluidssignaal bij verhoging.
 
 Niet in scope: individuele chipstacks per speler, rebuys/add-ons als actieve
 functie, meerdere apparaten, opslag buiten het apparaat, historie over meerdere
@@ -103,7 +103,7 @@ codepaden.
 
 **Berekend.** Vloeiende groei met een vast eindpunt.
 
-- `levels = floor(duur / levellengte) − aantal pauzes`
+- `levels = floor(duur / levellengte)`
 - `startBB = startstack / 100` (honderd big blinds diep beginnen)
 - `eindBB = (spelers × startstack / 3) / 10` (bij drie spelers over is de
   gemiddelde stack ongeveer 10 BB)
@@ -122,12 +122,18 @@ codepaden.
 
 De gebruikelijke speelwijze is *verdubbelend + beide*.
 
-### Pauzes
+### Pauzeren
 
-Eén pauze halverwege het geplande aantal levels, standaard tien minuten, uit te
-zetten in de setup. Een pauze is geen level: de blinds staan stil en de pauze
-heeft een eigen aftelling. In de formule voor het aantal levels hierboven telt hij
-mee als verloren speeltijd.
+Pauzeren is een knop op het tafelscherm, geen ingepland moment. Eén druk bevriest
+de leveltimer; de blinds staan stil en het scherm toont dat het toernooi
+gepauzeerd is. Nog een druk laat de klok verder lopen waar hij gebleven was.
+
+Tijdens een pauze verhoogt ook een eliminatie de blinds niet — je pauzeert nu
+eenmaal omdat er niet gespeeld wordt.
+
+De geschatte eindtijd die de setup toont is daarmee een schatting bij ononderbroken
+spel; elke pauze schuift die op. Het tafelscherm rekent de verwachte eindtijd
+tijdens het spelen mee met de tijd die je gepauzeerd hebt.
 
 Bij verdubbelend met de trigger *beide* loopt de big blind hard op. De setup toont
 daarom vóór de start altijd de volledige structuur met geschatte tijdlijn, plus
@@ -190,7 +196,9 @@ en eventuele waarschuwingen vóór de start.
 de blinds direct daaronder, daaronder in kleine letters de volgende blinds en de
 gemiddelde stack in big blinds. Bovenaan een dunne balk met level, aantal spelers
 en pot. Onderaan een strook met de spelers; één tik haalt iemand eruit, doorgestreept
-betekent uitgeschakeld.
+betekent uitgeschakeld. Een pauzeknop rechtsonder, groot genoeg om zonder kijken te
+raken; tijdens een pauze dimt het scherm en staat er onmiskenbaar dat er gepauzeerd
+is.
 
 **Instellingen** — chipset-editor met presets, geluid aan/uit, wake lock aan/uit.
 
@@ -214,9 +222,11 @@ niemand kijkt naar het scherm.
 
 ## Robuustheid
 
-**De timer telt niet op per tick.** De resterende tijd wordt afgeleid uit een
-opgeslagen eindtijdstip en `Date.now()`. Een refresh, een tabwissel of een laptop
-die even in slaap valt verstoort de klok daardoor niet. De Screen Wake Lock API
+**De timer telt niet op per tick.** De klok heeft twee toestanden: *lopend*, met
+een opgeslagen eindtijdstip waaruit de resterende tijd volgt uit `Date.now()`, en
+*gepauzeerd*, met de resterende tijd bevroren opgeslagen. Hervatten berekent een
+nieuw eindtijdstip. Een refresh, een tabwissel of een laptop die even in slaap
+valt verstoort de klok daardoor niet — ook niet als hij gepauzeerd was. De Screen Wake Lock API
 houdt het scherm daarnaast aan, met terugval op niets als de browser dat niet
 ondersteunt.
 
