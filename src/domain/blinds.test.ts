@@ -110,6 +110,7 @@ describe('buildStructure — betaalbaarheid', () => {
     const eigenaardig = {
       id: 'eigenaardig',
       name: 'Doos met vreemde waardes',
+      colorUp: true,
       chips: [
         { name: 'a', color: '#111', value: 3, count: 200 },
         { name: 'b', color: '#222', value: 20, count: 200 },
@@ -140,6 +141,7 @@ describe('buildStructure — betaalbaarheid', () => {
     const vreemd = {
       id: 'vreemd',
       name: 'Vreemde waardes',
+      colorUp: true,
       chips: [
         { name: 'a', color: '#111', value: 1, count: 200 },
         { name: 'b', color: '#222', value: 5, count: 200 },
@@ -192,8 +194,12 @@ describe('buildStructure — handmatig', () => {
 })
 
 describe('color-up', () => {
+  // De huisregel heeft color-up uit staan; voor deze regels is een doos nodig die
+  // hem aan heeft. Verder dezelfde waardes, zodat 1 naar 5 te volgen blijft.
+  const metColorUp = { ...HOUSE_RULES, colorUp: true }
+
   it('haalt de kleinste denominatie eruit zodra de kleine blind tien keer zo groot is', () => {
-    const structuur = buildStructure(huisregel, HOUSE_RULES)
+    const structuur = buildStructure(huisregel, metColorUp)
     const eerste = structuur.colorUps[0]
     expect(eerste).toBeDefined()
     expect(eerste.retiredValue).toBe(1)
@@ -202,7 +208,7 @@ describe('color-up', () => {
   })
 
   it('noemt de kleuren die uit het spel gaan', () => {
-    const structuur = buildStructure(huisregel, HOUSE_RULES)
+    const structuur = buildStructure(huisregel, metColorUp)
     expect(structuur.colorUps[0].retiredColors).toEqual(
       expect.arrayContaining(['wit', 'rood', 'blauw']),
     )
@@ -225,5 +231,69 @@ describe('color-up', () => {
     const groot = buildStructure({ ...huisregel, startingStack: 10_000 }, STANDARD_500)
     expect(groot.colorUps[0]?.levelIndex).toBe(0)
     expect(groot.startDenomination).toBeGreaterThan(1)
+  })
+})
+
+describe('buildStructure — de 1-2-5 ladder', () => {
+  const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, HOUSE_RULES)
+
+  it('geeft de reeks die je met fiches van 1 en 5 kunt leggen', () => {
+    const paren = structuur.levels.slice(0, 7).map((l) => `${l.smallBlind}/${l.bigBlind}`)
+    expect(paren).toEqual(['1/2', '2/4', '5/10', '10/20', '20/40', '50/100', '100/200'])
+  })
+
+  it('houdt de big blind exact het dubbele van de kleine blind', () => {
+    for (const level of structuur.levels) {
+      expect(level.bigBlind).toBe(level.smallBlind * 2)
+    }
+  })
+
+  it('schaalt mee met de kleinste fichewaarde', () => {
+    const grofeDoos = {
+      id: 'grof',
+      name: 'Grof',
+      colorUp: true,
+      chips: [
+        { name: 'groen', color: '#0f0', value: 25, count: 100 },
+        { name: 'zwart', color: '#000', value: 100, count: 100 },
+        { name: 'paars', color: '#a0f', value: 500, count: 50 },
+      ],
+    }
+    const grof = buildStructure(
+      { ...huisregel, kind: 'ladder', startingStack: 2500 },
+      grofeDoos,
+    )
+    expect(grof.levels.slice(0, 4).map((l) => `${l.smallBlind}/${l.bigBlind}`)).toEqual([
+      '25/50',
+      '50/100',
+      '125/250',
+      '250/500',
+    ])
+  })
+
+  it('loopt altijd omhoog', () => {
+    for (const [i, level] of structuur.levels.entries()) {
+      if (i === 0) continue
+      expect(level.bigBlind).toBeGreaterThan(structuur.levels[i - 1].bigBlind)
+    }
+  })
+})
+
+describe('color-up per doos', () => {
+  it('doet geen color-up bij een doos die dat uit heeft staan', () => {
+    const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, HOUSE_RULES)
+    expect(HOUSE_RULES.colorUp).toBe(false)
+    expect(structuur.colorUps).toEqual([])
+  })
+
+  it('houdt de kleinste fiche in het spel als er geen color-up is', () => {
+    const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, HOUSE_RULES)
+    expect(structuur.startDenomination).toBe(denominations(HOUSE_RULES)[0])
+  })
+
+  it('doet wel een color-up bij een doos die dat aan heeft staan', () => {
+    const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, STANDARD_500)
+    expect(STANDARD_500.colorUp).toBe(true)
+    expect(structuur.colorUps.length).toBeGreaterThan(0)
   })
 })

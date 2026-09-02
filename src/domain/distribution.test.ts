@@ -6,6 +6,7 @@ import { HOUSE_RULES, STANDARD_500, type Chipset } from './chipset'
 const kleineDoos: Chipset = {
   id: 'klein',
   name: 'Kleine doos',
+  colorUp: true,
   chips: [
     { name: 'wit', color: '#fff', value: 1, count: 40 },
     { name: 'groen', color: '#0a0', value: 5, count: 20 },
@@ -58,6 +59,7 @@ describe('distributeChips — invariant', () => {
     const twee: Chipset = {
       id: 'twee',
       name: 'Twee kleuren',
+      colorUp: true,
       chips: [
         { name: 'a', color: '#111', value: 1, count: 5 },
         { name: 'b', color: '#222', value: 1, count: 5 },
@@ -84,7 +86,7 @@ describe('distributeChips — tekorten', () => {
   })
 
   it('meldt een lege chipset', () => {
-    const leeg: Chipset = { id: 'leeg', name: 'Leeg', chips: [] }
+    const leeg: Chipset = { id: 'leeg', name: 'Leeg', colorUp: true, chips: [] }
     expect(distributeChips(leeg, 4, 100, 1, 1).shortages).toEqual([{ kind: 'geenFiches' }])
   })
 })

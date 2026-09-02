@@ -4,12 +4,15 @@ import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { useAppState } from '../state/AppState'
 import { prepareSetup } from '../domain/setup'
+import { chipsWithValue, longestValueDigits } from '../domain/chipset'
 import type { StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import { sprite } from '../sprites'
 import './SetupScreen.css'
 
-const STANDAARD_NAMEN = 'Sam\nIlse\nJoost\nMax\nNadia\nRavi'
+// Acht genummerde spelers: een naam wegstrepen gaat sneller dan er een
+// bijtypen. De afsluitende newline zet de cursor op een lege regel klaar.
+const STANDAARD_NAMEN = Array.from({ length: 8 }, (_, i) => `Speler ${i + 1}`).join('\n') + '\n'
 
 export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { chipsets, settings, start, storageOk } = useAppState()
@@ -20,11 +23,13 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [startingStack, setStartingStack] = useState(settings?.startingStack ?? 100)
   const [levelMinutes, setLevelMinutes] = useState(settings?.levelMinutes ?? 15)
   const [durationMinutes, setDurationMinutes] = useState(settings?.durationMinutes ?? 180)
-  const [structure, setStructure] = useState<StructureKind>(settings?.structure ?? 'doubling')
+  const [structure, setStructure] = useState<StructureKind>(settings?.structure ?? 'ladder')
   const [trigger, setTrigger] = useState<Trigger>(settings?.trigger ?? 'both')
   const [chipsetId, setChipsetId] = useState(settings?.chipsetId ?? chipsets[0].id)
 
   const chipset = chipsets.find((c) => c.id === chipsetId) ?? chipsets[0]
+  // Eén lettergrootte voor alle fiches van deze doos.
+  const cijfers = longestValueDigits(chipset)
 
   const huidigeSettings: Settings = useMemo(
     () => ({
@@ -70,7 +75,7 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
         <Panel title="Spelers">
           <label className="veld">
             <span>Namen, één per regel</span>
-            <textarea rows={7} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
+            <textarea rows={10} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
           </label>
         </Panel>
 
@@ -111,6 +116,7 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
               value={structure}
               onChange={(e) => setStructure(e.target.value as StructureKind)}
             >
+              <option value="ladder">1-2-5, makkelijk te leggen</option>
               <option value="doubling">Verdubbelen per level</option>
               <option value="calculated">Berekend, vloeiend oplopend</option>
             </select>
@@ -158,9 +164,15 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
           </tbody>
         </table>
         {structuur.colorUps.map((colorUp) => (
-          <p key={colorUp.levelIndex} className="uitleg">
-            Vanaf level {colorUp.levelIndex + 1}: {colorUp.retiredColors.join(', ')} uit het spel,
-            wisselen naar {colorUp.nextValue}.
+          <p key={colorUp.levelIndex} className="uitleg uitleg--fiches">
+            Vanaf level {colorUp.levelIndex + 1}:
+            {chipsWithValue(chipset, colorUp.retiredValue).map((chip) => (
+              <ChipIcon key={chip.name} color={chip.color} value={chip.value} size={22} digits={cijfers} />
+            ))}
+            uit het spel, wisselen naar
+            {chipsWithValue(chipset, colorUp.nextValue).map((chip) => (
+              <ChipIcon key={chip.name} color={chip.color} value={chip.value} size={22} digits={cijfers} />
+            ))}
           </p>
         ))}
       </Panel>
@@ -169,10 +181,8 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
         <Panel title="Fiches per speler">
           {verdeling.perPlayer.map((allocatie) => (
             <div key={allocatie.name} className="fiche-regel">
-              <ChipIcon color={allocatie.color} value={allocatie.value} size={22} />
-              <span>
-                {allocatie.count}× {allocatie.name}
-              </span>
+              <span className="fiche-regel__aantal">{allocatie.count}×</span>
+              <ChipIcon color={allocatie.color} value={allocatie.value} digits={cijfers} />
             </div>
           ))}
           <p className="uitleg">Samen {verdeling.stackValue} fiches per speler.</p>

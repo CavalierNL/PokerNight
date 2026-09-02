@@ -6,16 +6,18 @@ account, werkt offline. Er komt geen geld aan te pas: geen inleg, geen pot.
 
 ## Wat het doet
 
-- **Blindstructuur** — verdubbelend of vloeiend berekend, afgerond op bedragen
-  die je met jouw fiches kunt leggen. De big blind is altijd exact het dubbele
-  van de kleine blind.
+- **Blindstructuur** — een 1-2-5 reeks (1/2, 2/4, 5/10, 10/20 …), verdubbelend,
+  of vloeiend berekend. Altijd afgerond op bedragen die je met jouw fiches kunt
+  leggen; de big blind is exact het dubbele van de kleine blind. De 1-2-5 reeks
+  schaalt mee met de kleinste fichewaarde in je doos.
 - **Twee manieren om levels op te schuiven** — op de klok, als er iemand uit gaat,
   of allebei. Die laatste is de huisregel.
 - **Chipsets** — vrij in te stellen: kleur, waarde, aantal in de doos. Meerdere
   kleuren mogen dezelfde waarde hebben, dus het systeem "één kleur is 5, de rest
   is 1" werkt gewoon. De app rekent uit wat iedereen bij aanvang krijgt en
   waarschuwt als de doos te klein is.
-- **Color-up** — meldt op welk level de kleinste kleur uit het spel mag.
+- **Color-up** — meldt op welk level de kleinste kleur uit het spel mag. Per
+  doos uit te zetten: bij een set met maar twee waardes levert het niets op.
 - **Aan tafel** — pauzeknop, ongedaan maken, gemiddelde stack in big blinds,
   hoe laat je naar verwachting klaar bent, geluid bij een blindverhoging, en het
   scherm blijft aan.

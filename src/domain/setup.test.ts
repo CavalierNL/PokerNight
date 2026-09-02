@@ -76,6 +76,7 @@ describe('prepareSetup — ongeldige invoer wordt vóór de start gevangen', () 
     const stuk = {
       id: 'stuk',
       name: 'Stuk',
+      colorUp: true,
       chips: [{ name: 'wit', color: '#fff', value: 0, count: 100 }],
     }
     const setup = prepareSetup(basis, stuk)

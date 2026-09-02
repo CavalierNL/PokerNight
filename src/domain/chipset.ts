@@ -13,6 +13,13 @@ export type Chipset = {
   id: string
   name: string
   chips: Chip[]
+  /**
+   * Of de kleinste kleur onderweg uit het spel gehaald mag worden. Bij een doos
+   * met maar twee waardes, zoals de huisregel, levert dat niets op: je speelt
+   * daarna met één soort fiche en kunt niets meer wisselen. Per doos in te
+   * stellen, want of het de moeite is hangt af van wat er in de doos zit.
+   */
+  colorUp: boolean
 }
 
 /**
@@ -35,10 +42,21 @@ export function totalCountForValue(chipset: Chipset, value: number): number {
   return chipsWithValue(chipset, value).reduce((som, c) => som + c.count, 0)
 }
 
+/**
+ * Het aantal cijfers van de langste fichewaarde in de doos. Bepaalt de
+ * lettergrootte op het fiche: die geldt voor de hele doos, niet per fiche, zodat
+ * de fiches van één set naast elkaar dezelfde maat cijfers dragen.
+ */
+export function longestValueDigits(chipset: Chipset): number {
+  const langste = Math.max(1, ...chipset.chips.map((c) => String(Math.max(0, c.value)).length))
+  return langste
+}
+
 /** Huisregel: één kleur is 5 waard, alle andere kleuren zijn 1 waard. */
 export const HOUSE_RULES: Chipset = {
   id: 'huisregel',
   name: 'Huisregel (5 en 1)',
+  colorUp: false,
   chips: [
     { name: 'wit', color: '#f2efe6', value: 1, count: 150 },
     { name: 'rood', color: '#c0392b', value: 1, count: 100 },
@@ -51,6 +69,7 @@ export const HOUSE_RULES: Chipset = {
 export const STANDARD_500: Chipset = {
   id: 'standaard-500',
   name: 'Standaardset (500 fiches)',
+  colorUp: true,
   chips: [
     { name: 'wit', color: '#f2efe6', value: 1, count: 150 },
     { name: 'rood', color: '#c0392b', value: 5, count: 150 },

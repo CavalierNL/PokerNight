@@ -61,6 +61,25 @@ describe('App', () => {
     expect(html).toContain('Fiches per speler')
   })
 
+  it('begint met acht genummerde spelers', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('Speler 1')
+    expect(html).toContain('Speler 8')
+    expect(html).not.toContain('Speler 9')
+  })
+
+  it('begint op de 1-2-5 reeks', () => {
+    const html = renderToStaticMarkup(<App />)
+    for (const paar of ['1 / 2', '2 / 4', '5 / 10', '10 / 20']) {
+      expect(html, paar).toContain(paar)
+    }
+  })
+
+  it('doet bij de huisregel geen color-up', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).not.toContain('uit het spel')
+  })
+
   it('vraagt om te hervatten als er een toernooi in de opslag staat', () => {
     bewaarToernooi()
     const html = renderToStaticMarkup(<App />)
@@ -151,5 +170,33 @@ describe('instellingen', () => {
     expect(html).toContain('Chipset')
     expect(html).toContain('Geluid bij een blindverhoging')
     expect(html).toContain('Scherm aan houden tijdens het toernooi')
+  })
+
+  it('benoemt welk getal de waarde is en welk het aantal', () => {
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SettingsScreen onClose={() => {}} />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('Waarde per fiche')
+    expect(html).toContain('Aantal in de doos')
+  })
+
+  it('heeft een knop om de blindtoon te beluisteren', () => {
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SettingsScreen onClose={() => {}} />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('Beluister')
+  })
+
+  it('laat de color-up per doos schakelen', () => {
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SettingsScreen onClose={() => {}} />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('Color-up gebruiken')
   })
 })

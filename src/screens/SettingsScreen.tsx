@@ -3,13 +3,15 @@ import { Button } from '../components/Button'
 import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { useAppState } from '../state/AppState'
-import { PRESETS, type Chipset } from '../domain/chipset'
+import { longestValueDigits, PRESETS, type Chipset } from '../domain/chipset'
+import { speelBlindToon } from '../audio/blindToon'
 import './SetupScreen.css'
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const { chipsets, setChipsets, preferences, setPreferences } = useAppState()
   const [geselecteerd, setGeselecteerd] = useState(chipsets[0].id)
   const chipset = chipsets.find((c) => c.id === geselecteerd) ?? chipsets[0]
+  const cijfers = longestValueDigits(chipset)
 
   const vervang = (nieuw: Chipset) =>
     setChipsets(chipsets.map((c) => (c.id === chipset.id ? nieuw : c)))
@@ -18,12 +20,13 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     // Een leeggemaakt getalveld geeft Number('') === 0. Een fichewaarde van nul
     // laat de hele blindberekening op NaN uitkomen, dus die klemmen we af.
     const getal = (ondergrens: number) => Math.max(ondergrens, Math.floor(Number(waarde) || 0))
-    const nieuweWaarde =
-      veld === 'value' ? getal(1) : veld === 'count' ? getal(0) : waarde
+    const nieuweWaarde = veld === 'value' ? getal(1) : veld === 'count' ? getal(0) : waarde
 
     vervang({
       ...chipset,
-      chips: chipset.chips.map((chip, i) => (i === index ? { ...chip, [veld]: nieuweWaarde } : chip)),
+      chips: chipset.chips.map((chip, i) =>
+        i === index ? { ...chip, [veld]: nieuweWaarde } : chip,
+      ),
     })
   }
 
@@ -53,43 +56,64 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
         </label>
 
         {chipset.chips.map((chip, index) => (
-          <div key={index} className="chip-editor">
-            <ChipIcon color={chip.color} value={chip.value} size={26} />
-            <input
-              type="text"
-              aria-label="kleurnaam"
-              value={chip.name}
-              onChange={(e) => wijzig(index, 'name', e.target.value)}
-            />
-            <input
-              type="color"
-              aria-label="kleur"
-              value={chip.color}
-              onChange={(e) => wijzig(index, 'color', e.target.value)}
-            />
-            <input
-              type="number"
-              aria-label="waarde"
-              min={1}
-              value={chip.value}
-              onChange={(e) => wijzig(index, 'value', e.target.value)}
-            />
-            <input
-              type="number"
-              aria-label="aantal in de doos"
-              min={0}
-              value={chip.count}
-              onChange={(e) => wijzig(index, 'count', e.target.value)}
-            />
+          <div key={index} className="chip-rij">
+            <div className="chip-rij__fiche">
+              <ChipIcon color={chip.color} value={chip.value} digits={cijfers} />
+            </div>
+            <label className="veld chip-rij__naam">
+              <span>Kleurnaam</span>
+              <input
+                type="text"
+                value={chip.name}
+                onChange={(e) => wijzig(index, 'name', e.target.value)}
+              />
+            </label>
+            <label className="veld chip-rij__kleur">
+              <span>Kleur</span>
+              <input
+                type="color"
+                value={chip.color}
+                onChange={(e) => wijzig(index, 'color', e.target.value)}
+              />
+            </label>
+            <label className="veld chip-rij__getal">
+              <span>Waarde per fiche</span>
+              <input
+                type="number"
+                min={1}
+                value={chip.value}
+                onChange={(e) => wijzig(index, 'value', e.target.value)}
+              />
+            </label>
+            <label className="veld chip-rij__getal">
+              <span>Aantal in de doos</span>
+              <input
+                type="number"
+                min={0}
+                value={chip.count}
+                onChange={(e) => wijzig(index, 'count', e.target.value)}
+              />
+            </label>
             <Button variant="danger" onClick={() => verwijder(index)}>
               Weg
             </Button>
           </div>
         ))}
 
-        <p className="uitleg">Kleur, waarde per fiche, en hoeveel er van in de doos zitten.</p>
+        <label className="veld veld--schakelaar">
+          <input
+            type="checkbox"
+            checked={chipset.colorUp}
+            onChange={(e) => vervang({ ...chipset, colorUp: e.target.checked })}
+          />
+          <span>Color-up gebruiken: de kleinste kleur mag onderweg uit het spel</span>
+        </label>
+        <p className="uitleg">
+          Bij een doos met maar twee waardes, zoals de huisregel, levert dat niets op — je speelt
+          daarna met één soort fiche en kunt niets meer wisselen.
+        </p>
 
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="knoppenrij">
           <Button variant="ghost" onClick={voegToe}>
             Kleur toevoegen
           </Button>
@@ -100,14 +124,20 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
       </Panel>
 
       <Panel title="Aan tafel">
-        <label className="veld veld--schakelaar">
-          <input
-            type="checkbox"
-            checked={preferences.sound}
-            onChange={(e) => setPreferences({ ...preferences, sound: e.target.checked })}
-          />
-          <span>Geluid bij een blindverhoging</span>
-        </label>
+        <div className="schakelaar-rij">
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
+              checked={preferences.sound}
+              onChange={(e) => setPreferences({ ...preferences, sound: e.target.checked })}
+            />
+            <span>Geluid bij een blindverhoging</span>
+          </label>
+          {/* Ook bruikbaar met het vinkje uit: juist dan wil je horen wat je aanzet. */}
+          <Button variant="ghost" onClick={speelBlindToon}>
+            Beluister
+          </Button>
+        </div>
         <label className="veld veld--schakelaar">
           <input
             type="checkbox"

@@ -43,7 +43,12 @@ describe('chipsets', () => {
 
   it('bewaart en leest chipsets terug', () => {
     const eigen = [
-      { id: 'x', name: 'Mijn doos', chips: [{ name: 'wit', color: '#fff', value: 1, count: 10 }] },
+      {
+        id: 'x',
+        name: 'Mijn doos',
+        colorUp: true,
+        chips: [{ name: 'wit', color: '#fff', value: 1, count: 10 }],
+      },
     ]
     saveChipsets(eigen)
     expect(loadChipsets()).toEqual(eigen)

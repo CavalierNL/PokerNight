@@ -1,7 +1,7 @@
 import { chipsWithValue, denominations, type Chipset } from './chipset'
 import { roundToPayable, smallBlindFor } from './amounts'
 
-export type StructureKind = 'calculated' | 'doubling' | 'manual'
+export type StructureKind = 'ladder' | 'calculated' | 'doubling' | 'manual'
 
 export type BlindLevel = {
   index: number
@@ -79,6 +79,32 @@ function rawBigBlinds(input: StructureInput, smallestDenomination: number): numb
 }
 
 /**
+ * De ladder van bedragen die je aan tafel zonder rekenen kunt leggen: 1, 2, 5,
+ * 10, 20, 50, 100 … Elke stap is een veelvoud van tien met een 1, 2 of 5 ervoor.
+ */
+export function ladderRung(index: number): number {
+  const factoren = [1, 2, 5]
+  return factoren[index % 3] * 10 ** Math.floor(index / 3)
+}
+
+/**
+ * De eerstvolgende big blind op de ladder, geschaald op de fichewaarde die nu in
+ * het spel is. De big blind is `2 × fichewaarde × sport`, zodat de kleine blind
+ * exact de helft is en allebei met hele fiches te leggen zijn.
+ *
+ * Schuift de ladder mee na een color-up: de sport wordt opnieuw gezocht bij de
+ * nieuwe kleinste fichewaarde, in plaats van door te tellen op de oude.
+ */
+function ladderBigBlind(denomination: number, minimum: number, strikt: boolean): number {
+  for (let i = 0; i < 60; i += 1) {
+    const bigBlind = 2 * denomination * ladderRung(i)
+    if (strikt ? bigBlind > minimum : bigBlind >= minimum) return bigBlind
+  }
+  // Onbereikbaar bij realistische invoer: sport 59 is al 2×10^19.
+  return minimum + 2 * denomination
+}
+
+/**
  * Bouwt de structuur level voor level op. Dat moet sequentieel: afronden hangt
  * af van de kleinste actieve denominatie, en die verschuift zodra een color-up
  * plaatsvindt — wat op zijn beurt van de al berekende blinds afhangt.
@@ -95,6 +121,8 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
   let vorigeBigBlind = 0
   let startDenomination = kleinste
 
+  const start = Math.max(input.startingStack / 100, kleinste * 2)
+
   for (const ruweBb of ruw) {
     const index = levels.length
     const d = denoms[denomIndex] ?? 1
@@ -104,7 +132,10 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // fiches te betalen. Afronden op enkelvoudige fichewaardes levert paren als
     // 30/65 op.
     const ondergrens = Math.max(vorigeBigBlind, d)
-    const bigBlind = roundToPayable(Math.max(ruweBb, d * 2), d * 2, ondergrens)
+    const bigBlind =
+      input.kind === 'ladder'
+        ? ladderBigBlind(d, index === 0 ? start : vorigeBigBlind, index > 0)
+        : roundToPayable(Math.max(ruweBb, d * 2), d * 2, ondergrens)
     const smallBlind = smallBlindFor(bigBlind, d)
     levels.push({ index, smallBlind, bigBlind })
     vorigeBigBlind = bigBlind
@@ -112,7 +143,7 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // Is de kleinste kleur nog nuttig? Zodra de kleine blind tien keer die
     // waarde is, kun je hem uit het spel halen.
     const isLaatsteDenominatie = denomIndex >= denoms.length - 1
-    if (!isLaatsteDenominatie && smallBlind >= 10 * d) {
+    if (chipset.colorUp && !isLaatsteDenominatie && smallBlind >= 10 * d) {
       colorUps.push({
         levelIndex: index,
         retiredValue: d,
@@ -129,6 +160,12 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // nadert de groeifactor 1, en dan duwt de afronding elke keer een volle stap
     // omhoog — waardoor de reeks het doel met een veelvoud voorbijschiet.
     // Afkappen zodra het doel gehaald is houdt hem bij zijn eigen belofte.
+    //
+    // De ladder kapt bewust níét af. Levels boven het beslispunt worden nooit
+    // bereikt, maar afkappen zou de reeks korter maken dan de opgegeven duur
+    // zonder dat er een instelling is die dat rechttrekt — en het zou de
+    // waarschuwing over hard oplopende blinds hieronder de mond snoeren, terwijl
+    // die precies het goede verhaal vertelt.
     const genoegLevels = levels.length >= 2
     if (input.kind === 'calculated' && genoegLevels && bigBlind >= doelEind) break
   }
