@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '../components/Button'
 import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
-import { kiesHand, PlayingCard } from '../components/PlayingCard'
+import { Kop } from '../components/Kop'
 import { useAppState } from '../state/AppState'
 import { prepareSetup } from '../domain/setup'
 import { longestValueDigits } from '../domain/chipset'
@@ -14,11 +14,14 @@ import './SetupScreen.css'
 // bijtypen. De afsluitende newline zet de cursor op een lege regel klaar.
 const STANDAARD_NAMEN = Array.from({ length: 8 }, (_, i) => `Speler ${i + 1}`).join('\n') + '\n'
 
-export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function SetupScreen({
+  onTerug,
+  onGestart,
+}: {
+  onTerug: () => void
+  onGestart: () => void
+}) {
   const { chipsets, settings, start, storageOk } = useAppState()
-
-  // Eén hand per keer dat het scherm opent; niet opnieuw trekken bij elke render.
-  const [hand] = useState(kiesHand)
 
   const [namenTekst, setNamenTekst] = useState(
     settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
@@ -52,14 +55,12 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
 
   const setup = useMemo(() => prepareSetup(huidigeSettings, chipset), [huidigeSettings, chipset])
   const { structure: structuur, distribution: verdeling, warnings, canStart } = setup
+  // Het aantal fiches, tegenover verdeling.stackValue dat de wáárde optelt.
+  const aantalFiches = verdeling.perPlayer.reduce((som, a) => som + a.count, 0)
 
   return (
     <div className="setup">
-      <header className="setup__kop">
-        <PlayingCard kaart={hand[0]} className="setup__kaart" />
-        <PlayingCard kaart={hand[1]} className="setup__kaart setup__kaart--twee" />
-        <h1 className="setup__titel">PokerNight</h1>
-      </header>
+      <Kop>PokerNight</Kop>
 
       {!storageOk && (
         <div className="melding melding--error">
@@ -68,47 +69,11 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
         </div>
       )}
 
-      {warnings.map((melding, i) => (
-        <div key={i} className={`melding melding--${melding.level}`}>
-          {melding.message}
-        </div>
-      ))}
-
       <div className="setup__raster">
         <Panel title="Spelers">
           <label className="veld">
             <span>Namen, één per regel</span>
             <textarea rows={10} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
-          </label>
-        </Panel>
-
-        <Panel title="Toernooi">
-          <label className="veld">
-            <span>Startstack (fiches)</span>
-            <input
-              type="number"
-              min={1}
-              value={startingStack}
-              onChange={(e) => setStartingStack(Number(e.target.value))}
-            />
-          </label>
-          <label className="veld">
-            <span>Duur (minuten)</span>
-            <input
-              type="number"
-              min={15}
-              step={15}
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            />
-          </label>
-          <label className="veld">
-            <span>Levellengte</span>
-            <select value={levelMinutes} onChange={(e) => setLevelMinutes(Number(e.target.value))}>
-              <option value={10}>10 minuten</option>
-              <option value={15}>15 minuten</option>
-              <option value={20}>20 minuten</option>
-            </select>
           </label>
         </Panel>
 
@@ -143,6 +108,36 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
             </select>
           </label>
         </Panel>
+        <Panel title="Toernooi">
+          <label className="veld">
+            <span>Startstack (fiches)</span>
+            <input
+              type="number"
+              min={1}
+              value={startingStack}
+              onChange={(e) => setStartingStack(Number(e.target.value))}
+            />
+          </label>
+          <label className="veld">
+            <span>Duur (minuten)</span>
+            <input
+              type="number"
+              min={15}
+              step={15}
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            />
+          </label>
+          <label className="veld">
+            <span>Levellengte</span>
+            <select value={levelMinutes} onChange={(e) => setLevelMinutes(Number(e.target.value))}>
+              <option value={10}>10 minuten</option>
+              <option value={15}>15 minuten</option>
+              <option value={20}>20 minuten</option>
+            </select>
+          </label>
+        </Panel>
+
       </div>
 
       <Panel title="Blindstructuur">
@@ -200,16 +195,30 @@ export function SetupScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
               <ChipIcon color={allocatie.color} value={allocatie.value} digits={cijfers} />
             </div>
           ))}
-          <p className="uitleg">Samen {verdeling.stackValue} fiches per speler.</p>
+          <p className="uitleg">
+            {aantalFiches} fiches, samen {verdeling.stackValue} waard.
+          </p>
         </Panel>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <Button disabled={!canStart} onClick={() => start(huidigeSettings, chipset)}>
+      {warnings.map((melding, i) => (
+        <div key={i} className={`melding melding--${melding.level}`}>
+          {melding.message}
+        </div>
+      ))}
+
+      <div className="knoppenrij">
+        <Button
+          disabled={!canStart}
+          onClick={() => {
+            start(huidigeSettings, chipset)
+            onGestart()
+          }}
+        >
           Start het toernooi
         </Button>
-        <Button variant="ghost" onClick={onOpenSettings}>
-          Instellingen en chipsets
+        <Button variant="ghost" onClick={onTerug}>
+          Terug
         </Button>
       </div>
     </div>

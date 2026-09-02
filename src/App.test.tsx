@@ -5,6 +5,8 @@ import { AppStateProvider } from './state/AppState'
 import { OPSLAG_VERSIE } from './state/storage'
 import { TournamentScreen } from './screens/TournamentScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { ChipsetScreen } from './screens/ChipsetScreen'
+import { SetupScreen } from './screens/SetupScreen'
 import { createTournament, type Settings } from './domain/tournament'
 import { HOUSE_RULES, STANDARD_500 } from './domain/chipset'
 
@@ -48,35 +50,48 @@ function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = HOUSE_RULES
   opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE, data: core }))
 }
 
+function opgezetScherm() {
+  return renderToStaticMarkup(
+    <AppStateProvider>
+      <SetupScreen onTerug={() => {}} onGestart={() => {}} />
+    </AppStateProvider>,
+  )
+}
+
 describe('App', () => {
-  it('toont de setup als er geen toernooi loopt', () => {
+  it('opent op het startscherm en toont nog geen formulier', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('PokerNight')
-    expect(html).toContain('Start het toernooi')
+    expect(html).toContain('Nieuw toernooi')
+    expect(html).toContain('Chipsets')
+    expect(html).toContain('Instellingen')
+    // De instellingen van het toernooi komen pas na "Nieuw toernooi".
+    expect(html).not.toContain('Blindstructuur')
+    expect(html).not.toContain('Namen, één per regel')
   })
 
   it('toont de blindstructuur en de fiches', () => {
-    const html = renderToStaticMarkup(<App />)
+    const html = opgezetScherm()
     expect(html).toContain('Blindstructuur')
     expect(html).toContain('Fiches per speler')
   })
 
   it('begint met acht genummerde spelers', () => {
-    const html = renderToStaticMarkup(<App />)
+    const html = opgezetScherm()
     expect(html).toContain('Speler 1')
     expect(html).toContain('Speler 8')
     expect(html).not.toContain('Speler 9')
   })
 
   it('begint op de 1-2-5 reeks', () => {
-    const html = renderToStaticMarkup(<App />)
+    const html = opgezetScherm()
     for (const paar of ['1 / 2', '2 / 4', '5 / 10', '10 / 20']) {
       expect(html, paar).toContain(paar)
     }
   })
 
   it('doet bij de huisregel geen color-up', () => {
-    const html = renderToStaticMarkup(<App />)
+    const html = opgezetScherm()
     expect(html).not.toContain('uit het spel')
   })
 
@@ -87,7 +102,7 @@ describe('App', () => {
     expect(html).toContain('Hervatten')
   })
 
-  it('valt terug op de setup bij een onbruikbaar opgeslagen toernooi', () => {
+  it('valt terug op het startscherm bij een onbruikbaar opgeslagen toernooi', () => {
     // Een oud opslagformaat crashte het tafelscherm, en omdat het record bleef
     // staan gaf elke volgende refresh opnieuw een wit scherm.
     opslag.set(
@@ -96,7 +111,7 @@ describe('App', () => {
     )
     const html = renderToStaticMarkup(<App />)
     expect(html).not.toContain('Er loopt nog een toernooi')
-    expect(html).toContain('Start het toernooi')
+    expect(html).toContain('Nieuw toernooi')
   })
 })
 
@@ -184,7 +199,6 @@ describe('instellingen', () => {
         <SettingsScreen onClose={() => {}} />
       </AppStateProvider>,
     )
-    expect(html).toContain('Chipset')
     expect(html).toContain('Geluid bij een blindverhoging')
     expect(html).toContain('Scherm aan houden tijdens het toernooi')
   })
@@ -192,7 +206,7 @@ describe('instellingen', () => {
   it('benoemt welk getal de waarde is en welk het aantal', () => {
     const html = renderToStaticMarkup(
       <AppStateProvider>
-        <SettingsScreen onClose={() => {}} />
+        <ChipsetScreen onClose={() => {}} />
       </AppStateProvider>,
     )
     expect(html).toContain('Waarde per fiche')
@@ -211,7 +225,7 @@ describe('instellingen', () => {
   it('laat de doos hernoemen en beheren', () => {
     const html = renderToStaticMarkup(
       <AppStateProvider>
-        <SettingsScreen onClose={() => {}} />
+        <ChipsetScreen onClose={() => {}} />
       </AppStateProvider>,
     )
     expect(html).toContain('Naam van deze doos')
@@ -223,7 +237,7 @@ describe('instellingen', () => {
   it('laat de color-up per doos schakelen', () => {
     const html = renderToStaticMarkup(
       <AppStateProvider>
-        <SettingsScreen onClose={() => {}} />
+        <ChipsetScreen onClose={() => {}} />
       </AppStateProvider>,
     )
     expect(html).toContain('Color-up gebruiken')

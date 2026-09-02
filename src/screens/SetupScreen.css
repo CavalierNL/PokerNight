@@ -12,6 +12,22 @@
   margin: 0;
 }
 
+/* De voordeur is bijna leeg; die mag verticaal wat meer lucht krijgen. */
+.setup--home {
+  padding-top: 4rem;
+}
+
+.home__knoppen {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 22rem;
+}
+
+.home__knoppen .knop {
+  padding: 0.9rem 1.1rem;
+  font-size: 1.05rem;
+}
+
 .setup__raster {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));

@@ -64,6 +64,10 @@ test.describe.serial('de gepubliceerde site', () => {
 
     await expect(page).toHaveTitle('PokerNight')
     await expect(page.getByRole('heading', { name: 'PokerNight' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Nieuw toernooi' })).toBeVisible()
+
+    // Achter de voordeur zit het formulier met de gerekende blindstructuur.
+    await page.getByRole('button', { name: 'Nieuw toernooi' }).click()
     await expect(page.getByRole('button', { name: 'Start het toernooi' })).toBeVisible()
     // Een bestand uit public/ los opvragen. De browser haalt het favicon in
     // headless niet op, dus zonder deze controle blijft een verkeerde base voor
@@ -81,6 +85,7 @@ test.describe.serial('de gepubliceerde site', () => {
     const problemen = verzamelProblemen(page)
 
     await page.goto('./')
+    await page.getByRole('button', { name: 'Nieuw toernooi' }).click()
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
     // Het toernooischerm is een tweede laadpad met een eigen render en een
