@@ -20,6 +20,10 @@ export type Settings = {
  * De klok telt nooit op per tick. Lopend betekent: er is een eindtijdstip en de
  * resterende tijd volgt uit de huidige tijd. Gepauzeerd betekent: de resterende
  * tijd staat vast. Daardoor overleeft de klok een refresh of een slapende laptop.
+ *
+ * Wel schuift er per tick hoogstens één level op. Slaapt de laptop drie levels
+ * lang, dan gaan de blinds één level omhoog en begint dat level opnieuw — gemiste
+ * levels worden bewust niet ingehaald, want er is in die tijd ook niet gespeeld.
  */
 export type Clock =
   | { state: 'running'; endsAt: number }
@@ -36,18 +40,25 @@ type TournamentCore = {
   players: Player[]
   clock: Clock
   startedAt: number
-  /** Totaal gepauzeerde tijd, voor de verwachte eindtijd. */
+  /** Totaal gepauzeerde tijd, zodat de optellende klok pauzes niet meetelt. */
   pausedMs: number
 }
 
-export type Tournament = TournamentCore & { history: TournamentCore[] }
+/**
+ * Een undo-stap. `takenAt` hoort erbij omdat een `Clock` alleen betekenis heeft
+ * ten opzichte van een tijdstip: zonder dat zou undo een eindtijdstip uit het
+ * verleden terugzetten en zou de klok meteen weer aflopen.
+ */
+type Snapshot = { core: TournamentCore; takenAt: number }
+
+export type Tournament = TournamentCore & { history: Snapshot[] }
 
 export type Action =
   | { type: 'tick'; now: number }
   | { type: 'playerOut'; index: number; now: number }
   | { type: 'advanceLevel'; now: number }
   | { type: 'togglePause'; now: number }
-  | { type: 'undo' }
+  | { type: 'undo'; now: number }
 
 const HISTORY_LIMIT = 20
 
@@ -77,7 +88,7 @@ export function createTournament(settings: Settings, chipset: Chipset, now: numb
   }
 }
 
-export function currentLevel(state: Tournament): BlindLevel {
+export function currentLevel(state: Tournament): BlindLevel | undefined {
   return state.levels[state.levelIndex]
 }
 
@@ -88,6 +99,21 @@ export function nextLevel(state: Tournament): BlindLevel | undefined {
 export function remainingMs(state: Tournament, now: number): number {
   if (state.clock.state === 'paused') return state.clock.remainingMs
   return Math.max(0, state.clock.endsAt - now)
+}
+
+export function isLastLevel(state: Tournament): boolean {
+  return state.levelIndex >= state.levels.length - 1
+}
+
+/**
+ * Wanneer het toernooi naar verwachting klaar is, als er vanaf nu onafgebroken
+ * doorgespeeld wordt. Omdat er vanaf `now` gerekend wordt, schuift de schatting
+ * vanzelf op met elke pauze. Alleen zinvol als de tijd de levels opschuift.
+ */
+export function expectedEndAt(state: Tournament, now: number): number | undefined {
+  if (state.settings.trigger === 'elimination') return undefined
+  const levelsTeGaan = state.levels.length - state.levelIndex - 1
+  return now + remainingMs(state, now) + levelsTeGaan * state.settings.levelMinutes * 60_000
 }
 
 export function playersLeft(state: Tournament): number {
@@ -117,13 +143,21 @@ function core(state: Tournament): TournamentCore {
   return rest
 }
 
-function withHistory(state: Tournament, next: TournamentCore): Tournament {
-  return { ...next, history: [core(state), ...state.history].slice(0, HISTORY_LIMIT) }
+function withHistory(state: Tournament, next: TournamentCore, now: number): Tournament {
+  return {
+    ...next,
+    history: [{ core: core(state), takenAt: now }, ...state.history].slice(0, HISTORY_LIMIT),
+  }
 }
 
-/** Zet het level één op en start de leveltimer opnieuw. Blijft op het laatste level staan. */
-function goToNextLevel(state: TournamentCore, now: number): TournamentCore {
-  if (state.levelIndex >= state.levels.length - 1) return state
+/**
+ * Het volgende level, of `null` als er geen volgend level is. Dat onderscheid is
+ * niet cosmetisch: zonder `null` zou elke tick op het laatste level een lege
+ * undo-stap opleveren, en omdat het tafelscherm vier keer per seconde tikt zou
+ * de undo-geschiedenis binnen vijf seconden vol staan met niets.
+ */
+function goToNextLevel(state: TournamentCore, now: number): TournamentCore | null {
+  if (state.levelIndex >= state.levels.length - 1) return null
   return {
     ...state,
     levelIndex: state.levelIndex + 1,
@@ -134,13 +168,29 @@ function goToNextLevel(state: TournamentCore, now: number): TournamentCore {
 const advancesOnTime = (t: Trigger) => t === 'time' || t === 'both'
 const advancesOnElimination = (t: Trigger) => t === 'elimination' || t === 'both'
 
+/**
+ * Zet een bewaarde klok terug alsof hij nu wordt hervat. Was er op het moment van
+ * de snapshot geen tijd meer over — dan was de snapshot genomen precies toen het
+ * level afliep — dan krijgt het teruggezette level een volle klok. Zonder dat zou
+ * undo van een levelovergang meteen weer door de eerstvolgende tick ongedaan
+ * worden gemaakt.
+ */
+function herstelKlok(snapshot: Snapshot, now: number, levelMinutes: number): Clock {
+  if (snapshot.core.clock.state === 'paused') {
+    return { state: 'paused', remainingMs: snapshot.core.clock.remainingMs, pausedAt: now }
+  }
+  const over = snapshot.core.clock.endsAt - snapshot.takenAt
+  return { state: 'running', endsAt: now + (over > 0 ? over : levelMinutes * 60_000) }
+}
+
 export function reduce(state: Tournament, action: Action): Tournament {
   switch (action.type) {
     case 'tick': {
       if (state.clock.state === 'paused') return state
       if (!advancesOnTime(state.settings.trigger)) return state
       if (remainingMs(state, action.now) > 0) return state
-      return withHistory(state, goToNextLevel(core(state), action.now))
+      const volgende = goToNextLevel(core(state), action.now)
+      return volgende ? withHistory(state, volgende, action.now) : state
     }
 
     case 'playerOut': {
@@ -150,36 +200,52 @@ export function reduce(state: Tournament, action: Action): Tournament {
       // Tijdens een pauze wordt er niet gespeeld, dus verhoogt een eliminatie
       // de blinds niet.
       if (state.clock.state === 'running' && advancesOnElimination(state.settings.trigger)) {
-        volgende = goToNextLevel(volgende, action.now)
+        volgende = goToNextLevel(volgende, action.now) ?? volgende
       }
-      return withHistory(state, volgende)
+      return withHistory(state, volgende, action.now)
     }
 
-    case 'advanceLevel':
-      return withHistory(state, goToNextLevel(core(state), action.now))
+    case 'advanceLevel': {
+      const volgende = goToNextLevel(core(state), action.now)
+      return volgende ? withHistory(state, volgende, action.now) : state
+    }
 
     case 'togglePause': {
       if (state.clock.state === 'running') {
-        return withHistory(state, {
-          ...core(state),
-          clock: {
-            state: 'paused',
-            remainingMs: remainingMs(state, action.now),
-            pausedAt: action.now,
+        return withHistory(
+          state,
+          {
+            ...core(state),
+            clock: {
+              state: 'paused',
+              remainingMs: remainingMs(state, action.now),
+              pausedAt: action.now,
+            },
           },
-        })
+          action.now,
+        )
       }
-      return withHistory(state, {
-        ...core(state),
-        pausedMs: state.pausedMs + (action.now - state.clock.pausedAt),
-        clock: { state: 'running', endsAt: action.now + state.clock.remainingMs },
-      })
+      return withHistory(
+        state,
+        {
+          ...core(state),
+          pausedMs: state.pausedMs + (action.now - state.clock.pausedAt),
+          clock: { state: 'running', endsAt: action.now + state.clock.remainingMs },
+        },
+        action.now,
+      )
     }
 
     case 'undo': {
       const [vorige, ...rest] = state.history
       if (!vorige) return state
-      return { ...vorige, history: rest }
+      return {
+        ...vorige.core,
+        clock: herstelKlok(vorige, action.now, state.settings.levelMinutes),
+        // Gepauzeerde tijd is echt verstreken; die draai je niet terug.
+        pausedMs: state.pausedMs,
+        history: rest,
+      }
     }
   }
 }

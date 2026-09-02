@@ -56,21 +56,6 @@
   color: var(--creme);
 }
 
-.melding {
-  border-radius: 6px;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.9rem;
-}
-
-.melding--error {
-  background: rgba(192, 57, 43, 0.2);
-  border: 1px solid rgba(192, 57, 43, 0.5);
-}
-
-.melding--warning {
-  background: rgba(240, 197, 66, 0.12);
-  border: 1px solid rgba(240, 197, 66, 0.4);
-}
 
 .structuur {
   width: 100%;

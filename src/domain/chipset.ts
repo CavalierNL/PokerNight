@@ -15,9 +15,15 @@ export type Chipset = {
   chips: Chip[]
 }
 
-/** Unieke waardes, oplopend. Kleuren met dezelfde waarde vormen één denominatie. */
+/**
+ * Unieke waardes, oplopend. Kleuren met dezelfde waarde vormen één denominatie.
+ *
+ * Waardes van nul of lager vallen af. De chipset-editor laat een getalveld leeg
+ * achter als je het wist, en `Number('')` is 0 — zonder deze filter rekent de
+ * hele blindstructuur daarna met een fichewaarde van 0 en komt er `NaN` uit.
+ */
 export function denominations(chipset: Chipset): number[] {
-  const waardes = new Set(chipset.chips.map((c) => c.value))
+  const waardes = new Set(chipset.chips.filter((c) => c.value > 0).map((c) => c.value))
   return [...waardes].sort((a, b) => a - b)
 }
 

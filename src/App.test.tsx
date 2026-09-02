@@ -5,12 +5,12 @@ import { AppStateProvider } from './state/AppState'
 import { TournamentScreen } from './screens/TournamentScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { createTournament, type Settings } from './domain/tournament'
-import { HOUSE_RULES } from './domain/chipset'
+import { HOUSE_RULES, STANDARD_500 } from './domain/chipset'
 
 /**
- * Rendert de app zonder browser. Vangt geen gedrag af — daarvoor is de rekenkern
- * getest — maar wel de fout die je aan tafel het minst kunt gebruiken: een scherm
- * dat crasht in plaats van laadt.
+ * Rendert de app zonder browser. Vangt geen klikgedrag af — daarvoor is de
+ * rekenkern getest — maar wel de fout die je aan tafel het minst kunt gebruiken:
+ * een scherm dat crasht in plaats van laadt.
  */
 
 const opslag = new Map<string, string>()
@@ -38,6 +38,16 @@ const settings: Settings = {
   chipsetId: HOUSE_RULES.id,
 }
 
+/** Zet een toernooi in de opslag, in dezelfde vorm als de app zelf schrijft. */
+function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = HOUSE_RULES) {
+  const { history: _h, ...core } = createTournament(
+    { ...settings, ...overrides },
+    chipset,
+    Date.now(),
+  )
+  opslag.set('pokernight.tournament', JSON.stringify({ version: 1, data: core }))
+}
+
 describe('App', () => {
   it('toont de setup als er geen toernooi loopt', () => {
     const html = renderToStaticMarkup(<App />)
@@ -45,7 +55,7 @@ describe('App', () => {
     expect(html).toContain('Start het toernooi')
   })
 
-  it('toont de blindstructuur en de fiches per speler in de setup', () => {
+  it('toont de blindstructuur, de fiches en de prijzenpot', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('Blindstructuur')
     expect(html).toContain('Fiches per speler')
@@ -53,25 +63,30 @@ describe('App', () => {
   })
 
   it('vraagt om te hervatten als er een toernooi in de opslag staat', () => {
-    const toernooi = createTournament(settings, HOUSE_RULES, Date.now())
-    opslag.set('pokernight.tournament', JSON.stringify(toernooi))
+    bewaarToernooi()
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('Er loopt nog een toernooi')
     expect(html).toContain('Hervatten')
+  })
+
+  it('valt terug op de setup bij een onbruikbaar opgeslagen toernooi', () => {
+    // Een oud opslagformaat crashte het tafelscherm, en omdat het record bleef
+    // staan gaf elke volgende refresh opnieuw een wit scherm.
+    opslag.set('pokernight.tournament', JSON.stringify({ version: 1, data: { levels: [] } }))
+    const html = renderToStaticMarkup(<App />)
+    expect(html).not.toContain('Er loopt nog een toernooi')
+    expect(html).toContain('Start het toernooi')
   })
 })
 
 describe('tafelscherm', () => {
   it('toont klok, blinds, spelers en de pauzeknop', () => {
-    const toernooi = createTournament(settings, HOUSE_RULES, Date.now())
-    opslag.set('pokernight.tournament', JSON.stringify(toernooi))
-
+    bewaarToernooi()
     const html = renderToStaticMarkup(
       <AppStateProvider>
         <TournamentScreen />
       </AppStateProvider>,
     )
-
     expect(html).toContain('15:00')
     expect(html).toContain('1 / 2')
     expect(html).toContain('volgende 2 / 4')
@@ -79,7 +94,51 @@ describe('tafelscherm', () => {
     expect(html).toContain('Pauze')
     expect(html).toContain('Pot € 40')
   })
+
+  it('toont wanneer het toernooi naar verwachting klaar is', () => {
+    bewaarToernooi({ trigger: 'time' })
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('klaar rond')
+  })
+
+  it('laat de eindtijd weg als alleen eliminaties de blinds verhogen', () => {
+    bewaarToernooi({ trigger: 'elimination' })
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+    expect(html).not.toContain('klaar rond')
+  })
 })
+
+describe('setup met een grotere startstack', () => {
+  it('is startbaar met de standaardset', () => {
+    // De knop was hier uitgeschakeld: de app eiste honderden kleine fiches per
+    // speler en meldde een tekort dat niet op te lossen was.
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SetupMetInstellingen />
+      </AppStateProvider>,
+    )
+    expect(html).not.toContain('disabled')
+  })
+})
+
+function SetupMetInstellingen() {
+  opslag.set(
+    'pokernight.settings',
+    JSON.stringify({
+      version: 1,
+      data: { ...settings, startingStack: 2000, chipsetId: STANDARD_500.id },
+    }),
+  )
+  return <App />
+}
 
 describe('instellingen', () => {
   it('toont de chipset-editor en de schakelaars', () => {

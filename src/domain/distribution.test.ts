@@ -1,13 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { distributeChips } from './distribution'
-import { HOUSE_RULES, STANDARD_500 } from './chipset'
+import { buildStructure } from './blinds'
+import { HOUSE_RULES, STANDARD_500, type Chipset } from './chipset'
+
+const kleineDoos: Chipset = {
+  id: 'klein',
+  name: 'Kleine doos',
+  chips: [
+    { name: 'wit', color: '#fff', value: 1, count: 40 },
+    { name: 'groen', color: '#0a0', value: 5, count: 20 },
+  ],
+}
 
 describe('distributeChips — huisregel', () => {
-  const verdeling = distributeChips(HOUSE_RULES, 6, 100, 1)
+  const verdeling = distributeChips(HOUSE_RULES, 6, 100, 1, 1)
 
-  it('komt uit op ongeveer de gewenste startstack', () => {
-    expect(verdeling.stackValue).toBeLessThanOrEqual(100)
-    expect(verdeling.stackValue).toBeGreaterThan(80)
+  it('haalt de gewenste startstack', () => {
+    expect(verdeling.stackValue).toBe(100)
+    expect(verdeling.shortages).toEqual([])
   })
 
   it('geeft elke speler genoeg kleine fiches voor de eerste levels', () => {
@@ -25,35 +35,106 @@ describe('distributeChips — huisregel', () => {
   })
 
   it('meldt geen tekorten bij zes spelers', () => {
-    expect(verdeling.shortages).toEqual([])
+    expect(verdeling.maxPlayers).toBe(6)
+  })
+})
+
+describe('distributeChips — invariant', () => {
+  it('stackValue is altijd de som van de uitgedeelde fiches', () => {
+    for (const chipset of [HOUSE_RULES, STANDARD_500, kleineDoos]) {
+      for (const spelers of [1, 2, 6, 9, 12]) {
+        for (const stack of [50, 100, 2000]) {
+          const v = distributeChips(chipset, spelers, stack, 1, 1)
+          const som = v.perPlayer.reduce((s, a) => s + a.value * a.count, 0)
+          expect(som).toBe(v.stackValue)
+        }
+      }
+    }
+  })
+
+  it('telt afrondverlies over kleuren mee in de tekortmelding', () => {
+    // Twee kleuren van 5 fiches à 1 en 2 spelers: per kleur past er 2 per speler,
+    // samen 4 — niet de 5 die de som zou suggereren. Dat verschil moet gemeld.
+    const twee: Chipset = {
+      id: 'twee',
+      name: 'Twee kleuren',
+      chips: [
+        { name: 'a', color: '#111', value: 1, count: 5 },
+        { name: 'b', color: '#222', value: 1, count: 5 },
+      ],
+    }
+    const v = distributeChips(twee, 2, 100, 1, 1)
+    const uitgedeeld = v.perPlayer.reduce((s, a) => s + a.count, 0)
+    const gemeld = v.shortages.find((s) => s.kind === 'weinigKleineFiches')
+    expect(gemeld).toBeDefined()
+    if (gemeld?.kind === 'weinigKleineFiches') expect(gemeld.perSpeler).toBe(uitgedeeld)
   })
 })
 
 describe('distributeChips — tekorten', () => {
-  it('meldt een tekort en het maximale aantal spelers', () => {
-    const kleineDoos = {
-      id: 'klein',
-      name: 'Kleine doos',
-      chips: [
-        { name: 'wit', color: '#fff', value: 1, count: 40 },
-        { name: 'groen', color: '#0a0', value: 5, count: 20 },
-      ],
-    }
-    const verdeling = distributeChips(kleineDoos, 10, 100, 1)
-    expect(verdeling.shortages.length).toBeGreaterThan(0)
+  it('meldt dat de startstack niet gehaald wordt, met het aantal spelers dat wel past', () => {
+    const verdeling = distributeChips(kleineDoos, 10, 100, 1, 1)
+    expect(verdeling.shortages.some((s) => s.kind === 'startstackNietGehaald')).toBe(true)
     expect(verdeling.maxPlayers).toBeLessThan(10)
+    expect(verdeling.maxPlayers).toBeGreaterThan(0)
+  })
+
+  it('geeft maxPlayers gelijk aan het gevraagde aantal als het gewoon lukt', () => {
+    expect(distributeChips(HOUSE_RULES, 8, 100, 1, 1).maxPlayers).toBe(8)
+  })
+
+  it('meldt een lege chipset', () => {
+    const leeg: Chipset = { id: 'leeg', name: 'Leeg', chips: [] }
+    expect(distributeChips(leeg, 4, 100, 1, 1).shortages).toEqual([{ kind: 'geenFiches' }])
   })
 })
 
-describe('distributeChips — standaardset', () => {
-  const verdeling = distributeChips(STANDARD_500, 8, 10000, 50)
+describe('distributeChips — samen met de blindstructuur', () => {
+  it('reserveert geen fiches die op level 0 al door een color-up van tafel gaan', () => {
+    // Standaardset met een grote startstack: de blinds beginnen op 50/100, dus
+    // fiches van 1 zijn meteen overbodig. Zonder de startDenomination vroeg de
+    // app 1000 witte fiches per speler en blokkeerde hij de start.
+    const structuur = buildStructure(
+      {
+        kind: 'doubling',
+        players: 8,
+        startingStack: 10_000,
+        durationMinutes: 180,
+        levelMinutes: 15,
+      },
+      STANDARD_500,
+    )
+    expect(structuur.startDenomination).toBeGreaterThan(1)
 
-  it('gebruikt ook de hoge denominaties', () => {
-    const hoog = verdeling.perPlayer.filter((a) => a.value >= 100 && a.count > 0)
-    expect(hoog.length).toBeGreaterThan(0)
+    const verdeling = distributeChips(
+      STANDARD_500,
+      8,
+      10_000,
+      structuur.levels[0].smallBlind,
+      structuur.startDenomination,
+    )
+    expect(verdeling.perPlayer.every((a) => a.value >= structuur.startDenomination)).toBe(true)
   })
 
-  it('blijft binnen de gewenste startstack', () => {
-    expect(verdeling.stackValue).toBeLessThanOrEqual(10000)
+  it('haalt een realistische startstack met de standaardset', () => {
+    const structuur = buildStructure(
+      {
+        kind: 'calculated',
+        players: 8,
+        startingStack: 2000,
+        durationMinutes: 240,
+        levelMinutes: 15,
+      },
+      STANDARD_500,
+    )
+    const verdeling = distributeChips(
+      STANDARD_500,
+      8,
+      2000,
+      structuur.levels[0].smallBlind,
+      structuur.startDenomination,
+    )
+    expect(verdeling.shortages.filter((s) => s.kind === 'startstackNietGehaald')).toEqual([])
+    expect(verdeling.stackValue).toBeGreaterThanOrEqual(1800)
   })
 })

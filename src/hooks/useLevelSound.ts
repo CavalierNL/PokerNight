@@ -1,21 +1,30 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Speelt een korte toon bij elke levelverhoging. Aan tafel wordt gepraat en
+ * Speelt een korte toon zodra de blinds omhoog gaan. Aan tafel wordt gepraat en
  * niemand kijkt naar het scherm, dus dit signaal is belangrijker dan het lijkt.
  * Bewust met de Web Audio API in plaats van een geluidsbestand: geen download,
  * geen asset die kan ontbreken.
+ *
+ * Alleen bij een verhoging: na "Ongedaan maken" gaat het level omlaag, en dan zou
+ * hetzelfde signaal het tegenovergestelde suggereren van wat er gebeurt.
  */
 export function useLevelSound(levelIndex: number, enabled: boolean): void {
   const vorigeLevel = useRef(levelIndex)
 
   useEffect(() => {
-    if (levelIndex === vorigeLevel.current) return
+    const omhoog = levelIndex > vorigeLevel.current
     vorigeLevel.current = levelIndex
-    if (!enabled) return
+    if (!omhoog || !enabled) return
 
     try {
       const context = new AudioContext()
+
+      // Het autoplay-beleid laat de constructor slagen maar levert een context in
+      // de toestand 'suspended': er komt dan geen geluid uit, zonder dat er iets
+      // gegooid wordt. Vandaar deze expliciete hervatting.
+      if (context.state === 'suspended') void context.resume().catch(() => {})
+
       const nu = context.currentTime
       // Twee korte tonen, een kwint uit elkaar — hoorbaar boven gepraat uit.
       for (const [start, frequentie] of [
@@ -33,9 +42,9 @@ export function useLevelSound(levelIndex: number, enabled: boolean): void {
         oscillator.start(nu + start)
         oscillator.stop(nu + start + 0.18)
       }
-      setTimeout(() => void context.close(), 1000)
+      setTimeout(() => void context.close().catch(() => {}), 1000)
     } catch {
-      // Geluid geblokkeerd tot de gebruiker iets aanklikt: geen probleem.
+      // Geen Web Audio in deze browser: dan blijft het stil, en dat is te overzien.
     }
   }, [levelIndex, enabled])
 }

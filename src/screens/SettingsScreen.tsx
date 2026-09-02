@@ -14,15 +14,18 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const vervang = (nieuw: Chipset) =>
     setChipsets(chipsets.map((c) => (c.id === chipset.id ? nieuw : c)))
 
-  const wijzig = (index: number, veld: 'name' | 'color' | 'value' | 'count', waarde: string) =>
+  const wijzig = (index: number, veld: 'name' | 'color' | 'value' | 'count', waarde: string) => {
+    // Een leeggemaakt getalveld geeft Number('') === 0. Een fichewaarde van nul
+    // laat de hele blindberekening op NaN uitkomen, dus die klemmen we af.
+    const getal = (ondergrens: number) => Math.max(ondergrens, Math.floor(Number(waarde) || 0))
+    const nieuweWaarde =
+      veld === 'value' ? getal(1) : veld === 'count' ? getal(0) : waarde
+
     vervang({
       ...chipset,
-      chips: chipset.chips.map((chip, i) =>
-        i === index
-          ? { ...chip, [veld]: veld === 'value' || veld === 'count' ? Number(waarde) : waarde }
-          : chip,
-      ),
+      chips: chipset.chips.map((chip, i) => (i === index ? { ...chip, [veld]: nieuweWaarde } : chip)),
     })
+  }
 
   const voegToe = () =>
     vervang({

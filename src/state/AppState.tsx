@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   createTournament,
@@ -17,6 +17,7 @@ import {
   savePreferences,
   saveSettings,
   saveTournament,
+  type OpslagStatus,
   type Preferences,
 } from './storage'
 
@@ -25,6 +26,8 @@ type AppState = {
   settings: Settings | null
   chipsets: Chipset[]
   preferences: Preferences
+  /** `false` zodra opslaan een keer mislukt is; het scherm waarschuwt dan. */
+  storageOk: boolean
   start: (settings: Settings, chipset: Chipset) => void
   dispatch: (action: Action) => void
   discard: () => void
@@ -39,16 +42,35 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings | null>(() => loadSettings())
   const [chipsets, setChipsetsState] = useState<Chipset[]>(() => loadChipsets())
   const [preferences, setPreferencesState] = useState<Preferences>(() => loadPreferences())
+  const [storageOk, setStorageOk] = useState(true)
 
-  useEffect(() => saveTournament(tournament), [tournament])
-  useEffect(() => saveChipsets(chipsets), [chipsets])
-  useEffect(() => savePreferences(preferences), [preferences])
-
-  const start = useCallback((nieuwe: Settings, chipset: Chipset) => {
-    setSettingsState(nieuwe)
-    saveSettings(nieuwe)
-    setTournament(createTournament(nieuwe, chipset, Date.now()))
+  const meld = useCallback((status: OpslagStatus) => {
+    if (status === 'mislukt') setStorageOk(false)
   }, [])
+
+  useEffect(() => meld(saveTournament(tournament)), [tournament, meld])
+
+  // Chipsets en voorkeuren worden pas na een echte wijziging geschreven. Schrijven
+  // bij het opstarten zou een onleesbaar opgeslagen chipset meteen overschrijven
+  // met de presets, en dan is de eigen doos van de gebruiker definitief weg.
+  const eersteRender = useRef(true)
+  useEffect(() => {
+    if (eersteRender.current) {
+      eersteRender.current = false
+      return
+    }
+    meld(saveChipsets(chipsets))
+    meld(savePreferences(preferences))
+  }, [chipsets, preferences, meld])
+
+  const start = useCallback(
+    (nieuwe: Settings, chipset: Chipset) => {
+      meld(saveSettings(nieuwe))
+      setSettingsState(nieuwe)
+      setTournament(createTournament(nieuwe, chipset, Date.now()))
+    },
+    [meld],
+  )
 
   const dispatch = useCallback((action: Action) => {
     setTournament((huidig) => (huidig ? reduce(huidig, action) : huidig))
@@ -62,13 +84,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       settings,
       chipsets,
       preferences,
+      storageOk,
       start,
       dispatch,
       discard,
       setChipsets: setChipsetsState,
       setPreferences: setPreferencesState,
     }),
-    [tournament, settings, chipsets, preferences, start, dispatch, discard],
+    [tournament, settings, chipsets, preferences, storageOk, start, dispatch, discard],
   )
 
   return <Context.Provider value={waarde}>{children}</Context.Provider>

@@ -4,14 +4,17 @@ import {
   averageStackInBigBlinds,
   createTournament,
   currentLevel,
+  expectedEndAt,
   playersLeft,
   reduce,
   remainingMs,
   type Settings,
+  type Tournament,
 } from './tournament'
 import { HOUSE_RULES } from './chipset'
 
 const T0 = 1_000_000
+const MINUUT = 60_000
 
 const basis: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost', 'Max'],
@@ -27,6 +30,12 @@ const basis: Settings = {
 const maak = (overrides: Partial<Settings> = {}) =>
   createTournament({ ...basis, ...overrides }, HOUSE_RULES, T0)
 
+/** Zet het toernooi op het laatste level. */
+function naarLaatsteLevel(t: Tournament, now = T0): Tournament {
+  while (t.levelIndex < t.levels.length - 1) t = reduce(t, { type: 'advanceLevel', now })
+  return t
+}
+
 describe('createTournament', () => {
   it('begint op level 0 met een lopende klok', () => {
     const t = maak()
@@ -39,33 +48,46 @@ describe('createTournament', () => {
   })
 
   it('laat de klok de levellengte lopen', () => {
-    expect(remainingMs(maak(), T0)).toBe(15 * 60 * 1000)
+    expect(remainingMs(maak(), T0)).toBe(15 * MINUUT)
   })
 })
 
 describe('tick', () => {
   it('verhoogt het level als de tijd om is en de trigger tijd omvat', () => {
-    const t = maak({ trigger: 'time' })
-    const na = reduce(t, { type: 'tick', now: T0 + 15 * 60 * 1000 })
+    const na = reduce(maak({ trigger: 'time' }), { type: 'tick', now: T0 + 15 * MINUUT })
     expect(na.levelIndex).toBe(1)
   })
 
   it('verhoogt het level niet zolang er tijd over is', () => {
-    const t = maak({ trigger: 'time' })
-    const na = reduce(t, { type: 'tick', now: T0 + 60 * 1000 })
+    const na = reduce(maak({ trigger: 'time' }), { type: 'tick', now: T0 + MINUUT })
     expect(na.levelIndex).toBe(0)
   })
 
   it('verhoogt het level niet bij de trigger eliminatie', () => {
-    const t = maak({ trigger: 'elimination' })
-    const na = reduce(t, { type: 'tick', now: T0 + 60 * 60 * 1000 })
+    const na = reduce(maak({ trigger: 'elimination' }), { type: 'tick', now: T0 + 60 * MINUUT })
     expect(na.levelIndex).toBe(0)
   })
 
   it('doet niets als de klok gepauzeerd is', () => {
     const t = reduce(maak(), { type: 'togglePause', now: T0 })
-    const na = reduce(t, { type: 'tick', now: T0 + 60 * 60 * 1000 })
-    expect(na.levelIndex).toBe(0)
+    expect(reduce(t, { type: 'tick', now: T0 + 60 * MINUUT }).levelIndex).toBe(0)
+  })
+
+  it('laat de state ongemoeid als er geen volgend level meer is', () => {
+    // Anders levert elke tick een nieuw object op. Het tafelscherm tikt vier keer
+    // per seconde, dus dat betekent vier renders en vier schrijfacties naar
+    // localStorage per seconde, en een undo-geschiedenis die binnen vijf seconden
+    // vol staat met lege stappen.
+    const laatste = naarLaatsteLevel(maak({ trigger: 'time' }))
+    const veelLater = T0 + 999 * MINUUT
+    const na = reduce(laatste, { type: 'tick', now: veelLater })
+    expect(na).toBe(laatste)
+
+    let herhaald = laatste
+    for (let i = 0; i < 40; i++) {
+      herhaald = reduce(herhaald, { type: 'tick', now: veelLater + i })
+    }
+    expect(herhaald.history.length).toBe(laatste.history.length)
   })
 })
 
@@ -77,68 +99,130 @@ describe('playerOut', () => {
   })
 
   it('verhoogt het level bij de trigger eliminatie', () => {
-    const t = maak({ trigger: 'elimination' })
-    const na = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    const na = reduce(maak({ trigger: 'elimination' }), { type: 'playerOut', index: 0, now: T0 })
     expect(na.levelIndex).toBe(1)
   })
 
   it('zet de leveltimer terug op vol bij een eliminatie', () => {
-    const t = maak({ trigger: 'both' })
-    const halverwege = T0 + 7 * 60 * 1000
-    const na = reduce(t, { type: 'playerOut', index: 0, now: halverwege })
-    expect(remainingMs(na, halverwege)).toBe(15 * 60 * 1000)
+    const halverwege = T0 + 7 * MINUUT
+    const na = reduce(maak(), { type: 'playerOut', index: 0, now: halverwege })
+    expect(remainingMs(na, halverwege)).toBe(15 * MINUUT)
   })
 
   it('verhoogt het level niet bij de trigger tijd', () => {
-    const t = maak({ trigger: 'time' })
-    const na = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    const na = reduce(maak({ trigger: 'time' }), { type: 'playerOut', index: 0, now: T0 })
     expect(na.levelIndex).toBe(0)
   })
 
   it('verhoogt het level niet tijdens een pauze', () => {
-    const t = reduce(maak({ trigger: 'both' }), { type: 'togglePause', now: T0 })
+    const t = reduce(maak(), { type: 'togglePause', now: T0 })
     const na = reduce(t, { type: 'playerOut', index: 0, now: T0 })
     expect(na.levelIndex).toBe(0)
     expect(na.players[0].out).toBe(true)
+  })
+
+  it('haalt de speler er nog steeds uit op het laatste level', () => {
+    const laatste = naarLaatsteLevel(maak())
+    const na = reduce(laatste, { type: 'playerOut', index: 2, now: T0 })
+    expect(na.players[2].out).toBe(true)
+    expect(na.levelIndex).toBe(laatste.levelIndex)
   })
 })
 
 describe('togglePause', () => {
   it('bevriest de resterende tijd', () => {
-    const t = maak()
-    const gepauzeerd = reduce(t, { type: 'togglePause', now: T0 + 5 * 60 * 1000 })
+    const gepauzeerd = reduce(maak(), { type: 'togglePause', now: T0 + 5 * MINUUT })
     expect(gepauzeerd.clock.state).toBe('paused')
-    expect(remainingMs(gepauzeerd, T0 + 60 * 60 * 1000)).toBe(10 * 60 * 1000)
+    expect(remainingMs(gepauzeerd, T0 + 60 * MINUUT)).toBe(10 * MINUUT)
   })
 
   it('hervat waar de klok gebleven was', () => {
-    const t = maak()
-    const gepauzeerd = reduce(t, { type: 'togglePause', now: T0 + 5 * 60 * 1000 })
-    const hervat = reduce(gepauzeerd, { type: 'togglePause', now: T0 + 60 * 60 * 1000 })
+    const gepauzeerd = reduce(maak(), { type: 'togglePause', now: T0 + 5 * MINUUT })
+    const hervat = reduce(gepauzeerd, { type: 'togglePause', now: T0 + 60 * MINUUT })
     expect(hervat.clock.state).toBe('running')
-    expect(remainingMs(hervat, T0 + 60 * 60 * 1000)).toBe(10 * 60 * 1000)
+    expect(remainingMs(hervat, T0 + 60 * MINUUT)).toBe(10 * MINUUT)
   })
 
   it('telt de gepauzeerde tijd op', () => {
-    const t = maak()
-    const gepauzeerd = reduce(t, { type: 'togglePause', now: T0 })
-    const hervat = reduce(gepauzeerd, { type: 'togglePause', now: T0 + 3 * 60 * 1000 })
-    expect(hervat.pausedMs).toBe(3 * 60 * 1000)
+    const gepauzeerd = reduce(maak(), { type: 'togglePause', now: T0 })
+    const hervat = reduce(gepauzeerd, { type: 'togglePause', now: T0 + 3 * MINUUT })
+    expect(hervat.pausedMs).toBe(3 * MINUUT)
   })
 })
 
 describe('undo', () => {
   it('draait een eliminatie terug', () => {
-    const t = maak()
-    const na = reduce(t, { type: 'playerOut', index: 2, now: T0 })
-    const terug = reduce(na, { type: 'undo' })
+    const na = reduce(maak(), { type: 'playerOut', index: 2, now: T0 })
+    const terug = reduce(na, { type: 'undo', now: T0 })
     expect(terug.players[2].out).toBe(false)
     expect(terug.levelIndex).toBe(0)
   })
 
+  it('houdt de resterende tijd van het level intact', () => {
+    const halverwege = T0 + 7 * MINUUT
+    const na = reduce(maak({ trigger: 'time' }), { type: 'playerOut', index: 0, now: halverwege })
+    const terug = reduce(na, { type: 'undo', now: halverwege })
+    expect(remainingMs(terug, halverwege)).toBe(8 * MINUUT)
+  })
+
+  it('draait een tijdgestuurde levelovergang echt terug', () => {
+    // De teruggezette klok stond op nul, dus de eerstvolgende tick zette het
+    // level meteen weer omhoog en deed undo in de praktijk niets.
+    const om = T0 + 15 * MINUUT
+    const t = reduce(maak({ trigger: 'time' }), { type: 'tick', now: om })
+    expect(t.levelIndex).toBe(1)
+
+    const terug = reduce(t, { type: 'undo', now: om })
+    expect(terug.levelIndex).toBe(0)
+    expect(remainingMs(terug, om)).toBe(15 * MINUUT)
+    expect(reduce(terug, { type: 'tick', now: om + 250 }).levelIndex).toBe(0)
+  })
+
+  it('laat het toernooi na undo van een pauze niet doorschieten', () => {
+    // De bewaarde klok had een eindtijdstip dat tijdens de pauze verouderde.
+    const pauzeOp = T0 + 5 * MINUUT
+    const undoOp = T0 + 25 * MINUUT
+    const gepauzeerd = reduce(maak(), { type: 'togglePause', now: pauzeOp })
+    const terug = reduce(gepauzeerd, { type: 'undo', now: undoOp })
+
+    expect(terug.clock.state).toBe('running')
+    expect(remainingMs(terug, undoOp)).toBe(10 * MINUUT)
+    expect(reduce(terug, { type: 'tick', now: undoOp + 250 }).levelIndex).toBe(0)
+  })
+
+  it('draait gepauzeerde tijd die echt verstreken is niet terug', () => {
+    const gepauzeerd = reduce(maak(), { type: 'togglePause', now: T0 })
+    const hervat = reduce(gepauzeerd, { type: 'togglePause', now: T0 + 3 * MINUUT })
+    const terug = reduce(hervat, { type: 'undo', now: T0 + 4 * MINUUT })
+    expect(terug.pausedMs).toBe(3 * MINUUT)
+  })
+
+  it('stapt meerdere acties terug', () => {
+    let t = maak({ trigger: 'elimination' })
+    t = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    t = reduce(t, { type: 'playerOut', index: 1, now: T0 })
+    expect(t.levelIndex).toBe(2)
+
+    t = reduce(t, { type: 'undo', now: T0 })
+    expect(t.levelIndex).toBe(1)
+    expect(t.players[1].out).toBe(false)
+
+    t = reduce(t, { type: 'undo', now: T0 })
+    expect(t.levelIndex).toBe(0)
+    expect(t.players[0].out).toBe(false)
+  })
+
+  it('bewaart hoogstens twintig stappen', () => {
+    let t = maak()
+    for (let i = 0; i < 30; i++) {
+      t = reduce(t, { type: 'togglePause', now: T0 + i * 1000 })
+    }
+    expect(t.history.length).toBe(20)
+  })
+
   it('doet niets als er niets terug te draaien is', () => {
     const t = maak()
-    expect(reduce(t, { type: 'undo' }).players).toEqual(t.players)
+    expect(reduce(t, { type: 'undo', now: T0 })).toBe(t)
   })
 })
 
@@ -152,8 +236,25 @@ describe('gemiddelde stack', () => {
 
   it('rekent om naar big blinds', () => {
     const t = maak()
-    const bb = currentLevel(t).bigBlind
-    expect(averageStackInBigBlinds(t)).toBeCloseTo(100 / bb)
+    expect(averageStackInBigBlinds(t)).toBeCloseTo(100 / currentLevel(t)!.bigBlind)
+  })
+})
+
+describe('verwachte eindtijd', () => {
+  it('telt de resterende levels bij de huidige klok op', () => {
+    const t = maak({ trigger: 'time' })
+    const teGaan = t.levels.length - 1
+    expect(expectedEndAt(t, T0)).toBe(T0 + 15 * MINUUT + teGaan * 15 * MINUUT)
+  })
+
+  it('schuift op met elke pauze', () => {
+    const t = maak({ trigger: 'time' })
+    const gepauzeerd = reduce(t, { type: 'togglePause', now: T0 })
+    expect(expectedEndAt(gepauzeerd, T0 + 20 * MINUUT)!).toBe(expectedEndAt(t, T0)! + 20 * MINUUT)
+  })
+
+  it('bestaat niet als alleen eliminaties de blinds verhogen', () => {
+    expect(expectedEndAt(maak({ trigger: 'elimination' }), T0)).toBeUndefined()
   })
 })
 
@@ -161,9 +262,13 @@ describe('einde structuur', () => {
   it('blijft op het laatste level staan', () => {
     let t = maak({ trigger: 'time', durationMinutes: 30 })
     const laatste = t.levels.length - 1
-    for (let i = 0; i < 10; i++) {
-      t = reduce(t, { type: 'advanceLevel', now: T0 })
-    }
+    for (let i = 0; i < 10; i++) t = reduce(t, { type: 'advanceLevel', now: T0 })
     expect(t.levelIndex).toBe(laatste)
+  })
+
+  it('vult de undo-geschiedenis niet met lege stappen', () => {
+    const laatste = naarLaatsteLevel(maak())
+    const na = reduce(laatste, { type: 'advanceLevel', now: T0 })
+    expect(na).toBe(laatste)
   })
 })

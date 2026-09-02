@@ -19,7 +19,11 @@ nodig — geen backend, geen account, werkt offline.
 - **Prijzenpot** — verdeling naar groepsgrootte, in hele euro's, altijd exact de
   pot.
 - **Aan tafel** — pauzeknop, ongedaan maken, gemiddelde stack in big blinds,
-  geluid bij een blindverhoging, en het scherm blijft aan.
+  hoe laat je naar verwachting klaar bent, geluid bij een blindverhoging, en het
+  scherm blijft aan.
+- **Robuust** — de klok overleeft een refresh of een slapende laptop, een lopend
+  toernooi wordt hersteld bij het openen, en als de opslag van je browser vol of
+  geblokkeerd is zegt de app dat in plaats van het stil te laten mislukken.
 
 ## Ontwikkelen
 

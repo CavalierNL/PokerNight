@@ -18,35 +18,56 @@ describe('payoutPercentages', () => {
   it('betaalt vier plaatsen vanaf twaalf spelers', () => {
     expect(payoutPercentages(12)).toEqual([40, 25, 20, 15])
   })
+
+  it('telt altijd op tot honderd procent', () => {
+    for (let spelers = 2; spelers <= 20; spelers++) {
+      expect(payoutPercentages(spelers).reduce((s, p) => s + p, 0)).toBe(100)
+    }
+  })
 })
 
 describe('calculatePayouts', () => {
   it('verdeelt de pot over de betaalde plaatsen', () => {
-    const uitbetalingen = calculatePayouts(10, 8)
-    expect(uitbetalingen).toHaveLength(3)
-    expect(uitbetalingen[0].place).toBe(1)
+    const { places } = calculatePayouts(10, 8)
+    expect(places).toHaveLength(3)
+    expect(places[0].place).toBe(1)
   })
 
-  it('telt altijd exact op tot de pot', () => {
+  it('betaalt nooit meer uit dan er is opgehaald', () => {
+    // Halve euro's zijn normaal gebruik: het inlegveld staat op stappen van 0,50.
+    // Naar boven afronden zou geld uitkeren dat niet in de doos zit.
     for (let spelers = 2; spelers <= 15; spelers++) {
-      for (const inleg of [5, 10, 12.5, 20]) {
-        const pot = Math.round(inleg * spelers)
-        const som = calculatePayouts(inleg, spelers).reduce((s, u) => s + u.amount, 0)
+      for (const inleg of [2.5, 5, 7.5, 10, 12.5, 20]) {
+        const { pot, places } = calculatePayouts(inleg, spelers)
+        const som = places.reduce((s, u) => s + u.amount, 0)
         expect(som).toBe(pot)
+        expect(pot).toBeLessThanOrEqual(inleg * spelers)
       }
     }
   })
 
+  it('houdt de halve euro in de kas', () => {
+    // 7,50 x 5 = 37,50 opgehaald; er wordt 37 verdeeld, niet 38.
+    const { pot, places } = calculatePayouts(7.5, 5)
+    expect(pot).toBe(37)
+    expect(places.reduce((s, u) => s + u.amount, 0)).toBe(37)
+  })
+
   it('geeft het afrondingsrestant aan de winnaar', () => {
     // pot 65, 65/35 => 42,25 en 22,75 => 42 en 22, restant 1 naar de winnaar
-    const uitbetalingen = calculatePayouts(13, 5)
-    expect(uitbetalingen[0].amount).toBe(43)
-    expect(uitbetalingen[1].amount).toBe(22)
+    const { places } = calculatePayouts(13, 5)
+    expect(places[0].amount).toBe(43)
+    expect(places[1].amount).toBe(22)
   })
 
   it('geeft hele euro-bedragen', () => {
-    for (const uitbetaling of calculatePayouts(12.5, 9)) {
+    for (const uitbetaling of calculatePayouts(12.5, 9).places) {
       expect(Number.isInteger(uitbetaling.amount)).toBe(true)
     }
+  })
+
+  it('geeft geen negatieve pot bij onzinnige invoer', () => {
+    expect(calculatePayouts(0, 6).pot).toBe(0)
+    expect(calculatePayouts(-5, 6).pot).toBe(0)
   })
 })
