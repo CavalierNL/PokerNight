@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { prepareSetup } from './setup'
-import { STANDARD_500 } from './chipset'
+import { prepareSetup, suggestStartingStack } from './setup'
+import { distributeChips } from './distribution'
+import { STANDARD_500, TOERNOOI_DOOS, denominations } from './chipset'
 import type { Settings } from './tournament'
 import { KLEINE_DOOS } from './testdozen'
 
@@ -99,5 +100,49 @@ describe('prepareSetup — samenhang tussen de modules', () => {
       const kleinste = Math.min(...setup.distribution.perPlayer.map((a) => a.value))
       expect(setup.structure.levels[0].smallBlind % kleinste).toBe(0)
     }
+  })
+})
+
+describe('suggestStartingStack', () => {
+  it('stelt een bedrag voor dat de doos echt kan uitdelen', () => {
+    for (const spelers of [2, 4, 6, 8, 10]) {
+      const stack = suggestStartingStack(TOERNOOI_DOOS, spelers)
+      expect(stack, `${spelers} spelers`).toBeDefined()
+
+      const kleinste = denominations(TOERNOOI_DOOS)[0]
+      const verdeling = distributeChips(TOERNOOI_DOOS, spelers, stack!, kleinste, kleinste)
+      // Waarschuwingen mogen; de start blokkeren niet.
+      const blokkades = verdeling.shortages.filter(
+        (t) => t.kind === 'geenFiches' || t.kind === 'startstackNietGehaald',
+      )
+      expect(blokkades, `${spelers} spelers`).toEqual([])
+      // De verdeling komt niet altijd op de cent uit; ver eronder blijven mag niet.
+      expect(verdeling.stackValue, `${spelers} spelers`).toBeGreaterThan(stack! * 0.98)
+    }
+  })
+
+  it('geeft een bedrag dat je met de chips uit die doos kunt neerleggen', () => {
+    const stack = suggestStartingStack(TOERNOOI_DOOS, 8)!
+    expect(stack % denominations(TOERNOOI_DOOS)[0]).toBe(0)
+  })
+
+  it('stelt minder voor naarmate er meer spelers zijn', () => {
+    const weinig = suggestStartingStack(TOERNOOI_DOOS, 2)!
+    const veel = suggestStartingStack(TOERNOOI_DOOS, 10)!
+    expect(veel).toBeLessThanOrEqual(weinig)
+  })
+
+  it('zwijgt als de doos het gezelschap niet aankan', () => {
+    // Vier chips in totaal, tien spelers: elke suggestie zou een leugen zijn.
+    const minidoos = {
+      id: 'mini',
+      name: 'Mini',
+      chips: [{ color: '#fff', value: 1, count: 4 }],
+    }
+    expect(suggestStartingStack(minidoos, 10)).toBeUndefined()
+  })
+
+  it('zwijgt bij een doos zonder chips', () => {
+    expect(suggestStartingStack({ id: 'leeg', name: 'Leeg', chips: [] }, 6)).toBeUndefined()
   })
 })

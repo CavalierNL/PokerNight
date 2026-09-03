@@ -260,6 +260,37 @@ input[type='checkbox'] {
   }
 }
 
+/* Twee kolommen binnen een paneel, voor de keuzes boven de blindtabel. */
+.setup__raster--smal {
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-bottom: 0.75rem;
+}
+
+.voorstel {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.voorstel__tekst {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+
+/* De chips liggen naast elkaar in plaats van onder elkaar: bij zeven kleuren
+   werd dat een kolom die het halve scherm vulde. */
+.chips-per-speler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+}
+
+.chips-per-speler .fiche-regel {
+  margin-bottom: 0;
+}
+
 .huisregel {
   display: grid;
   gap: 0.6rem;

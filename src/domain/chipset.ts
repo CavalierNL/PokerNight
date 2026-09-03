@@ -84,7 +84,8 @@ export const TOERNOOI_DOOS: Chipset = {
   ],
 }
 
-export const PRESETS: Chipset[] = [STANDARD_500, TOERNOOI_DOOS]
+// De toernooidoos staat voorop: dat is de doos die hier op tafel ligt.
+export const PRESETS: Chipset[] = [TOERNOOI_DOOS, STANDARD_500]
 
 /**
  * Een id dat niet botst met een bestaande doos. Oplopend geteld in plaats van

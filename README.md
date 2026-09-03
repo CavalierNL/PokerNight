@@ -5,7 +5,7 @@ verdelen. Eén scherm midden op tafel, verder niets nodig — geen backend, geen
 account, alles blijft in je eigen browser. Er komt geen geld aan te pas: geen
 inleg, geen pot.
 
-Op je telefoon kun je hem op het beginscherm zetten; hij opent dan zonder
+Op je telefoon kun je hem op het startscherm zetten; hij opent dan zonder
 browserbalken. Het laden zelf vraagt nog wel een verbinding: er is geen service
 worker, dus de app is niet offline te openen.
 

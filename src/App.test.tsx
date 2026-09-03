@@ -62,11 +62,11 @@ function opgezetScherm() {
 }
 
 describe('App', () => {
-  it('biedt altijd aan om de app op het beginscherm te zetten', () => {
+  it('biedt altijd aan om de app op het startscherm te zetten', () => {
     // De browser meldt zelden zelf dat hij kan installeren — Firefox en Safari
     // doen het nooit — dus de knop mag daar niet van afhangen.
     const html = renderToStaticMarkup(<App />)
-    expect(html).toContain('Op je beginscherm zetten')
+    expect(html).toContain('Op je startscherm zetten')
   })
 
   it('opent op het startscherm en toont nog geen formulier', () => {
@@ -93,11 +93,19 @@ describe('App', () => {
     expect(html).not.toContain('Speler 9')
   })
 
-  it('begint op de 1-2-5 reeks', () => {
+  it('begint op de 1-2-5 reeks, geschaald op de stack', () => {
+    // De voorgestelde stack is honderd big blinds diep, dus de ladder begint
+    // daar en loopt in stappen van 1, 2, 5 verder.
     const html = opgezetScherm()
-    for (const paar of ['1 / 2', '2 / 4', '5 / 10', '10 / 20']) {
+    for (const paar of ['250 / 500', '500 / 1000', '1000 / 2000', '2500 / 5000']) {
       expect(html, paar).toContain(paar)
     }
+  })
+
+  it('vult de startstack met het voorstel voor deze doos', () => {
+    const html = opgezetScherm()
+    expect(html).toContain('Voorstel voor deze doos met 8 spelers')
+    expect(html).toContain('value="50000"')
   })
 
   it('biedt de color-up aan bij een doos met genoeg waardes', () => {

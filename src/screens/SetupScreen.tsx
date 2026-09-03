@@ -4,7 +4,7 @@ import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { Kop } from '../components/Kop'
 import { useAppState } from '../state/AppState'
-import { prepareSetup } from '../domain/setup'
+import { prepareSetup, suggestStartingStack } from '../domain/setup'
 import { kanColorUp, longestValueDigits, metInstellingen } from '../domain/chipset'
 import { MultiChip } from '../components/MultiChip'
 import type { StructureKind } from '../domain/blinds'
@@ -15,6 +15,12 @@ import './SetupScreen.css'
 // bijtypen. De afsluitende newline zet de cursor op een lege regel klaar.
 const STANDAARD_NAMEN = Array.from({ length: 8 }, (_, i) => `Speler ${i + 1}`).join('\n') + '\n'
 
+/**
+ * De volgorde volgt hoe een avond werkelijk begint: eerst wat vastligt — wie er
+ * zijn en welke doos er op tafel staat — dan hoeveel tijd je hebt, en pas daarna
+ * wat daaruit volgt. De blindstructuur staat onderaan omdat je die leest en niet
+ * invult.
+ */
 export function SetupScreen({
   onTerug,
   onGestart,
@@ -27,9 +33,10 @@ export function SetupScreen({
   const [namenTekst, setNamenTekst] = useState(
     settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
   )
-  const [startingStack, setStartingStack] = useState(settings?.startingStack ?? 100)
+  // Leeg betekent "nog niet zelf gekozen"; dan geldt het voorstel hieronder.
+  const [startingStack, setStartingStack] = useState<number | undefined>(settings?.startingStack)
   const [levelMinutes, setLevelMinutes] = useState(settings?.levelMinutes ?? 15)
-  const [durationMinutes, setDurationMinutes] = useState(settings?.durationMinutes ?? 180)
+  const [durationMinutes, setDurationMinutes] = useState(settings?.durationMinutes ?? 90)
   const [structure, setStructure] = useState<StructureKind>(settings?.structure ?? 'ladder')
   const [trigger, setTrigger] = useState<Trigger>(settings?.trigger ?? 'both')
   const [colorUp, setColorUp] = useState(settings?.colorUp ?? true)
@@ -52,19 +59,34 @@ export function SetupScreen({
   const chipset = metInstellingen(doos, {
     houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
   })
-  // Eén lettergrootte voor alle fiches van deze doos.
+  // Eén lettergrootte voor alle chips van deze doos.
   const cijfers = longestValueDigits(chipset)
-  // Met twee waardes hou je na een color-up één soort fiche over; dan is er
-  // niets meer te wisselen en heeft de keuze geen betekenis.
+  // Met twee waardes hou je na een color-up één soort chip over; dan is er niets
+  // meer te wisselen en heeft de keuze geen betekenis.
   const colorUpMogelijk = kanColorUp(chipset)
 
-  const huidigeSettings: Settings = useMemo(
-    () => ({
-      playerNames: namenTekst
+  const spelerNamen = useMemo(
+    () =>
+      namenTekst
         .split('\n')
         .map((n) => n.trim())
         .filter(Boolean),
-      startingStack,
+    [namenTekst],
+  )
+
+  // Het voorstel volgt uit de doos en het gezelschap. Zolang je zelf niets hebt
+  // ingevuld staat het in het veld; typ je iets anders, dan blijft het als knop
+  // staan en dringt het zich niet op.
+  const voorstel = useMemo(
+    () => suggestStartingStack(chipset, Math.max(spelerNamen.length, 1)),
+    [chipset, spelerNamen.length],
+  )
+  const gekozenStack = startingStack ?? voorstel ?? 100
+
+  const huidigeSettings: Settings = useMemo(
+    () => ({
+      playerNames: spelerNamen,
+      startingStack: gekozenStack,
       levelMinutes,
       durationMinutes,
       structure,
@@ -74,8 +96,8 @@ export function SetupScreen({
       chipsetId: chipset.id,
     }),
     [
-      namenTekst,
-      startingStack,
+      spelerNamen,
+      gekozenStack,
       levelMinutes,
       durationMinutes,
       structure,
@@ -99,8 +121,8 @@ export function SetupScreen({
 
       {!storageOk && (
         <div className="melding melding--error">
-          De opslag van je browser is vol of geblokkeerd. Instellingen en een lopend toernooi
-          worden niet bewaard.
+          De opslag van je browser is vol of geblokkeerd. Instellingen en een lopend toernooi worden
+          niet bewaard.
         </div>
       )}
 
@@ -112,28 +134,9 @@ export function SetupScreen({
           </label>
         </Panel>
 
-        <Panel title="Blinds">
+        <Panel title="Pokerdoos">
           <label className="veld">
-            <span>Hoe de blinds groeien</span>
-            <select
-              value={structure}
-              onChange={(e) => setStructure(e.target.value as StructureKind)}
-            >
-              <option value="ladder">1-2-5, makkelijk te leggen</option>
-              <option value="doubling">Verdubbelen per level</option>
-              <option value="calculated">Berekend, vloeiend oplopend</option>
-            </select>
-          </label>
-          <label className="veld">
-            <span>Wanneer ze omhoog gaan</span>
-            <select value={trigger} onChange={(e) => setTrigger(e.target.value as Trigger)}>
-              <option value="both">Op de klok én als iemand eruit gaat</option>
-              <option value="time">Alleen op de klok</option>
-              <option value="elimination">Alleen als iemand eruit gaat</option>
-            </select>
-          </label>
-          <label className="veld">
-            <span>Pokerdoos</span>
+            <span>Welke doos</span>
             <select value={chipsetId} onChange={(e) => setChipsetId(e.target.value)}>
               {chipsets.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -180,33 +183,11 @@ export function SetupScreen({
               </div>
             </div>
           )}
-
-          <label className="veld veld--schakelaar">
-            <input
-              type="checkbox"
-              checked={colorUp && colorUpMogelijk}
-              disabled={!colorUpMogelijk}
-              onChange={(e) => setColorUp(e.target.checked)}
-            />
-            <span>Color-up: de kleinste kleur gaat onderweg uit het spel</span>
-          </label>
-          {!colorUpMogelijk && (
-            <p className="uitleg">
-              Kan niet met deze doos: er zijn maar twee waardes, dus na een color-up hou je één
-              soort chip over en valt er niets meer te wisselen.
-            </p>
-          )}
         </Panel>
-        <Panel title="Toernooi">
-          <label className="veld">
-            <span>Startstack (chips)</span>
-            <input
-              type="number"
-              min={1}
-              value={startingStack}
-              onChange={(e) => setStartingStack(Number(e.target.value))}
-            />
-          </label>
+      </div>
+
+      <div className="setup__raster">
+        <Panel title="Tijd">
           <label className="veld">
             <span>Duur (minuten)</span>
             <input
@@ -220,16 +201,98 @@ export function SetupScreen({
           <label className="veld">
             <span>Levellengte</span>
             <select value={levelMinutes} onChange={(e) => setLevelMinutes(Number(e.target.value))}>
-              <option value={10}>10 minuten</option>
-              <option value={15}>15 minuten</option>
-              <option value={20}>20 minuten</option>
+              {[10, 15, 20].map((m) => (
+                <option key={m} value={m}>
+                  {m} minuten
+                </option>
+              ))}
             </select>
           </label>
         </Panel>
 
+        <Panel title="Startstack">
+          {voorstel === undefined ? (
+            <p className="uitleg">
+              Deze doos kan met {spelerNamen.length} spelers geen bruikbare stack uitdelen.
+            </p>
+          ) : (
+            <div className="voorstel">
+              <p className="uitleg voorstel__tekst">
+                Voorstel voor deze doos met {spelerNamen.length} spelers: <strong>{voorstel}</strong>{' '}
+                per speler.
+              </p>
+              <Button
+                variant="ghost"
+                disabled={gekozenStack === voorstel}
+                onClick={() => setStartingStack(voorstel)}
+              >
+                Overnemen
+              </Button>
+            </div>
+          )}
+
+          <label className="veld">
+            <span>Startstack (chips)</span>
+            <input
+              type="number"
+              min={1}
+              value={gekozenStack}
+              onChange={(e) => setStartingStack(Number(e.target.value))}
+            />
+          </label>
+        </Panel>
       </div>
 
+      <Panel title="Chips per speler">
+        <div className="chips-per-speler">
+          {verdeling.perPlayer.map((allocatie) => (
+            <div key={`${allocatie.color}-${allocatie.value}`} className="fiche-regel">
+              <span className="fiche-regel__aantal">{allocatie.count}×</span>
+              <ChipIcon color={allocatie.color} value={allocatie.value} digits={cijfers} />
+            </div>
+          ))}
+        </div>
+        <p className="uitleg">
+          {aantalChips} chips, samen {verdeling.stackValue} waard.
+        </p>
+      </Panel>
+
       <Panel title="Blindstructuur">
+        <div className="setup__raster setup__raster--smal">
+          <label className="veld">
+            <span>Hoe de blinds groeien</span>
+            <select
+              value={structure}
+              onChange={(e) => setStructure(e.target.value as StructureKind)}
+            >
+              <option value="ladder">1-2-5, makkelijk te leggen</option>
+              <option value="doubling">Verdubbelen per level</option>
+              <option value="calculated">Berekend, vloeiend oplopend</option>
+            </select>
+          </label>
+          <label className="veld">
+            <span>Wanneer ze omhoog gaan</span>
+            <select value={trigger} onChange={(e) => setTrigger(e.target.value as Trigger)}>
+              <option value="both">Op de klok én als iemand eruit gaat</option>
+              <option value="time">Alleen op de klok</option>
+              <option value="elimination">Alleen als iemand eruit gaat</option>
+            </select>
+          </label>
+        </div>
+
+        {/* Met de huisregel zijn er maar twee waardes; dan valt er niets te kiezen. */}
+        {!huisregel && (
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
+              checked={colorUp && colorUpMogelijk}
+              disabled={!colorUpMogelijk}
+              onChange={(e) => setColorUp(e.target.checked)}
+            />
+            <span>Color-up: de kleinste kleur gaat onderweg uit het spel</span>
+          </label>
+        )}
+
         <table className="structuur">
           <thead>
             <tr>
@@ -250,24 +313,25 @@ export function SetupScreen({
             ))}
           </tbody>
         </table>
-        {structuur.colorUps.map((colorUp) => (
-          <p key={colorUp.levelIndex} className="uitleg uitleg--fiches">
-            Vanaf level {colorUp.levelIndex + 1}:
-            {colorUp.retiredColors.map((kleur) => (
+
+        {structuur.colorUps.map((moment) => (
+          <p key={moment.levelIndex} className="uitleg uitleg--fiches">
+            Vanaf level {moment.levelIndex + 1}:
+            {moment.retiredColors.map((kleur) => (
               <ChipIcon
                 key={kleur}
                 color={kleur}
-                value={colorUp.retiredValue}
+                value={moment.retiredValue}
                 size={26}
                 digits={cijfers}
               />
             ))}
             uit het spel, wisselen naar
-            {colorUp.nextColors.map((kleur) => (
+            {moment.nextColors.map((kleur) => (
               <ChipIcon
                 key={kleur}
                 color={kleur}
-                value={colorUp.nextValue}
+                value={moment.nextValue}
                 size={26}
                 digits={cijfers}
               />
@@ -275,20 +339,6 @@ export function SetupScreen({
           </p>
         ))}
       </Panel>
-
-      <div className="setup__raster">
-        <Panel title="Chips per speler">
-          {verdeling.perPlayer.map((allocatie) => (
-            <div key={`${allocatie.color}-${allocatie.value}`} className="fiche-regel">
-              <span className="fiche-regel__aantal">{allocatie.count}×</span>
-              <ChipIcon color={allocatie.color} value={allocatie.value} digits={cijfers} />
-            </div>
-          ))}
-          <p className="uitleg">
-            {aantalChips} chips, samen {verdeling.stackValue} waard.
-          </p>
-        </Panel>
-      </div>
 
       {warnings.map((melding, i) => (
         <div key={i} className={`melding melding--${melding.level}`}>

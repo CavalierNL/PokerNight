@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Een browser die de app op het beginscherm kan zetten meldt dat met
+ * Een browser die de app op het startscherm kan zetten meldt dat met
  * `beforeinstallprompt`. Die gebeurtenis komt één keer en moet bewaard worden:
  * het venster openen mag alleen vanuit een klik, niet meteen bij binnenkomst.
  *
@@ -13,14 +13,14 @@ import { useEffect, useState } from 'react'
 type InstallGebeurtenis = Event & { prompt: () => Promise<void> }
 
 export type Installatie = {
-  /** De app draait al vanaf het beginscherm; dan valt er niets te installeren. */
+  /** De app draait al vanaf het startscherm; dan valt er niets te installeren. */
   alGeinstalleerd: boolean
   /** Aanwezig als de browser het venster zelf kan openen. */
   installeer?: () => void
 }
 
-/** Draait de app al zonder browserbalken, of vanaf het iOS-beginscherm? */
-function staatOpBeginscherm(): boolean {
+/** Draait de app al zonder browserbalken, of vanaf het iOS-startscherm? */
+function staatOpStartscherm(): boolean {
   if (typeof window === 'undefined') return false
   const alsApp = ['(display-mode: standalone)', '(display-mode: fullscreen)'].some(
     (vraag) => window.matchMedia?.(vraag).matches,
@@ -35,7 +35,7 @@ export function useInstallPrompt(): Installatie {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    setAlGeinstalleerd(staatOpBeginscherm())
+    setAlGeinstalleerd(staatOpStartscherm())
 
     const onthoud = (e: Event) => {
       // Zonder dit toont de browser zijn eigen balk op zijn eigen moment.

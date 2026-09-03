@@ -38,12 +38,12 @@ export function HomeScreen({
       {!alGeinstalleerd && (
         <footer className="home__voet">
           <Button variant="ghost" onClick={installeer ?? (() => setUitleg((aan) => !aan))}>
-            Op je beginscherm zetten
+            Op je startscherm zetten
           </Button>
           {uitleg && (
             <p className="uitleg home__uitleg">
               Deze browser biedt het niet zelf aan. Op een iPhone gaat het via Deel → Zet op
-              beginscherm, op Android via het menu van je browser → Toevoegen aan startscherm. De
+              startscherm, op Android via het menu van je browser → Toevoegen aan startscherm. De
               app opent dan zonder browserbalken.
             </p>
           )}
