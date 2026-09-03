@@ -131,3 +131,37 @@ button {
 .colorup-regel__voor {
   color: var(--creme-zacht);
 }
+
+/*
+ * De blindstructuur als tabel. Staat in base omdat hij op twee plaatsen hoort:
+ * in de configuratie en in het schema dat je aan tafel opzoekt.
+ */
+.structuur {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.structuur th,
+.structuur td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.structuur th {
+  color: var(--goud-donker);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Het level dat nu gespeeld wordt, in het schema aan tafel. */
+.structuur__nu {
+  background: rgba(240, 197, 66, 0.16);
+}
+
+.structuur__nu td {
+  color: var(--goud);
+  font-weight: 700;
+}

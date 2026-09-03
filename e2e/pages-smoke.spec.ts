@@ -261,4 +261,82 @@ test.describe.serial('de gepubliceerde site', () => {
 
     expect(problemen).toEqual([])
   })
+
+  test('sluit het toernooi af met een winnaar en een uitslag', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Ann\nBob\n')
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await page.getByRole('button', { name: 'Ann' }).click()
+
+    await expect(page.getByText('Afgelopen')).toBeVisible()
+    await expect(page.locator('.eindscherm__winnaar')).toHaveText('Bob')
+    // De uitslag loopt van winnaar naar wie het eerst uitviel.
+    await expect(page.locator('.eindscherm__uitslag li')).toHaveText(['Bob', 'Ann'])
+  })
+
+  test('toont het hele schema met het huidige level erin', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await page.getByRole('button', { name: 'Schema' }).click()
+    await expect(page.locator('.schema .structuur__nu')).toContainText('1')
+
+    // De klok loopt door terwijl je opzoekt: dit is geen pauze.
+    await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)
+    // In het venster zelf: de achtergrond eromheen sluit ook, en heet net zo.
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await expect(page.locator('.schema')).toHaveCount(0)
+  })
+
+  test('gaat een level terug zonder er meteen weer doorheen te schieten', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await page.getByRole('button', { name: 'Een level vooruit' }).click()
+    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await expect(page.locator('.tafel__level')).toContainText('Level 2')
+
+    await page.getByRole('button', { name: 'Een level terug' }).click()
+    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await expect(page.locator('.tafel__level')).toContainText('Level 1')
+
+    // Het teruggekregen level begint vol; stond de klok op nul, dan zou de
+    // eerstvolgende tik hem meteen weer vooruit zetten.
+    await page.waitForTimeout(1200)
+    await expect(page.locator('.tafel__level')).toContainText('Level 1')
+  })
+
+  test('loot de tafel en wacht met de klok tot iedereen zit', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Loot wie de eerste hand deelt').check()
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await expect(page.getByText('deelt de eerste hand')).toBeVisible()
+    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+    await page.waitForTimeout(1200)
+    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+
+    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
+  })
+
+  test('laat een laatkomer instappen', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Laatkomers mogen instappen').check()
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await expect(page.getByText('8 spelers')).toBeVisible()
+    await page.getByRole('button', { name: '+ speler' }).click()
+    await page.getByLabel('Naam').fill('Nour')
+    await page.getByRole('button', { name: 'Erbij' }).click()
+
+    await expect(page.getByText('9 spelers')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Nour' })).toBeVisible()
+  })
 })

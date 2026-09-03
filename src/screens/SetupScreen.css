@@ -175,26 +175,6 @@ input[type='checkbox'] {
 }
 
 
-.structuur {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.structuur th,
-.structuur td {
-  text-align: left;
-  padding: 0.3rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.structuur th {
-  color: var(--goud-donker);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .uitleg {
   font-size: 0.85rem;
   color: var(--creme-zacht);

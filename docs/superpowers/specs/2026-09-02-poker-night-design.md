@@ -157,6 +157,38 @@ gepauzeerd is. Nog een druk laat de klok verder lopen waar hij gebleven was.
 Tijdens een pauze verhoogt ook een eliminatie de blinds niet — je pauzeert nu
 eenmaal omdat er niet gespeeld wordt.
 
+Een geplande pauze is er niet als apart begrip: het levelscherm houdt de klok al
+stil tot iemand hem vrijgeeft, dus een pauze is dat scherm laten staan. Het enige
+dat daar niet bij hoort door te gaan is het geluid, en daar zit een knop voor die
+alleen dit ene signaal stilzet — de instelling zelf blijft staan en het volgende
+level geeft weer geluid.
+
+De laatste minuut van een level wordt eenmalig gemeld: één lage toon, duidelijk
+anders dan de twee stijgende van een verhoging, plus de klok in het goud. Het
+signaal klinkt alleen op het moment dat de klok de grens passeert; wie de app
+opent met nog veertig seconden te gaan krijgt geen waarschuwing voor iets wat de
+tafel allang weet.
+
+### Het level met de hand verzetten
+
+Naast het levelnummer staan twee kleine pijlen. Vooruit en terug lopen allebei
+langs het levelscherm, zodat de tafel de blinds ziet die gaan gelden, en staan
+allebei in de geschiedenis.
+
+Het level dat je terugkrijgt begint met een volle klok. Dat is niet royaal
+bedoeld maar noodzakelijk: ging het level zojuist op tijd om, dan staat de klok
+op 0:00, en met 0:00 zet de eerstvolgende tik hem meteen weer vooruit — dan is
+teruggaan onmogelijk.
+
+Dit is iets anders dan ongedaan maken, dat de vorige zet terugdraait wat die ook
+was. Terug is een besluit aan tafel.
+
+### Het schema opzoeken
+
+Dezelfde tabel als in de configuratie, als venster over het tafelscherm, met het
+huidige level gemarkeerd en in beeld gescrold. De klok loopt door: opzoeken is
+geen pauze.
+
 De geschatte eindtijd die de setup toont is daarmee een schatting bij ononderbroken
 spel; elke pauze schuift die op. Het tafelscherm rekent de verwachte eindtijd
 tijdens het spelen mee met de tijd die je gepauzeerd hebt.
@@ -229,11 +261,50 @@ Per speler wordt alleen bijgehouden of hij nog in het toernooi zit. Individuele
 stacks worden **niet** bijgehouden — die kun je niet weten zonder de hele avond te
 tellen.
 
-Het totaal aan fiches in spel ligt vast: `spelers × startstack`, en verandert niet
-omdat er geen rebuys zijn. Daaruit volgt zonder enige invoer:
+Het totaal aan fiches in spel is de som van waarmee iedereen is ingestapt. Zonder
+laatkomers is dat `spelers × startstack`; een laatkomer brengt zijn eigen stack
+mee en die staat bij hem opgeslagen. Een uitgeschakelde speler telt mee: zijn
+chips liggen bij wie hem eruit heeft gespeeld. Daaruit volgt zonder enige invoer:
 
 - `gemiddelde stack = totaal / aantal spelers dat nog in het toernooi zit`
 - `gemiddelde stack in BB = gemiddelde stack / huidige big blind`
+
+### Laatkomers
+
+Een instelling per toernooi, met twee mogelijkheden. **Met de startstack** is wat
+een echt toernooi doet: laat binnenkomen terwijl de blinds hoog staan is het
+nadeel van laat komen. **Met de gemiddelde stack** is eerlijker, maar laat het
+aantal chips in spel harder groeien; dat bedrag wordt afgerond op iets wat je met
+de aanwezige chips kunt leggen. Staat de instelling uit, dan ligt de tafel vast
+zodra er gedeeld is.
+
+Een laatkomer komt achteraan te zitten en niet op een geloote plek: de tafel zit
+al, en de enige vrije stoel is de zijne. Bij het toevoegen wordt dezelfde
+setup-berekening gedraaid met één speler erbij; haalt de doos dat niet meer, dan
+staat er dat er gewisseld zal moeten worden.
+
+### Loten bij de start
+
+Twee losse keuzes vooraf: de zitplaatsen loten en wie de eerste hand deelt. Is er
+geloot, dan begint het toernooi bij het levelscherm — daar staat wie waar zit en
+wie deelt, en de klok wacht tot iedereen zit. Op dat ene scherm klinkt geen gong:
+iedereen kijkt op dat moment al mee.
+
+De toevalsbron is een argument van `createTournament` en geen aanroep van
+`Math.random` binnenin. Bij loten is "het lijkt willekeurig" niet te controleren;
+alleen met een vastgelegde bron is te testen dat er niemand verdwijnt of dubbel
+komt te zitten.
+
+## Het einde van het toernooi
+
+Zodra er nog één speler over is, is het toernooi afgelopen: de klok stopt, de
+blinds gaan niet meer omhoog — een level dat niemand meer speelt hoort niet in de
+structuur — en er verschijnt een scherm met de winnaar, de uitslag en de netto
+speelduur. De uitslag is de omgekeerde volgorde van uitvallen, waarvoor per
+speler het moment van uitschakelen wordt bewaard.
+
+Het einde staat in dezelfde toestand als de rest, zodat ongedaan maken het ook
+terugdraait: de laatste speler tik je zo verkeerd af.
 
 ## Schermen
 

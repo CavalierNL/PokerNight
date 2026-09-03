@@ -5,9 +5,13 @@ import {
   createTournament,
   currentLevel,
   expectedEndAt,
+  isAfgelopen,
   playersLeft,
   reduce,
   remainingMs,
+  speelduurMs,
+  totalChips,
+  uitslag,
   type Settings,
   type Tournament,
 } from './tournament'
@@ -350,5 +354,194 @@ describe('een levelovergang wacht op bevestiging', () => {
     const naTik = reduce(wachtend, { type: 'tick', now: T0 + 60 * MINUUT })
 
     expect(naTik.levelIndex).toBe(1)
+  })
+})
+
+/** Tikt spelers af tot er één over is. */
+function totDeWinnaar(t: Tournament, now = T0): Tournament {
+  for (let i = 0; i < t.players.length - 1; i += 1) {
+    t = reduce(t, { type: 'playerOut', index: i, now: now + i })
+  }
+  return t
+}
+
+describe('het einde van het toernooi', () => {
+  it('is afgelopen zodra er nog één speler over is', () => {
+    const na = totDeWinnaar(maak())
+    expect(isAfgelopen(na)).toBe(true)
+    expect(playersLeft(na)).toBe(1)
+  })
+
+  it('is niet afgelopen zolang er twee spelers zijn', () => {
+    let t = reduce(maak(), { type: 'playerOut', index: 0, now: T0 })
+    t = reduce(t, { type: 'playerOut', index: 1, now: T0 + 1 })
+    expect(isAfgelopen(t)).toBe(false)
+  })
+
+  it('verhoogt de blinds niet meer bij de laatste eliminatie', () => {
+    // Een level dat niemand meer speelt, hoort niet in de structuur.
+    let t = maak({ trigger: 'elimination' })
+    for (const index of [0, 1]) {
+      t = reduce(t, { type: 'playerOut', index, now: T0 + index })
+      t = reduce(t, { type: 'bevestigLevel', now: T0 + index })
+    }
+    const voorDeLaatste = t.levelIndex
+    expect(voorDeLaatste).toBe(2)
+
+    t = reduce(t, { type: 'playerOut', index: 2, now: T0 + 3 })
+    expect(isAfgelopen(t)).toBe(true)
+    expect(t.levelIndex).toBe(voorDeLaatste)
+  })
+
+  it('zet de klok stil', () => {
+    const t = totDeWinnaar(maak({ trigger: 'time' }))
+    expect(t.clock.state).toBe('paused')
+    const veelLater = reduce(t, { type: 'tick', now: T0 + 10 * 15 * MINUUT })
+    expect(veelLater.levelIndex).toBe(t.levelIndex)
+  })
+
+  it('zet de winnaar bovenaan en de rest omgekeerd aan uitvallen', () => {
+    const t = totDeWinnaar(maak())
+    expect(uitslag(t).map((p) => p.name)).toEqual(['Max', 'Joost', 'Ilse', 'Sam'])
+  })
+
+  it('telt de pauze niet mee in de speelduur', () => {
+    let t = reduce(maak(), { type: 'togglePause', now: T0 + 5 * MINUUT })
+    t = reduce(t, { type: 'togglePause', now: T0 + 8 * MINUUT })
+    t = totDeWinnaar(t, T0 + 20 * MINUUT)
+    expect(speelduurMs(t, T0 + 99 * MINUUT)).toBe(20 * MINUUT + 2 - 3 * MINUUT)
+  })
+
+  it('is terug te draaien, voor als je de verkeerde afgetikt hebt', () => {
+    const t = totDeWinnaar(maak())
+    const terug = reduce(t, { type: 'undo', now: T0 + MINUUT })
+    expect(isAfgelopen(terug)).toBe(false)
+    expect(playersLeft(terug)).toBe(2)
+  })
+
+  it('laat zich daarna niet meer verzetten', () => {
+    const t = totDeWinnaar(maak())
+    expect(reduce(t, { type: 'advanceLevel', now: T0 + MINUUT })).toBe(t)
+    expect(reduce(t, { type: 'levelTerug', now: T0 + MINUUT })).toBe(t)
+  })
+})
+
+describe('handmatig een level terug', () => {
+  it('gaat terug en vraagt om bevestiging aan tafel', () => {
+    const t = reduce(maak(), { type: 'advanceLevel', now: T0 })
+    const terug = reduce(t, { type: 'levelTerug', now: T0 + MINUUT })
+    expect(terug.levelIndex).toBe(0)
+    expect(terug.wachtOpLevel).toBe(true)
+  })
+
+  it('doet niets op het eerste level', () => {
+    const t = maak()
+    expect(reduce(t, { type: 'levelTerug', now: T0 })).toBe(t)
+  })
+
+  it('geeft het teruggekregen level een volle klok', () => {
+    // Anders staat de klok op 0:00 en zet de eerstvolgende tick het level
+    // meteen weer vooruit — dan is teruggaan onmogelijk.
+    const omgeslagen = T0 + 15 * MINUUT
+    let t = reduce(maak({ trigger: 'time' }), { type: 'tick', now: omgeslagen })
+    t = reduce(t, { type: 'bevestigLevel', now: omgeslagen })
+    t = reduce(t, { type: 'levelTerug', now: omgeslagen })
+    expect(remainingMs(t, omgeslagen)).toBe(15 * MINUUT)
+
+    t = reduce(t, { type: 'bevestigLevel', now: omgeslagen })
+    t = reduce(t, { type: 'tick', now: omgeslagen + 1000 })
+    expect(t.levelIndex).toBe(0)
+  })
+
+  it('is zelf ook terug te draaien', () => {
+    const t = reduce(maak(), { type: 'advanceLevel', now: T0 })
+    const terug = reduce(t, { type: 'levelTerug', now: T0 + MINUUT })
+    expect(reduce(terug, { type: 'undo', now: T0 + 2 * MINUUT }).levelIndex).toBe(1)
+  })
+})
+
+describe('loten bij de start', () => {
+  const opVolgorde = () => 0
+
+  it('laat de tafel met rust als er niet geloot wordt', () => {
+    const t = maak()
+    expect(t.players.map((p) => p.name)).toEqual(basis.playerNames)
+    expect(t.dealer).toBeUndefined()
+    expect(t.clock.state).toBe('running')
+  })
+
+  it('zet de spelers in de geloote volgorde', () => {
+    const t = createTournament(
+      { ...basis, shuffleSeats: true },
+      KLEINE_DOOS,
+      T0,
+      opVolgorde,
+    )
+    expect([...t.players.map((p) => p.name)].sort()).toEqual([...basis.playerNames].sort())
+    expect(t.players.map((p) => p.name)).not.toEqual(basis.playerNames)
+  })
+
+  it('wijst een dealer aan', () => {
+    const t = createTournament({ ...basis, randomDealer: true }, KLEINE_DOOS, T0, () => 0.5)
+    expect(t.dealer).toBe(2)
+  })
+
+  it('wacht met de klok tot de tafel zit', () => {
+    // De uitslag van de loting staat op het levelscherm; zolang die er staat
+    // wordt er niet gespeeld en loopt de tijd niet.
+    const t = createTournament({ ...basis, randomDealer: true }, KLEINE_DOOS, T0, opVolgorde)
+    expect(t.wachtOpLevel).toBe(true)
+    expect(t.clock.state).toBe('paused')
+    expect(remainingMs(t, T0 + 5 * MINUUT)).toBe(15 * MINUUT)
+
+    const gestart = reduce(t, { type: 'bevestigLevel', now: T0 + 5 * MINUUT })
+    expect(gestart.clock.state).toBe('running')
+    expect(remainingMs(gestart, T0 + 5 * MINUUT)).toBe(15 * MINUUT)
+  })
+})
+
+describe('een laatkomer', () => {
+  const erbij = (t: Tournament, name = 'Nour', now = T0 + MINUUT) =>
+    reduce(t, { type: 'spelerErbij', name, now })
+
+  it('doet niet mee als laatkomers uitstaan', () => {
+    const t = maak()
+    expect(erbij(t)).toBe(t)
+  })
+
+  it('komt binnen met de startstack', () => {
+    const t = erbij(maak({ laatkomers: 'startstack' }))
+    expect(t.players.map((p) => p.name)).toContain('Nour')
+    expect(playersLeft(t)).toBe(5)
+    expect(totalChips(t)).toBe(5 * 100)
+  })
+
+  it('komt met de gemiddelde stack binnen als dat gekozen is', () => {
+    // Vier spelers van 100, waarvan er één af is: gemiddeld 133 over drie.
+    let t = maak({ laatkomers: 'gemiddelde' })
+    t = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    t = erbij(t)
+    expect(t.players[4].stack).toBe(130)
+    expect(totalChips(t)).toBe(400 + 130)
+  })
+
+  it('telt mee in de gemiddelde stack', () => {
+    const t = erbij(maak({ laatkomers: 'startstack' }))
+    expect(averageStack(t)).toBe(100)
+  })
+
+  it('negeert een lege naam', () => {
+    const t = maak({ laatkomers: 'startstack' })
+    expect(erbij(t, '   ')).toBe(t)
+  })
+
+  it('kan er na afloop niet meer bij', () => {
+    const t = totDeWinnaar(maak({ laatkomers: 'startstack' }))
+    expect(erbij(t)).toBe(t)
+  })
+
+  it('is terug te draaien', () => {
+    const t = erbij(maak({ laatkomers: 'startstack' }))
+    expect(reduce(t, { type: 'undo', now: T0 + 2 * MINUUT }).players).toHaveLength(4)
   })
 })

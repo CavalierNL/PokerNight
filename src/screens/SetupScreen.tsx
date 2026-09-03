@@ -13,6 +13,7 @@ import {
 } from '../domain/chipset'
 import { MultiChip } from '../components/MultiChip'
 import { ColorUpRegel } from '../components/ColorUpRegel'
+import { StructuurTabel } from '../components/StructuurTabel'
 import { GetalVeld } from '../components/GetalVeld'
 import { levelOpties, type StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
@@ -81,6 +82,9 @@ export function SetupScreen({
   const [huisregel, setHuisregel] = useState(settings?.houseRuleFiveColor !== undefined)
   const [vijfKleur, setVijfKleur] = useState(settings?.houseRuleFiveColor)
   const [chipsetId, setChipsetId] = useState(settings?.chipsetId ?? chipsets[0].id)
+  const [shuffleSeats, setShuffleSeats] = useState(settings?.shuffleSeats === true)
+  const [randomDealer, setRandomDealer] = useState(settings?.randomDealer === true)
+  const [laatkomers, setLaatkomers] = useState<Settings['laatkomers']>(settings?.laatkomers)
 
   const doos = chipsets.find((c) => c.id === chipsetId) ?? chipsets[0]
 
@@ -159,6 +163,9 @@ export function SetupScreen({
       colorUp: colorUp && colorUpMogelijk,
       houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
       chipsetId: chipset.id,
+      shuffleSeats,
+      randomDealer,
+      laatkomers,
     }),
     [
       spelerNamen,
@@ -172,6 +179,9 @@ export function SetupScreen({
       huisregel,
       gekozenVijf,
       chipset,
+      shuffleSeats,
+      randomDealer,
+      laatkomers,
     ],
   )
 
@@ -225,8 +235,47 @@ export function SetupScreen({
         <Panel title="Spelers">
           <label className="veld">
             <span>Namen, één per regel</span>
-            <textarea rows={10} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
+            <textarea rows={8} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
           </label>
+
+          {/* Wat er bij de start geloot wordt, staat bij wie er meedoen. */}
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
+              checked={shuffleSeats}
+              onChange={(e) => setShuffleSeats(e.target.checked)}
+            />
+            <span>Loot de zitplaatsen</span>
+          </label>
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
+              checked={randomDealer}
+              onChange={(e) => setRandomDealer(e.target.checked)}
+            />
+            <span>Loot wie de eerste hand deelt</span>
+          </label>
+
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
+              checked={laatkomers !== undefined}
+              onChange={(e) => setLaatkomers(e.target.checked ? 'startstack' : undefined)}
+            />
+            <span>Laatkomers mogen instappen</span>
+          </label>
+          {laatkomers !== undefined && (
+            <label className="veld">
+              <span>Waarmee ze instappen</span>
+              <select
+                value={laatkomers}
+                onChange={(e) => setLaatkomers(e.target.value as Settings['laatkomers'])}
+              >
+                <option value="startstack">Met de startstack</option>
+                <option value="gemiddelde">Met de gemiddelde stack van dat moment</option>
+              </select>
+            </label>
+          )}
         </Panel>
 
         <Panel title="Pokerdoos">
@@ -436,26 +485,7 @@ export function SetupScreen({
           </label>
         )}
 
-        <table className="structuur">
-          <thead>
-            <tr>
-              <th>Level</th>
-              <th>Blinds</th>
-              <th>Vanaf</th>
-            </tr>
-          </thead>
-          <tbody>
-            {structuur.levels.map((level) => (
-              <tr key={level.index}>
-                <td>{level.index + 1}</td>
-                <td>
-                  {level.smallBlind} / {level.bigBlind}
-                </td>
-                <td>{level.index * gekozenLengte} min</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <StructuurTabel levels={structuur.levels} levelMinutes={gekozenLengte} />
 
         {structuur.colorUps.map((moment) => (
           <ColorUpRegel

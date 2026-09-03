@@ -1,21 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../components/Button'
 import { useNow } from '../hooks/useNow'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
+import { useLaatsteMinuut, WAARSCHUWING_MS } from '../hooks/useLaatsteMinuut'
 import { useAppState } from '../state/AppState'
 import { ColorUpRegel } from '../components/ColorUpRegel'
+import { StructuurTabel } from '../components/StructuurTabel'
+import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
+import { prepareSetup } from '../domain/setup'
+import type { Chipset } from '../domain/chipset'
 import {
   averageStack,
   averageStackInBigBlinds,
   colorUpAt,
   currentLevel,
   expectedEndAt,
+  isAfgelopen,
+  laatkomerStack,
   nextLevel,
   playersLeft,
   remainingMs,
+  speelduurMs,
+  uitslag,
+  type Tournament,
 } from '../domain/tournament'
 import './TournamentScreen.css'
 
@@ -29,17 +39,49 @@ function klokTijd(ms: number): string {
   return new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
 }
 
+/** Hoe lang er gespeeld is, in gewone woorden: dit staat op het eindscherm. */
+function formatteerDuur(ms: number): string {
+  const minuten = Math.round(ms / 60_000)
+  if (minuten === 0) return 'minder dan een minuut'
+  const uren = Math.floor(minuten / 60)
+  const rest = minuten % 60
+  const inMinuten = `${rest} ${rest === 1 ? 'minuut' : 'minuten'}`
+  if (uren === 0) return inMinuten
+  const inUren = `${uren} uur`
+  return rest === 0 ? inUren : `${inUren} en ${inMinuten}`
+}
+
 export function TournamentScreen() {
-  const { tournament, dispatch, discard, preferences, storageOk } = useAppState()
+  const { tournament, dispatch, discard, preferences, chipsets, storageOk } = useAppState()
   const [stopBevestigen, setStopBevestigen] = useState(false)
+  const [schemaOpen, setSchemaOpen] = useState(false)
+  const [laatkomerOpen, setLaatkomerOpen] = useState(false)
+  // Het level waarvoor iemand het geluid heeft stilgezet. Bewaard als index en
+  // niet als vlag, zodat het volgende level vanzelf weer geluid geeft zonder dat
+  // er ergens een reset hoeft te staan die vergeten kan worden.
+  const [stilVoorLevel, setStilVoorLevel] = useState<number | null>(null)
   const now = useNow()
 
   const wachtOpLevel = tournament?.wachtOpLevel === true
   // Wachten op een bevestiging is geen pauze: het scherm dat erbij hoort is een
   // ander, en de knoppen eronder horen niet te reageren.
   const gepauzeerd = tournament?.clock.state === 'paused' && !wachtOpLevel
+  const stil = tournament !== null && stilVoorLevel === tournament.levelIndex
   useWakeLock(preferences.wakeLock && tournament !== null && !gepauzeerd)
-  useLevelSound(wachtOpLevel, preferences.sound)
+  // Niet op het openingsscherm: daar is het levelscherm de uitslag van de
+  // loting, iedereen kijkt al mee en een gong is dan alleen maar hard.
+  const eersteScherm = tournament?.levelIndex === 0
+  useLevelSound(wachtOpLevel && !eersteScherm, preferences.sound && !stil)
+
+  // Alleen zinvol als de klok afloopt: bij "alleen eliminatie" telt hij op en is
+  // er geen minuut om te waarschuwen.
+  const telAfOpTijd = tournament !== null && tournament.settings.trigger !== 'elimination'
+  const resterend = tournament ? remainingMs(tournament, now) : 0
+  useLaatsteMinuut(
+    resterend,
+    preferences.sound && telAfOpTijd && tournament?.clock.state === 'running',
+    tournament?.levelIndex ?? 0,
+  )
 
   // De reducer beslist zelf of er iets moet gebeuren; hier wordt alleen de tijd
   // doorgegeven.
@@ -51,9 +93,14 @@ export function TournamentScreen() {
   if (!tournament || !level) return null
 
   const volgende = nextLevel(tournament)
+  const afgelopen = isAfgelopen(tournament)
+  const { shuffleSeats, randomDealer, laatkomers } = tournament.settings
+  const geloot = shuffleSeats === true || randomDealer === true
+  const dealer =
+    tournament.dealer === undefined ? undefined : tournament.players[tournament.dealer]?.name
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
-  const telAfOpTijd = tournament.settings.trigger !== 'elimination'
   const eindtijd = expectedEndAt(tournament, now)
+  const bijnaOm = telAfOpTijd && resterend <= WAARSCHUWING_MS
 
   // Bij de trigger "alleen eliminatie" gebeurt er niets als de tijd om is, dus
   // toont de klok de verstreken toernooitijd in plaats van een aftelling.
@@ -72,14 +119,36 @@ export function TournamentScreen() {
         )}
 
         <div className="tafel__balk">
-          <span>
-            Level {tournament.levelIndex + 1} · {playersLeft(tournament)} spelers
+          {/*
+            De levelknoppen staan bij het levelnummer en niet bij de grote
+            knoppen onderaan: ze horen bij wat ze verzetten, en ze horen klein te
+            zijn — je gebruikt ze zelden en een misgreep verzet de blinds.
+          */}
+          <span className="tafel__level">
+            <button
+              className="tafel__levelknop"
+              aria-label="Een level terug"
+              disabled={tournament.levelIndex === 0 || gepauzeerd}
+              onClick={() => dispatch({ type: 'levelTerug', now: Date.now() })}
+            >
+              ‹
+            </button>
+            Level {tournament.levelIndex + 1}
+            <button
+              className="tafel__levelknop"
+              aria-label="Een level vooruit"
+              disabled={volgende === undefined || gepauzeerd}
+              onClick={() => dispatch({ type: 'advanceLevel', now: Date.now() })}
+            >
+              ›
+            </button>
           </span>
+          <span>{playersLeft(tournament)} spelers</span>
         </div>
 
         <div className="tafel__midden">
-          <div className="tafel__klok">
-            {formatteerTijd(telAfOpTijd ? remainingMs(tournament, now) : verstreken)}
+          <div className={`tafel__klok${bijnaOm ? ' tafel__klok--bijna' : ''}`}>
+            {formatteerTijd(telAfOpTijd ? resterend : verstreken)}
           </div>
           <div className="tafel__blinds">
             <span className="tafel__blind">
@@ -99,7 +168,7 @@ export function TournamentScreen() {
             </span>
             <span>
               Gemiddelde stack {Math.round(averageStackInBigBlinds(tournament))} BB, ±{' '}
-              {roundToPayable(averageStack(tournament), 1)} chips
+              {roundToPayable(averageStack(tournament), tournament.kleinsteChip ?? 1)} chips
             </span>
             {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
           </div>
@@ -118,8 +187,21 @@ export function TournamentScreen() {
                 {speler.name}
               </button>
             ))}
+            {laatkomers !== undefined && !afgelopen && (
+              <button
+                className="speler speler--erbij"
+                disabled={gepauzeerd}
+                onClick={() => setLaatkomerOpen(true)}
+              >
+                + speler
+              </button>
+            )}
           </div>
           <div className="tafel__knoppen">
+            {/* Het schema is opzoekwerk, geen ingreep: de klok loopt gewoon door. */}
+            <Button variant="ghost" disabled={gepauzeerd} onClick={() => setSchemaOpen(true)}>
+              Schema
+            </Button>
             <Button
               variant="ghost"
               disabled={gepauzeerd}
@@ -154,7 +236,7 @@ export function TournamentScreen() {
           </div>
         </div>
       </div>
-      {gepauzeerd && (
+      {gepauzeerd && !afgelopen && (
         // Het hele scherm is de knop: tijdens een pauze hoef je niet te mikken.
         <button
           type="button"
@@ -189,12 +271,205 @@ export function TournamentScreen() {
 
             {colorUp && <ColorUpRegel label="Color-up:" colorUp={colorUp} />}
 
-            <Button onClick={() => dispatch({ type: 'bevestigLevel', now: Date.now() })}>
-              De klok mag lopen
-            </Button>
+            {/*
+              De uitslag van de loting hoort bij de eerste hand en nergens
+              anders: daarna zit iedereen en heeft de knop de tafel al rond
+              gehad.
+            */}
+            {tournament.levelIndex === 0 && geloot && (
+              <div className="loting">
+                {shuffleSeats === true && (
+                  <ol className="loting__plaatsen">
+                    {tournament.players.map((speler, i) => (
+                      <li key={speler.name + i}>{speler.name}</li>
+                    ))}
+                  </ol>
+                )}
+                {dealer !== undefined && (
+                  <p className="loting__dealer">{dealer} deelt de eerste hand</p>
+                )}
+              </div>
+            )}
+
+            <div className="levelscherm__knoppen">
+              {/*
+                Dit scherm houdt de klok stil tot iemand hem vrijgeeft, en is
+                daarmee ook de pauze: laat het staan en er wordt niet gespeeld.
+                Alleen het geluid hoort daar niet een kwartier bij door te gaan.
+              */}
+              {preferences.sound && !eersteScherm && (
+                <Button
+                  variant="ghost"
+                  aria-pressed={stil}
+                  onClick={() => setStilVoorLevel(stil ? null : tournament.levelIndex)}
+                >
+                  <SoundIcon gedempt={stil} />
+                  {stil ? 'Geluid aan' : 'Geluid uit'}
+                </Button>
+              )}
+              <Button onClick={() => dispatch({ type: 'bevestigLevel', now: Date.now() })}>
+                De klok mag lopen
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {schemaOpen && (
+        <SchemaVenster tournament={tournament} onSluiten={() => setSchemaOpen(false)} />
+      )}
+
+      {laatkomerOpen && (
+        <LaatkomerVenster
+          tournament={tournament}
+          chipset={chipsets.find((c) => c.id === tournament.settings.chipsetId)}
+          onErbij={(name) => {
+            dispatch({ type: 'spelerErbij', name, now: Date.now() })
+            setLaatkomerOpen(false)
+          }}
+          onSluiten={() => setLaatkomerOpen(false)}
+        />
+      )}
+
+      {afgelopen && (
+        <div className="levelscherm">
+          <div className="levelscherm__kaart eindscherm">
+            <span className="levelscherm__kop">Afgelopen</span>
+            <span className="eindscherm__winnaar">{uitslag(tournament)[0]?.name}</span>
+            <span className="eindscherm__duur">
+              wint na {formatteerDuur(speelduurMs(tournament, now))} spelen
+            </span>
+            {/* Genummerd van boven af: de winnaar is nummer één. */}
+            <ol className="eindscherm__uitslag">
+              {uitslag(tournament).map((speler, i) => (
+                <li key={speler.name + i}>{speler.name}</li>
+              ))}
+            </ol>
+            <div className="levelscherm__knoppen">
+              {/* Voor als de verkeerde is afgetikt: dan is het toernooi nog bezig. */}
+              <Button variant="ghost" onClick={() => dispatch({ type: 'undo', now: Date.now() })}>
+                Ongedaan maken
+              </Button>
+              <Button onClick={discard}>Klaar</Button>
+            </div>
           </div>
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * Iemand die later binnenkomt. Toont waarmee hij instapt, want dat is de vraag
+ * die aan tafel gesteld wordt, en waarschuwt als de doos er geen stack meer bij
+ * heeft: chips die er niet zijn kun je niet uitdelen, hoe graag je ook wilt.
+ */
+function LaatkomerVenster({
+  tournament,
+  chipset,
+  onErbij,
+  onSluiten,
+}: {
+  tournament: Tournament
+  chipset: Chipset | undefined
+  onErbij: (name: string) => void
+  onSluiten: () => void
+}) {
+  const [naam, setNaam] = useState(`Speler ${tournament.players.length + 1}`)
+  const stack = laatkomerStack(tournament)
+
+  // Dezelfde berekening als bij de opzet, maar met één speler erbij. Wat daar
+  // een blokkerende melding is, is hier de mededeling dat de doos leeg is.
+  const doosHeeftRuimte = useMemo(() => {
+    if (!chipset) return true
+    const namen = [...tournament.players.map((p) => p.name), naam]
+    const opzet = prepareSetup({ ...tournament.settings, playerNames: namen }, chipset)
+    return !opzet.warnings.some((w) => w.level === 'error')
+  }, [chipset, tournament.players, tournament.settings, naam])
+
+  return (
+    <div className="levelscherm">
+      <button
+        type="button"
+        className="schema__achtergrond"
+        aria-label="Sluiten"
+        onClick={onSluiten}
+      />
+      <form
+        className="levelscherm__kaart schema"
+        onSubmit={(e) => {
+          e.preventDefault()
+          onErbij(naam)
+        }}
+      >
+        <span className="levelscherm__kop">Speler erbij</span>
+        <label className="veld">
+          <span>Naam</span>
+          <input autoFocus value={naam} onChange={(e) => setNaam(e.target.value)} />
+        </label>
+        <p className="uitleg">
+          Stapt in met {stack} chips
+          {tournament.settings.laatkomers === 'gemiddelde'
+            ? ' — de gemiddelde stack van dit moment.'
+            : ' — de startstack.'}
+        </p>
+        {!doosHeeftRuimte && (
+          <div className="melding melding--warning">
+            De doos heeft niet genoeg chips voor er nog een stack bij. Je zult moeten wisselen.
+          </div>
+        )}
+        <div className="levelscherm__knoppen">
+          <Button type="button" variant="ghost" onClick={onSluiten}>
+            Annuleren
+          </Button>
+          <Button type="submit" disabled={naam.trim() === ''}>
+            Erbij
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+/**
+ * Het hele schema, opgezocht tijdens het spelen. Een eigen component omdat het
+ * bij openen naar het huidige level moet springen: bij veertig levels is
+ * scrollen naar waar je bent precies het werk dat je niet aan tafel wilt doen.
+ */
+function SchemaVenster({
+  tournament,
+  onSluiten,
+}: {
+  tournament: Tournament
+  onSluiten: () => void
+}) {
+  const lijst = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    lijst.current?.querySelector('.structuur__nu')?.scrollIntoView({ block: 'center' })
+  }, [])
+
+  return (
+    <div className="levelscherm">
+      <button type="button" className="schema__achtergrond" aria-label="Sluiten" onClick={onSluiten} />
+      <div className="levelscherm__kaart schema">
+        <span className="levelscherm__kop">Blindstructuur</span>
+        <div className="schema__lijst" ref={lijst}>
+          <StructuurTabel
+            levels={tournament.levels}
+            levelMinutes={tournament.settings.levelMinutes}
+            huidigLevel={tournament.levelIndex}
+          />
+        </div>
+        {tournament.colorUps.map((moment) => (
+          <ColorUpRegel
+            key={moment.levelIndex}
+            label={`Level ${moment.levelIndex + 1}:`}
+            colorUp={moment}
+          />
+        ))}
+        <Button onClick={onSluiten}>Sluiten</Button>
+      </div>
+    </div>
   )
 }
