@@ -225,30 +225,26 @@ export function reduce(state: Tournament, action: Action): Tournament {
       return volgende ? withHistory(state, volgende, action.now) : state
     }
 
+    // Pauzeren komt niet in de geschiedenis. Het is geen zet die je terugdraait
+    // maar een knop met een tegenhanger: hervatten. Zou het er wel in staan, dan
+    // zou "ongedaan maken" na een pauze eerst die pauze afpellen in plaats van
+    // de eliminatie of de levelovergang die je bedoelde.
     case 'togglePause': {
       if (state.clock.state === 'running') {
-        return withHistory(
-          state,
-          {
-            ...core(state),
-            clock: {
-              state: 'paused',
-              remainingMs: remainingMs(state, action.now),
-              pausedAt: action.now,
-            },
+        return {
+          ...state,
+          clock: {
+            state: 'paused',
+            remainingMs: remainingMs(state, action.now),
+            pausedAt: action.now,
           },
-          action.now,
-        )
+        }
       }
-      return withHistory(
-        state,
-        {
-          ...core(state),
-          pausedMs: state.pausedMs + (action.now - state.clock.pausedAt),
-          clock: { state: 'running', endsAt: action.now + state.clock.remainingMs },
-        },
-        action.now,
-      )
+      return {
+        ...state,
+        pausedMs: state.pausedMs + (action.now - state.clock.pausedAt),
+        clock: { state: 'running', endsAt: action.now + state.clock.remainingMs },
+      }
     }
 
     case 'undo': {

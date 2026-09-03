@@ -178,13 +178,15 @@ describe('undo', () => {
     expect(reduce(terug, { type: 'tick', now: om + 250 }).levelIndex).toBe(0)
   })
 
-  it('laat het toernooi na undo van een pauze niet doorschieten', () => {
-    // De bewaarde klok had een eindtijdstip dat tijdens de pauze verouderde.
-    const pauzeOp = T0 + 5 * MINUUT
+  it('laat het toernooi na een late undo niet doorschieten', () => {
+    // De bewaarde klok heeft een eindtijdstip dat tussen de stap en de undo
+    // veroudert; zonder herstel zou het teruggezette level meteen aflopen.
+    const uitOp = T0 + 5 * MINUUT
     const undoOp = T0 + 25 * MINUUT
-    const gepauzeerd = reduce(maak(), { type: 'togglePause', now: pauzeOp })
-    const terug = reduce(gepauzeerd, { type: 'undo', now: undoOp })
+    const naUit = reduce(maak(), { type: 'playerOut', index: 0, now: uitOp })
+    const terug = reduce(naUit, { type: 'undo', now: undoOp })
 
+    expect(terug.players[0].out).toBe(false)
     expect(terug.clock.state).toBe('running')
     expect(remainingMs(terug, undoOp)).toBe(10 * MINUUT)
     expect(reduce(terug, { type: 'tick', now: undoOp + 250 }).levelIndex).toBe(0)
@@ -213,9 +215,11 @@ describe('undo', () => {
   })
 
   it('bewaart hoogstens twintig stappen', () => {
-    let t = maak()
+    // Dertig spelers die één voor één uitgaan: genoeg stappen om de grens te
+    // halen. Pauzeren telt niet meer mee, dat komt niet in de geschiedenis.
+    let t = maak({ playerNames: Array.from({ length: 30 }, (_, i) => `Speler ${i + 1}`) })
     for (let i = 0; i < 30; i++) {
-      t = reduce(t, { type: 'togglePause', now: T0 + i * 1000 })
+      t = reduce(t, { type: 'playerOut', index: i, now: T0 + i * 1000 })
     }
     expect(t.history.length).toBe(20)
   })
@@ -270,5 +274,37 @@ describe('einde structuur', () => {
     const laatste = naarLaatsteLevel(maak())
     const na = reduce(laatste, { type: 'advanceLevel', now: T0 })
     expect(na).toBe(laatste)
+  })
+})
+
+describe('een pauze staat los van de geschiedenis', () => {
+  it('komt niet in de geschiedenis terecht', () => {
+    const t = maak()
+    const gepauzeerd = reduce(t, { type: 'togglePause', now: T0 + 100 })
+
+    expect(gepauzeerd.clock.state).toBe('paused')
+    expect(gepauzeerd.history).toHaveLength(t.history.length)
+  })
+
+  it('laat ongedaan maken doorpakken naar wat je echt deed', () => {
+    // Iemand gaat eruit, daarna wordt er gepauzeerd. Ongedaan maken hoort die
+    // eliminatie terug te draaien en niet eerst de pauze af te pellen.
+    const naUit = reduce(maak(), { type: 'playerOut', index: 0, now: T0 + 100 })
+    const naPauze = reduce(naUit, { type: 'togglePause', now: T0 + 200 })
+    const naUndo = reduce(naPauze, { type: 'undo', now: T0 + 300 })
+
+    expect(naUit.players[0].out).toBe(true)
+    expect(naUndo.players[0].out).toBe(false)
+  })
+
+  it('houdt hervatten symmetrisch met pauzeren', () => {
+    const t = maak()
+    const gepauzeerd = reduce(t, { type: 'togglePause', now: T0 + 100 })
+    const hervat = reduce(gepauzeerd, { type: 'togglePause', now: T0 + 10_000 })
+
+    expect(hervat.clock.state).toBe('running')
+    // De pauze telt niet mee als speeltijd.
+    expect(hervat.pausedMs).toBe(9900)
+    expect(hervat.history).toHaveLength(t.history.length)
   })
 })

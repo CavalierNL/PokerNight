@@ -277,8 +277,10 @@ export function SetupScreen({
                 Voorstel voor deze doos met {spelerNamen.length} spelers: <strong>{voorstel}</strong>{' '}
                 per speler.
               </p>
+              {/* Goud zolang hij iets te doen heeft; staat het voorstel er al,
+                  dan is er niets over te nemen en valt hij terug in de rij. */}
               <Button
-                variant="ghost"
+                variant={gekozenStack === voorstel ? 'ghost' : 'primary'}
                 disabled={gekozenStack === voorstel}
                 onClick={() => setStartingStack(voorstel)}
               >

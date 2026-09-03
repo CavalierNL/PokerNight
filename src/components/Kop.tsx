@@ -1,12 +1,5 @@
 import type { ReactNode } from 'react'
-import { kiesHand, PlayingCard } from './PlayingCard'
-
-/**
- * Eén hand voor de hele sessie, hier op moduleniveau getrokken. Zou elk scherm
- * zijn eigen hand kiezen, dan wisselden de kaarten zodra je naar de setup loopt
- * en terug — dat leest als een storing in plaats van als een grapje.
- */
-const HAND = kiesHand()
+import { PlayingCard, SESSIE_HAND as HAND } from './PlayingCard'
 
 export function Kop({ children }: { children: ReactNode }) {
   return (

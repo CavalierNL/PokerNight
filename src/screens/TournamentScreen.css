@@ -6,8 +6,9 @@
   padding: 1.25rem;
 }
 
+/* Steviger dan een lichte dimming: dat was aan tafel nauwelijks te zien. */
 .tafel--gepauzeerd {
-  filter: brightness(0.4);
+  filter: brightness(0.22) saturate(0.5);
 }
 
 .tafel__balk {
@@ -40,12 +41,38 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Small en big staan als twee benoemde bedragen naast elkaar, niet als "25 / 50".
+ * Aan tafel wordt er naar dit scherm gewezen; dan moet er staan wat het is.
+ */
 .tafel__blinds {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: clamp(1.5rem, 6vw, 4rem);
+  flex-wrap: wrap;
+}
+
+.tafel__blind {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.tafel__blind-label {
+  font-size: clamp(0.8rem, 2.2vw, 1.4rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--creme-zacht);
+}
+
+.tafel__blind-waarde {
   font-family: var(--serif);
   font-weight: 700;
-  font-size: clamp(2rem, 9vw, 5rem);
+  font-size: clamp(2.6rem, 12vw, 7rem);
   color: var(--goud);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .tafel__onder {
@@ -104,12 +131,46 @@
 .pauze-overlay {
   position: fixed;
   inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* De kaarten liggen achter het woord, als twee kaarten die op tafel wachten. */
+.pauze-overlay__kaarten {
+  grid-area: 1 / 1;
   display: flex;
-  align-items: center;
   justify-content: center;
+}
+
+.pauze-kaart {
+  width: clamp(4.5rem, 15vw, 8rem);
+  height: auto;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
+}
+
+.pauze-kaart--een {
+  transform: rotate(-11deg) translateX(9%);
+}
+
+.pauze-kaart--twee {
+  transform: rotate(9deg) translateX(-9%);
+}
+
+/*
+ * Boven de kaarten. Nodig omdat een `filter` op de kaarten een eigen laag maakt:
+ * zonder deze regel schilderen ze over de tekst heen, ook al staan ze ervoor in
+ * de HTML.
+ */
+.pauze-overlay__tekst {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 1;
   font-family: var(--serif);
-  font-size: clamp(2rem, 10vw, 6rem);
+  font-size: clamp(1.8rem, 8vw, 5rem);
   color: var(--goud);
   letter-spacing: 0.08em;
-  pointer-events: none;
+  text-shadow:
+    0 0 1.5rem rgba(0, 0, 0, 0.85),
+    0 3px 10px rgba(0, 0, 0, 0.9);
 }

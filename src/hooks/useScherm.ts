@@ -37,6 +37,24 @@ export function useScherm(): {
     return () => window.removeEventListener('popstate', opTerug)
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    // De browser zet bij een terugstap zelf de scrollpositie terug. In een app
+    // met één document vecht dat met de schermwissel: terug vanaf een lang
+    // scherm lijkt dan alleen naar boven te scrollen, of laat je halverwege het
+    // vorige scherm achter. Wij bepalen het zelf.
+    const vorige = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+    return () => {
+      window.history.scrollRestoration = vorige
+    }
+  }, [])
+
+  // Elk scherm begint bovenaan; de scrollpositie van het vorige zegt hier niets.
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.scrollTo(0, 0)
+  }, [scherm])
+
   const ga = useCallback((naar: Scherm) => {
     setScherm(naar)
     if (typeof window !== 'undefined') window.history.pushState({ scherm: naar }, '')

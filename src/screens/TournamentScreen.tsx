@@ -5,6 +5,7 @@ import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
 import { useAppState } from '../state/AppState'
 import { ChipIcon } from '../components/ChipIcon'
+import { PlayingCard, SESSIE_HAND } from '../components/PlayingCard'
 import {
   averageStackInBigBlinds,
   colorUpAt,
@@ -76,7 +77,14 @@ export function TournamentScreen() {
             {formatteerTijd(telAfOpTijd ? remainingMs(tournament, now) : verstreken)}
           </div>
           <div className="tafel__blinds">
-            {level.smallBlind} / {level.bigBlind}
+            <span className="tafel__blind">
+              <span className="tafel__blind-label">Small</span>
+              <span className="tafel__blind-waarde">{level.smallBlind}</span>
+            </span>
+            <span className="tafel__blind">
+              <span className="tafel__blind-label">Big</span>
+              <span className="tafel__blind-waarde">{level.bigBlind}</span>
+            </span>
           </div>
           <div className="tafel__onder">
             {volgende ? `volgende ${volgende.smallBlind} / ${volgende.bigBlind}` : 'laatste level'}
@@ -104,7 +112,7 @@ export function TournamentScreen() {
               <button
                 key={speler.name + index}
                 className={`speler${speler.out ? ' speler--uit' : ''}`}
-                disabled={speler.out}
+                disabled={speler.out || gepauzeerd}
                 onClick={() => dispatch({ type: 'playerOut', index, now: Date.now() })}
               >
                 {speler.name}
@@ -112,7 +120,11 @@ export function TournamentScreen() {
             ))}
           </div>
           <div className="tafel__knoppen">
-            <Button variant="ghost" onClick={() => dispatch({ type: 'undo', now: Date.now() })}>
+            <Button
+              variant="ghost"
+              disabled={gepauzeerd}
+              onClick={() => dispatch({ type: 'undo', now: Date.now() })}
+            >
               Ongedaan maken
             </Button>
             {stopBevestigen ? (
@@ -127,7 +139,7 @@ export function TournamentScreen() {
             ) : (
               // Stoppen is het enige wat niet terug te draaien is, en de knop
               // staat naast een pauzeknop die je zonder kijken moet kunnen raken.
-              <Button variant="ghost" onClick={() => setStopBevestigen(true)}>
+              <Button variant="ghost" disabled={gepauzeerd} onClick={() => setStopBevestigen(true)}>
                 Stoppen
               </Button>
             )}
@@ -140,7 +152,15 @@ export function TournamentScreen() {
           </div>
         </div>
       </div>
-      {gepauzeerd && <div className="pauze-overlay">GEPAUZEERD</div>}
+      {gepauzeerd && (
+        <div className="pauze-overlay">
+          <div className="pauze-overlay__kaarten">
+            <PlayingCard kaart={SESSIE_HAND[0]} className="pauze-kaart pauze-kaart--een" />
+            <PlayingCard kaart={SESSIE_HAND[1]} className="pauze-kaart pauze-kaart--twee" />
+          </div>
+          <span className="pauze-overlay__tekst">GEPAUZEERD</span>
+        </div>
+      )}
     </>
   )
 }

@@ -65,3 +65,10 @@ export function PlayingCard({ kaart, className }: { kaart: Kaart; className?: st
     </svg>
   )
 }
+
+/**
+ * Eén hand voor de hele sessie. Op moduleniveau getrokken zodat de kop en het
+ * pauzescherm dezelfde kaarten tonen; zou elk scherm zelf trekken, dan wisselden
+ * ze bij elke pauze en leest dat als een storing in plaats van als een grapje.
+ */
+export const SESSIE_HAND = kiesHand()

@@ -162,7 +162,11 @@ describe('tafelscherm', () => {
       </AppStateProvider>,
     )
     expect(html).toContain('15:00')
-    expect(html).toContain('1 / 2')
+    // Small en big staan als benoemde bedragen, niet als "1 / 2".
+    expect(html).toContain('>Small<')
+    expect(html).toContain('>1<')
+    expect(html).toContain('>Big<')
+    expect(html).toContain('>2<')
     expect(html).toContain('volgende 2 / 4')
     expect(html).toContain('Sam')
     expect(html).toContain('Pauze')
@@ -334,5 +338,30 @@ describe('de kleurkeuze bij de huisregel', () => {
     for (const chip of TOERNOOI_DOOS.chips) {
       expect(html, `${chip.color}`).toContain(`huisregel__aantal">${chip.count}<`)
     }
+  })
+})
+
+describe('het tafelscherm tijdens een pauze', () => {
+  function tafel() {
+    return renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+  }
+
+  it('toont small en big als benoemde bedragen', () => {
+    bewaarToernooi()
+    const html = tafel()
+    expect(html).toContain('Small')
+    expect(html).toContain('Big')
+  })
+
+  it('laat alleen hervatten toe zodra er gepauzeerd is', () => {
+    bewaarToernooi()
+    const lopend = tafel()
+    // Zonder pauze is er niets uitgeschakeld behalve spelers die al uit zijn.
+    expect(lopend).toContain('Pauze')
+    expect(lopend).not.toContain('GEPAUZEERD')
   })
 })

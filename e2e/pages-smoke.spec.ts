@@ -110,6 +110,15 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.goBack()
     await expect(page.getByRole('button', { name: 'Toernooi', exact: true })).toBeVisible()
 
+    // Vanaf een lang scherm dat ver doorgescrold is moet terug ook echt van
+    // scherm wisselen, en niet alleen naar boven springen.
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.mouse.wheel(0, 4000)
+    await expect(page.getByRole('button', { name: 'Start het toernooi' })).toBeVisible()
+    await page.goBack()
+    await expect(page.getByRole('button', { name: 'Pokerdozen' })).toBeVisible()
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
     // En de knop zelf doet precies hetzelfde.
     await page.getByRole('button', { name: 'Instellingen' }).click()
     await expect(page.getByRole('heading', { name: 'Instellingen' })).toBeVisible()
@@ -167,7 +176,9 @@ test.describe.serial('de gepubliceerde site', () => {
     // schrijfactie naar localStorage, die geen van beide in het setupscherm
     // langskomen. De klok telt af, dus alleen de vorm is te vastleggen.
     await expect(page.locator('.tafel__klok')).toHaveText(/^\d+:\d{2}$/)
-    await expect(page.locator('.tafel__blinds')).toHaveText(/^\d+ \/ \d+$/)
+    // Small en big staan als benoemde bedragen naast elkaar.
+    await expect(page.locator('.tafel__blind').first()).toContainText(/Small\s*\d+/)
+    await expect(page.locator('.tafel__blind').last()).toContainText(/Big\s*\d+/)
 
     expect(problemen).toEqual([])
   })
