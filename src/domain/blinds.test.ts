@@ -3,6 +3,7 @@ import {
   buildStructure,
   groeiPerLevel,
   levelCount,
+  laatsteBigBlind,
   levelOpties,
   targetEndBigBlind,
   LEVELS_ZONDER_DUUR,
@@ -316,16 +317,33 @@ describe('color-up is een keuze per toernooi', () => {
 })
 
 describe('een toernooi zonder eindtijd', () => {
-  it('loopt door tot het toernooi beslist is en niet verder', () => {
+  it('loopt door tot alle chips bij twee spelers passen', () => {
+    const spelers = 8
+    const stack = 200
     const zonderDuur = buildStructure(
-      { ...huisregel, kind: 'ladder', durationMinutes: undefined, startingStack: 200 },
+      { ...huisregel, kind: 'ladder', players: spelers, durationMinutes: undefined, startingStack: stack },
       STANDARD_500,
     )
-    const doel = targetEndBigBlind(huisregel.players, 200)
     const laatste = zonderDuur.levels[zonderDuur.levels.length - 1]
 
-    expect(laatste.bigBlind).toBeGreaterThanOrEqual(doel)
+    expect(laatste.bigBlind).toBeGreaterThanOrEqual(laatsteBigBlind(spelers, stack))
     expect(zonderDuur.levels.length).toBeLessThan(LEVELS_ZONDER_DUUR)
+  })
+
+  it('gaat verder dan waar een toernooi met een klok zou stoppen', () => {
+    // Bij last man standing speel je door na het punt waarop het "beslist" is;
+    // de reeks mag daar dus niet ophouden.
+    const spelers = 8
+    const stack = 200
+    const zonder = buildStructure(
+      { ...huisregel, kind: 'ladder', players: spelers, startingStack: stack, durationMinutes: undefined },
+      STANDARD_500,
+    )
+    const hoogste = zonder.levels[zonder.levels.length - 1].bigBlind
+
+    // Ruim voorbij het beslispunt, en genoeg levels om een avond mee door te komen.
+    expect(hoogste).toBeGreaterThan(targetEndBigBlind(spelers, stack) * 4)
+    expect(zonder.levels.length).toBeGreaterThan(6)
   })
 
   it('stopt ook bij verdubbelen, dat anders eindeloos doortelt', () => {

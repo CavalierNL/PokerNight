@@ -109,6 +109,20 @@ export function targetEndBigBlind(players: number, startingStack: number): numbe
 }
 
 /**
+ * Waar de reeks ophoudt als er geen eindtijd is.
+ *
+ * `targetEndBigBlind` markeert het punt waarop een toernooi feitelijk beslist is
+ * — een zinnige grens als je op een afgesproken tijd stopt, maar bij last man
+ * standing speel je juist dóór na dat punt en is de structuur dan op. Hier telt
+ * pas het echte einde: alle chips bij twee spelers, elk nog een big blind of
+ * twee, en de volgende hand beslist het. Dat is de big blind op een kwart van
+ * wat er in het spel is.
+ */
+export function laatsteBigBlind(players: number, startingStack: number): number {
+  return (players * startingStack) / 4
+}
+
+/**
  * De onafgeronde big blinds. De startwaarde is honderd big blinds diep, maar
  * minstens twee fiches — anders bestaat er geen kleine blind die daar strikt
  * onder ligt, en zou de hele reeks vanaf level 0 scheef staan.
@@ -244,10 +258,15 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // zonder dat er een instelling is die dat rechttrekt — en het zou de
     // waarschuwing over hard oplopende blinds hieronder de mond snoeren, terwijl
     // die precies het goede verhaal vertelt.
-    // Zonder eindtijd is dit het enige natuurlijke einde van de reeks.
+    // Zonder eindtijd is dit het enige natuurlijke einde van de reeks, en ligt
+    // het verder dan waar een toernooi met een klok zou stoppen.
     const stoptBijEinde = input.kind === 'calculated' || input.durationMinutes === undefined
+    const grens =
+      input.durationMinutes === undefined
+        ? laatsteBigBlind(input.players, input.startingStack)
+        : doelEind
     const genoegLevels = levels.length >= 2
-    if (stoptBijEinde && genoegLevels && bigBlind >= doelEind) break
+    if (stoptBijEinde && genoegLevels && bigBlind >= grens) break
   }
 
   return { levels, colorUps, startDenomination }
