@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { prepareSetup, suggestStartingStack } from './setup'
 import { distributeChips } from './distribution'
+import { buildStructure } from './blinds'
 import { STANDARD_500, TOERNOOI_DOOS, denominations } from './chipset'
 import type { Settings } from './tournament'
 import { KLEINE_DOOS } from './testdozen'
@@ -126,10 +127,41 @@ describe('suggestStartingStack', () => {
     expect(stack % denominations(TOERNOOI_DOOS)[0]).toBe(0)
   })
 
-  it('stelt minder voor naarmate er meer spelers zijn', () => {
-    const weinig = suggestStartingStack(TOERNOOI_DOOS, 2)!
-    const veel = suggestStartingStack(TOERNOOI_DOOS, 10)!
-    expect(veel).toBeLessThanOrEqual(weinig)
+  it('mikt op honderd big blinds bij de kleinste chip', () => {
+    // 200 x de kleinste waarde: daar begint de reeks op die chip zelf, dus is
+    // hij vanaf level 1 in gebruik.
+    const kleinste = denominations(TOERNOOI_DOOS)[0]
+    expect(suggestStartingStack(TOERNOOI_DOOS, 8)).toBe(200 * kleinste)
+    expect(suggestStartingStack(STANDARD_500, 8)).toBe(200 * denominations(STANDARD_500)[0])
+  })
+
+  it('laat de blinds op de kleinste chip beginnen', () => {
+    const stack = suggestStartingStack(TOERNOOI_DOOS, 8)!
+    const structuur = buildStructure(
+      {
+        kind: 'ladder',
+        colorUp: false,
+        players: 8,
+        startingStack: stack,
+        durationMinutes: 90,
+        levelMinutes: 15,
+      },
+      TOERNOOI_DOOS,
+    )
+    const kleinste = denominations(TOERNOOI_DOOS)[0]
+    expect(structuur.levels[0].smallBlind).toBe(kleinste)
+    expect(structuur.levels[0].bigBlind).toBe(kleinste * 2)
+  })
+
+  it('zakt naar een lager bedrag als de doos het ankerpunt niet haalt', () => {
+    // Deze doos heeft samen 1100 aan waarde. Voor tien spelers is 200 per speler
+    // ruim buiten bereik, dus moet het voorstel omlaag.
+    const spelers = 10
+    const totaal = KLEINE_DOOS.chips.reduce((som, c) => som + c.value * c.count, 0)
+    const stack = suggestStartingStack(KLEINE_DOOS, spelers)!
+
+    expect(stack).toBeLessThan(200 * denominations(KLEINE_DOOS)[0])
+    expect(stack * spelers).toBeLessThanOrEqual(totaal)
   })
 
   it('zwijgt als de doos het gezelschap niet aankan', () => {

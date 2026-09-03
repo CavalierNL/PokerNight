@@ -57,52 +57,46 @@ export function prepareSetup(settings: Settings, ruweChipset: Chipset): Setup {
 }
 
 /**
- * Een startstack die deze doos met dit aantal spelers echt kan uitdelen.
+ * Een startstack, geredeneerd vanuit de kleinste chip in de doos.
  *
- * Niet berekend uit de totale waarde in de doos: die deelt de kleine chips niet
- * mee die je in de eerste levels nodig hebt, en levert dus een getal op waar de
- * verdeling meteen over klaagt. In plaats daarvan wordt de verdeling zelf
- * gevraagd, van hoog naar laag, tot er een bedrag is waar niets meer op aan te
- * merken valt.
+ * Het ankerpunt is honderd big blinds diep bij blinds van d/2d, oftewel
+ * `200 × de kleinste chipwaarde`. Precies daar begint `buildStructure` de reeks
+ * op de kleinste chip: die is dan vanaf level 1 in gebruik en er valt aan tafel
+ * iets te wisselen. Dieper mag technisch, maar duwt de kleine chips meteen uit
+ * het spel — de blinds beginnen dan hoger dan waar ze voor bedoeld zijn.
  *
- * De kandidaten zijn ronde bedragen op dezelfde 1-2-5 ladder als de blinds, maal
- * de kleinste chipwaarde: 25, 50, 125, 250 … voor een doos die met 25 begint.
- * Zo krijg je een stack die je ook echt kunt neerleggen.
+ * Haalt de doos dat bedrag niet voor dit gezelschap, dan zakt het voorstel langs
+ * dezelfde 1-2-5 ladder als de blinds naar het eerstvolgende bedrag dat wel
+ * uitgedeeld kan worden. Zo blijft het altijd een bedrag dat je met deze chips
+ * kunt neerleggen.
  *
- * In twee slagen: eerst het hoogste bedrag waar de verdeling niets op aan te
- * merken heeft, en pas als dat er niet is het hoogste bedrag dat tenminste niet
- * geblokkeerd wordt. "Weinig kleine chips" is een waarschuwing en geen beletsel;
- * bij een doos die zwaar op de hoge waardes leunt is die vanaf een paar spelers
- * onvermijdelijk, en daarop afwijzen zou betekenen dat er nooit iets komt.
+ * Alleen blokkerende tekorten tellen. "Weinig kleine chips" is een waarschuwing
+ * en geen beletsel; bij een doos die zwaar op de hoge waardes leunt is die vanaf
+ * een paar spelers onvermijdelijk, en daarop afwijzen zou betekenen dat er nooit
+ * een voorstel komt.
  *
  * Geeft `undefined` als zelfs het kleinste bedrag niet lukt — dan is de doos te
- * klein voor dit gezelschap en is een suggestie geen hulp maar een leugen.
+ * klein voor dit gezelschap en is een voorstel geen hulp maar een leugen.
  */
 export function suggestStartingStack(chipset: Chipset, players: number): number | undefined {
   const kleinste = denominations(chipset)[0]
   if (!kleinste || players <= 0) return undefined
 
-  const totaal = chipset.chips.reduce((som, chip) => som + chip.value * chip.count, 0)
-  const bovengrens = totaal / players
+  const ideaal = 200 * kleinste
 
   const kandidaten: number[] = []
   for (let i = 0; i < 40; i += 1) {
     const bedrag = kleinste * ladderRung(i)
-    if (bedrag > bovengrens) break
+    if (bedrag > ideaal) break
     kandidaten.push(bedrag)
   }
 
   const blokkeert = (soort: Shortage['kind']) =>
     soort === 'geenFiches' || soort === 'startstackNietGehaald'
 
-  const aflopend = [...kandidaten].reverse()
-  const tekorten = aflopend.map(
-    (stack) => [stack, distributeChips(chipset, players, stack, kleinste, kleinste).shortages] as const,
-  )
-
-  const schoon = tekorten.find(([, gebreken]) => gebreken.length === 0)
-  if (schoon) return schoon[0]
-
-  const bruikbaar = tekorten.find(([, gebreken]) => !gebreken.some((t) => blokkeert(t.kind)))
-  return bruikbaar?.[0]
+  for (const stack of [...kandidaten].reverse()) {
+    const tekorten = distributeChips(chipset, players, stack, kleinste, kleinste).shortages
+    if (!tekorten.some((t) => blokkeert(t.kind))) return stack
+  }
+  return undefined
 }

@@ -93,11 +93,11 @@ describe('App', () => {
     expect(html).not.toContain('Speler 9')
   })
 
-  it('begint op de 1-2-5 reeks, geschaald op de stack', () => {
-    // De voorgestelde stack is honderd big blinds diep, dus de ladder begint
-    // daar en loopt in stappen van 1, 2, 5 verder.
+  it('begint op de kleinste chip van de doos', () => {
+    // De toernooidoos begint bij 25, en het startstack-voorstel is zo gekozen
+    // dat de blinds daar ook echt beginnen.
     const html = opgezetScherm()
-    for (const paar of ['250 / 500', '500 / 1000', '1000 / 2000', '2500 / 5000']) {
+    for (const paar of ['25 / 50', '50 / 100', '125 / 250']) {
       expect(html, paar).toContain(paar)
     }
   })
@@ -105,7 +105,7 @@ describe('App', () => {
   it('vult de startstack met het voorstel voor deze doos', () => {
     const html = opgezetScherm()
     expect(html).toContain('Voorstel voor deze doos met 8 spelers')
-    expect(html).toContain('value="50000"')
+    expect(html).toContain('value="5000"')
   })
 
   it('biedt de color-up aan bij een doos met genoeg waardes', () => {
