@@ -120,7 +120,7 @@ describe('App', () => {
 
   it('laat kiezen tussen een eindtijd en last man standing', () => {
     const html = opgezetScherm()
-    expect(html).toContain('Op een afgesproken tijd')
+    expect(html).toContain('Aan het einde van de speelduur')
     expect(html).toContain('Last man standing')
   })
 

@@ -213,14 +213,14 @@ export function SetupScreen({
           <label className="veld">
             <span>Wanneer het klaar is</span>
             <select value={opTijd ? 'tijd' : 'lms'} onChange={(e) => setOpTijd(e.target.value === 'tijd')}>
-              <option value="tijd">Op een afgesproken tijd</option>
+              <option value="tijd">Aan het einde van de speelduur</option>
               <option value="lms">Last man standing</option>
             </select>
           </label>
 
           {opTijd ? (
             <>
-              <GetalVeld label="Duur (minuten)" min={15} step={15} value={duur} onValue={setDuur} />
+              <GetalVeld label="Speelduur (minuten)" min={15} step={15} value={duur} onValue={setDuur} />
 
               {tijdOpties.length > 0 ? (
                 <label className="veld">
@@ -238,8 +238,8 @@ export function SetupScreen({
                 </label>
               ) : (
                 <p className="uitleg">
-                  {duur} minuten valt niet in gelijke levels te verdelen. Kies een duur die deelbaar
-                  is, bijvoorbeeld 90 of 120.
+                  {duur} minuten valt niet in gelijke levels te verdelen. Kies een speelduur die
+                  deelbaar is, bijvoorbeeld 90 of 120.
                 </p>
               )}
             </>

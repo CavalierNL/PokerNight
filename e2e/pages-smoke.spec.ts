@@ -125,7 +125,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
 
-    const duur = page.getByLabel('Duur (minuten)')
+    const duur = page.getByLabel('Speelduur (minuten)')
     await expect(duur).toHaveValue('90')
     await duur.fill('')
     await expect(duur).toHaveValue('')
@@ -146,13 +146,13 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('tbody tr')).toHaveCount(6)
 
     // Langer spelen vraagt een diepere stack, met dezelfde beginblinds.
-    await page.getByLabel('Duur (minuten)').fill('120')
+    await page.getByLabel('Speelduur (minuten)').fill('120')
     await expect(page.getByLabel('Startstack (chips)')).toHaveValue('50000')
     await expect(page.locator('tbody tr').first()).toContainText('25 / 50')
 
     // Zonder eindtijd loopt de reeks door tot het toernooi beslist is.
     await page.getByLabel('Wanneer het klaar is').selectOption('lms')
-    await expect(page.getByLabel('Duur (minuten)')).toHaveCount(0)
+    await expect(page.getByLabel('Speelduur (minuten)')).toHaveCount(0)
     await expect(page.getByText('tot er één speler over is')).toBeVisible()
   })
 
