@@ -7,6 +7,7 @@ import { useAppState } from '../state/AppState'
 import { prepareSetup, suggestStartingStack } from '../domain/setup'
 import { kanColorUp, longestValueDigits, metInstellingen } from '../domain/chipset'
 import { MultiChip } from '../components/MultiChip'
+import { GetalVeld } from '../components/GetalVeld'
 import type { StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import './SetupScreen.css'
@@ -194,16 +195,13 @@ export function SetupScreen({
 
       <div className="setup__raster">
         <Panel title="Tijd">
-          <label className="veld">
-            <span>Duur (minuten)</span>
-            <input
-              type="number"
-              min={15}
-              step={15}
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            />
-          </label>
+          <GetalVeld
+            label="Duur (minuten)"
+            min={15}
+            step={15}
+            value={durationMinutes}
+            onValue={setDurationMinutes}
+          />
           <label className="veld">
             <span>Levellengte</span>
             <select value={levelMinutes} onChange={(e) => setLevelMinutes(Number(e.target.value))}>
@@ -237,15 +235,12 @@ export function SetupScreen({
             </div>
           )}
 
-          <label className="veld">
-            <span>Startstack (chips)</span>
-            <input
-              type="number"
-              min={1}
-              value={gekozenStack}
-              onChange={(e) => setStartingStack(Number(e.target.value))}
-            />
-          </label>
+          <GetalVeld
+            label="Startstack (chips)"
+            min={1}
+            value={gekozenStack}
+            onValue={setStartingStack}
+          />
         </Panel>
       </div>
 

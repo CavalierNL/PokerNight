@@ -3,6 +3,7 @@ import { Button } from '../components/Button'
 import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { TrashIcon } from '../components/TrashIcon'
+import { GetalVeld } from '../components/GetalVeld'
 import { useAppState } from '../state/AppState'
 import {
   kopieerChipset,
@@ -105,24 +106,20 @@ export function ChipsetScreen({ onClose }: { onClose: () => void }) {
                 onChange={(e) => wijzig(index, 'color', e.target.value)}
               />
             </label>
-            <label className="veld chip-rij__getal">
-              <span>Waarde per chip</span>
-              <input
-                type="number"
-                min={1}
-                value={chip.value}
-                onChange={(e) => wijzig(index, 'value', e.target.value)}
-              />
-            </label>
-            <label className="veld chip-rij__getal">
-              <span>Aantal in de doos</span>
-              <input
-                type="number"
-                min={0}
-                value={chip.count}
-                onChange={(e) => wijzig(index, 'count', e.target.value)}
-              />
-            </label>
+            <GetalVeld
+              className="chip-rij__getal"
+              label="Waarde per chip"
+              min={1}
+              value={chip.value}
+              onValue={(waarde) => wijzig(index, 'value', String(waarde))}
+            />
+            <GetalVeld
+              className="chip-rij__getal"
+              label="Aantal in de doos"
+              min={0}
+              value={chip.count}
+              onValue={(waarde) => wijzig(index, 'count', String(waarde))}
+            />
             <Button
               variant="danger"
               onClick={() => verwijder(index)}

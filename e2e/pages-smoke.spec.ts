@@ -117,6 +117,25 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.getByRole('button', { name: 'Toernooi', exact: true })).toBeVisible()
   })
 
+  test('laat een leeggemaakt getalveld leeg in plaats van er 0 in te zetten', async ({
+    page,
+  }) => {
+    // Number('') is 0, en een duur van 0 is even fout als geen duur. Wie het veld
+    // leegmaakt om iets nieuws te typen moet geen 0 hoeven wegpoetsen.
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+
+    const duur = page.getByLabel('Duur (minuten)')
+    await expect(duur).toHaveValue('90')
+    await duur.fill('')
+    await expect(duur).toHaveValue('')
+
+    await duur.fill('120')
+    await expect(duur).toHaveValue('120')
+    // De blindstructuur rekent mee: acht levels van 15 minuten.
+    await expect(page.locator('tbody tr')).toHaveCount(8)
+  })
+
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 
