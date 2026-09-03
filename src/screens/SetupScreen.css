@@ -215,13 +215,6 @@ input[type='checkbox'] {
 }
 
 /* De fiches staan tussen de tekst in, dus ze moeten op de regel meelopen. */
-.uitleg--fiches {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
 /*
  * Elk veld houdt zijn eigen label. Een kopregel boven de tabel zou smaller zijn,
  * maar valt bij het omklappen naar één kolom weg — en dan is juist niet meer te

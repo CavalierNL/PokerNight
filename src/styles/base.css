@@ -107,3 +107,27 @@ button {
   justify-content: center;
   padding: 0.45rem 0.6rem;
 }
+
+/*
+ * Een color-up in één regel: label, de chips die eruit gaan, "voor", en wat je
+ * ervoor terugkrijgt. Groter dan de omringende uitleg, want aan tafel wordt er
+ * naar gewezen en niet in gelezen.
+ */
+.colorup-regel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  margin: 0.75rem 0 0;
+  font-size: clamp(1rem, min(2.6vw, 3vh), 1.5rem);
+  color: var(--goud);
+}
+
+.colorup-regel__label {
+  font-weight: 700;
+}
+
+.colorup-regel__voor {
+  color: var(--creme-zacht);
+}

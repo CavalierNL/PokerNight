@@ -129,8 +129,8 @@ describe('App', () => {
     expect(html).toContain('Color-up: de kleinste kleur gaat onderweg uit het spel')
     // De standaardset staat voorgeselecteerd en heeft vijf waardes.
     expect(html).not.toContain('er zijn maar twee waardes')
-    // De melding onder de blindstructuur begint met "Vanaf level N:".
-    expect(html).toContain('Vanaf level')
+    // De color-up regel onder de blindstructuur: "Level N: chip voor chip".
+    expect(html).toContain('colorup-regel')
   })
 
   it('vraagt om te hervatten als er een toernooi in de opslag staat', () => {
@@ -181,7 +181,7 @@ describe('tafelscherm', () => {
         <TournamentScreen />
       </AppStateProvider>,
     )
-    expect(html).toContain('Color-up: haal')
+    expect(html).toContain('Color-up:')
     // De chips die uit het spel gaan, als svg met hun eigen kleur.
     expect(html).toContain(STANDARD_500.chips[0].color)
     for (const kleurnaam of ['wit', 'rood', 'groen', 'zwart', 'paars']) {

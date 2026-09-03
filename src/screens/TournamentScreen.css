@@ -89,17 +89,6 @@
   color: var(--creme-zacht);
 }
 
-/* De chips lopen mee in de zin, dus die regel moet ze ook ruimte geven. */
-.tafel__colorup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  color: var(--goud);
-  font-weight: 600;
-  max-width: 34rem;
-}
 
 .tafel__voet {
   display: flex;

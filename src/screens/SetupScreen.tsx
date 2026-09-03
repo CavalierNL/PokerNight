@@ -7,6 +7,7 @@ import { useAppState } from '../state/AppState'
 import { prepareSetup, suggestStartingStack } from '../domain/setup'
 import { kanColorUp, longestValueDigits, metInstellingen } from '../domain/chipset'
 import { MultiChip } from '../components/MultiChip'
+import { ColorUpRegel } from '../components/ColorUpRegel'
 import { GetalVeld } from '../components/GetalVeld'
 import { levelOpties, type StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
@@ -446,26 +447,12 @@ export function SetupScreen({
         </table>
 
         {structuur.colorUps.map((moment) => (
-          <p key={moment.levelIndex} className="uitleg uitleg--fiches">
-            Vanaf level {moment.levelIndex + 1}:
-            {moment.retiredColors.map((kleur) => (
-              <ChipIcon
-                key={kleur}
-                color={kleur}
-                value={moment.retiredValue}
-                digits={cijfers}
-              />
-            ))}
-            uit het spel, wisselen naar
-            {moment.nextColors.map((kleur) => (
-              <ChipIcon
-                key={kleur}
-                color={kleur}
-                value={moment.nextValue}
-                digits={cijfers}
-              />
-            ))}
-          </p>
+          <ColorUpRegel
+            key={moment.levelIndex}
+            label={`Level ${moment.levelIndex + 1}:`}
+            colorUp={moment}
+            digits={cijfers}
+          />
         ))}
       </Panel>
 

@@ -4,7 +4,7 @@ import { useNow } from '../hooks/useNow'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
 import { useAppState } from '../state/AppState'
-import { ChipIcon } from '../components/ChipIcon'
+import { ColorUpRegel } from '../components/ColorUpRegel'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
 import {
@@ -103,18 +103,7 @@ export function TournamentScreen() {
             </span>
             {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
           </div>
-          {colorUp && (
-            <div className="tafel__colorup">
-              Color-up: haal
-              {colorUp.retiredColors.map((kleur) => (
-                <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} />
-              ))}
-              uit het spel en wissel naar
-              {colorUp.nextColors.map((kleur) => (
-                <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} />
-              ))}
-            </div>
-          )}
+          {colorUp && <ColorUpRegel label="Color-up:" colorUp={colorUp} />}
         </div>
 
         <div className="tafel__voet">
@@ -198,18 +187,7 @@ export function TournamentScreen() {
               </span>
             </div>
 
-            {colorUp && (
-              <div className="tafel__colorup">
-                Color-up: haal
-                {colorUp.retiredColors.map((kleur) => (
-                  <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} />
-                ))}
-                uit het spel en wissel naar
-                {colorUp.nextColors.map((kleur) => (
-                  <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} />
-                ))}
-              </div>
-            )}
+            {colorUp && <ColorUpRegel label="Color-up:" colorUp={colorUp} />}
 
             <Button onClick={() => dispatch({ type: 'bevestigLevel', now: Date.now() })}>
               De klok mag lopen
