@@ -5,7 +5,23 @@
  */
 
 export const KLEUREN = ['♠', '♥', '♦', '♣'] as const
-export const WAARDEN = ['A', 'K', 'Q', 'J', '10', '9', '8', '7'] as const
+// Het hele spel. De kaarten worden getekend, dus er is geen reden om bij 7 te
+// stoppen zoals een korte pot doet.
+export const WAARDEN = [
+  'A',
+  'K',
+  'Q',
+  'J',
+  '10',
+  '9',
+  '8',
+  '7',
+  '6',
+  '5',
+  '4',
+  '3',
+  '2',
+] as const
 
 export type Kaart = { waarde: string; kleur: string }
 

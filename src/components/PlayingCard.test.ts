@@ -29,3 +29,15 @@ describe('kiesHand', () => {
     expect(handen.size).toBeGreaterThan(1)
   })
 })
+
+describe('het kaartspel', () => {
+  it('loopt van 2 tot en met aas', () => {
+    expect(WAARDEN).toHaveLength(13)
+    expect(WAARDEN).toContain('2')
+    expect(WAARDEN).toContain('A')
+  })
+
+  it('heeft alle 52 kaarten', () => {
+    expect(WAARDEN.length * KLEUREN.length).toBe(52)
+  })
+})

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { prepareSetup } from './setup'
-import { HOUSE_RULES, STANDARD_500 } from './chipset'
+import { STANDARD_500 } from './chipset'
 import type { Settings } from './tournament'
+import { KLEINE_DOOS } from './testdozen'
 
 const basis: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost', 'Max', 'Nadia', 'Ravi'],
@@ -11,14 +12,14 @@ const basis: Settings = {
   structure: 'doubling',
   trigger: 'both',
   colorUp: true,
-  chipsetId: HOUSE_RULES.id,
+  chipsetId: KLEINE_DOOS.id,
 }
 
 const fouten = (setup: ReturnType<typeof prepareSetup>) =>
   setup.warnings.filter((w) => w.level === 'error').map((w) => w.message)
 
 describe('prepareSetup — de gebruikelijke speelwijze', () => {
-  const setup = prepareSetup(basis, HOUSE_RULES)
+  const setup = prepareSetup(basis, KLEINE_DOOS)
 
   it('is startbaar', () => {
     expect(fouten(setup)).toEqual([])
@@ -32,12 +33,12 @@ describe('prepareSetup — de gebruikelijke speelwijze', () => {
 })
 
 describe('prepareSetup — realistische startstacks', () => {
-  // De regel "reserveer twintig kleine blinds aan kleine fiches" eiste bij een
-  // startstack van 10000 duizend witte fiches per speler. Alleen de
+  // De regel "reserveer twintig kleine blinds aan kleine chips" eiste bij een
+  // startstack van 10000 duizend witte chips per speler. Alleen de
   // standaardwaarde 100 was daardoor startbaar.
   const gevallen = [
-    { chipset: HOUSE_RULES, startingStack: 100 },
-    { chipset: HOUSE_RULES, startingStack: 200 },
+    { chipset: KLEINE_DOOS, startingStack: 100 },
+    { chipset: KLEINE_DOOS, startingStack: 200 },
     { chipset: STANDARD_500, startingStack: 100 },
     { chipset: STANDARD_500, startingStack: 1000 },
     { chipset: STANDARD_500, startingStack: 2000 },
@@ -61,15 +62,15 @@ describe('prepareSetup — realistische startstacks', () => {
 
 describe('prepareSetup — ongeldige invoer wordt vóór de start gevangen', () => {
   it('blokkeert een lege startstack', () => {
-    expect(prepareSetup({ ...basis, startingStack: 0 }, HOUSE_RULES).canStart).toBe(false)
+    expect(prepareSetup({ ...basis, startingStack: 0 }, KLEINE_DOOS).canStart).toBe(false)
   })
 
   it('blokkeert een duur waar geen twee levels in passen', () => {
-    expect(prepareSetup({ ...basis, durationMinutes: 0 }, HOUSE_RULES).canStart).toBe(false)
+    expect(prepareSetup({ ...basis, durationMinutes: 0 }, KLEINE_DOOS).canStart).toBe(false)
   })
 
   it('blokkeert één speler', () => {
-    expect(prepareSetup({ ...basis, playerNames: ['Sam'] }, HOUSE_RULES).canStart).toBe(false)
+    expect(prepareSetup({ ...basis, playerNames: ['Sam'] }, KLEINE_DOOS).canStart).toBe(false)
   })
 
   it('blokkeert een chipset met alleen een leeggemaakt waardeveld', () => {
@@ -86,13 +87,13 @@ describe('prepareSetup — ongeldige invoer wordt vóór de start gevangen', () 
 })
 
 describe('prepareSetup — samenhang tussen de modules', () => {
-  it('deelt geen fiches uit die op level 0 al van tafel gaan', () => {
+  it('deelt geen chips uit die op level 0 al van tafel gaan', () => {
     const setup = prepareSetup({ ...basis, startingStack: 2000 }, STANDARD_500)
     const kleinsteUitgedeeld = Math.min(...setup.distribution.perPlayer.map((a) => a.value))
     expect(kleinsteUitgedeeld).toBeGreaterThanOrEqual(setup.structure.startDenomination)
   })
 
-  it('kan de eerste kleine blind met de uitgedeelde fiches betalen', () => {
+  it('kan de eerste kleine blind met de uitgedeelde chips betalen', () => {
     for (const startingStack of [100, 1000, 2000]) {
       const setup = prepareSetup({ ...basis, startingStack }, STANDARD_500)
       const kleinste = Math.min(...setup.distribution.perPlayer.map((a) => a.value))

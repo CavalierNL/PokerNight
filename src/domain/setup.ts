@@ -1,5 +1,5 @@
 import { buildStructure, type Structure } from './blinds'
-import type { Chipset } from './chipset'
+import { metInstellingen, type Chipset } from './chipset'
 import { distributeChips, type Distribution } from './distribution'
 import { setupWarnings, type Warning } from './warnings'
 import type { Settings } from './tournament'
@@ -21,7 +21,8 @@ export type Setup = {
  * plek is waar het misgaat — een color-up op level 0 die de chipverdeling
  * fiches laat reserveren die al van tafel zijn, bijvoorbeeld.
  */
-export function prepareSetup(settings: Settings, chipset: Chipset): Setup {
+export function prepareSetup(settings: Settings, ruweChipset: Chipset): Setup {
+  const chipset = metInstellingen(ruweChipset, settings)
   const spelers = Math.max(settings.playerNames.length, 2)
 
   const structure = buildStructure(

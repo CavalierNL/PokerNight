@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildStructure, levelCount, targetEndBigBlind } from './blinds'
-import { denominations, kanColorUp, HOUSE_RULES, STANDARD_500 } from './chipset'
+import { denominations, kanColorUp, STANDARD_500 } from './chipset'
 import type { StructureInput } from './blinds'
+import { KLEINE_DOOS } from './testdozen'
 
 const huisregel: StructureInput = {
   kind: 'doubling',
@@ -29,19 +30,19 @@ describe('levelCount', () => {
 
 describe('targetEndBigBlind', () => {
   it('mikt op tien big blinds gemiddeld bij drie spelers over', () => {
-    // 8 spelers x 10000 fiches = 80000, over drie spelers is 26667, daarvan een tiende
+    // 8 spelers x 10000 chips = 80000, over drie spelers is 26667, daarvan een tiende
     expect(targetEndBigBlind(8, 10000)).toBeCloseTo(2666.67, 1)
   })
 })
 
 describe('buildStructure — verdubbelend', () => {
-  const structuur = buildStructure(huisregel, HOUSE_RULES)
+  const structuur = buildStructure(huisregel, KLEINE_DOOS)
 
   it('verdubbelt de big blind per level', () => {
     expect(structuur.levels.slice(0, 4).map((l) => l.bigBlind)).toEqual([2, 4, 8, 16])
   })
 
-  it('begint op honderd big blinds diep, met een big blind van minstens twee fiches', () => {
+  it('begint op honderd big blinds diep, met een big blind van minstens twee chips', () => {
     expect(structuur.levels[0].bigBlind).toBe(2)
     expect(structuur.levels[0].smallBlind).toBe(1)
   })
@@ -54,7 +55,7 @@ describe('buildStructure — verdubbelend', () => {
 describe('buildStructure — berekend', () => {
   it('loopt strikt op en houdt de kleine blind onder de big blind', () => {
     for (const startingStack of [10, 100, 1000, 10_000, 100_000]) {
-      for (const chipset of [HOUSE_RULES, STANDARD_500]) {
+      for (const chipset of [KLEINE_DOOS, STANDARD_500]) {
         const structuur = buildStructure(
           { ...huisregel, kind: 'calculated', players: 8, startingStack, durationMinutes: 240 },
           chipset,
@@ -82,7 +83,7 @@ describe('buildStructure — berekend', () => {
     ] as const) {
       const structuur = buildStructure(
         { ...huisregel, kind: 'calculated', players, startingStack, durationMinutes: 240 },
-        HOUSE_RULES,
+        KLEINE_DOOS,
       )
       const doel = targetEndBigBlind(players, startingStack)
       const eind = structuur.levels[structuur.levels.length - 1].bigBlind
@@ -107,7 +108,7 @@ describe('buildStructure — berekend', () => {
 })
 
 describe('buildStructure — betaalbaarheid', () => {
-  it('geeft blinds die met de aanwezige fiches te leggen zijn', () => {
+  it('geeft blinds die met de aanwezige chips te leggen zijn', () => {
     const eigenaardig = {
       id: 'eigenaardig',
       name: 'Doos met vreemde waardes',
@@ -116,7 +117,7 @@ describe('buildStructure — betaalbaarheid', () => {
         { color: '#222', value: 20, count: 200 },
       ],
     }
-    for (const chipset of [HOUSE_RULES, STANDARD_500, eigenaardig]) {
+    for (const chipset of [KLEINE_DOOS, STANDARD_500, eigenaardig]) {
       const denoms = denominations(chipset)
       for (const kind of ['doubling', 'calculated'] as const) {
         const structuur = buildStructure(
@@ -135,8 +136,8 @@ describe('buildStructure — betaalbaarheid', () => {
   })
 
   it('houdt de big blind het dubbele van de kleine blind', () => {
-    // Brak eerder bij fichewaardes van 2, 20 of 200: de afrondstap kwam dan boven
-    // twee fichewaardes uit zonder er een veelvoud van te zijn, en 740/1500 is
+    // Brak eerder bij chipwaardes van 2, 20 of 200: de afrondstap kwam dan boven
+    // twee chipwaardes uit zonder er een veelvoud van te zijn, en 740/1500 is
     // geen blindpaar.
     const vreemd = {
       id: 'vreemd',
@@ -147,7 +148,7 @@ describe('buildStructure — betaalbaarheid', () => {
         { color: '#333', value: 20, count: 200 },
       ],
     }
-    for (const chipset of [HOUSE_RULES, STANDARD_500, vreemd]) {
+    for (const chipset of [KLEINE_DOOS, STANDARD_500, vreemd]) {
       for (const kind of ['doubling', 'calculated'] as const) {
         for (const startingStack of [100, 5_000, 100_000]) {
           const structuur = buildStructure(
@@ -170,7 +171,7 @@ describe('buildStructure — handmatig', () => {
   it('gebruikt de opgegeven big blinds', () => {
     const structuur = buildStructure(
       { ...huisregel, kind: 'manual', manualBigBlinds: [2, 6, 20] },
-      HOUSE_RULES,
+      KLEINE_DOOS,
     )
     expect(structuur.levels.map((l) => l.bigBlind)).toEqual([2, 6, 20])
   })
@@ -178,7 +179,7 @@ describe('buildStructure — handmatig', () => {
   it('dwingt een dalende reeks omhoog in plaats van hem te accepteren', () => {
     const structuur = buildStructure(
       { ...huisregel, kind: 'manual', manualBigBlinds: [100, 50] },
-      HOUSE_RULES,
+      KLEINE_DOOS,
     )
     expect(structuur.levels[1].bigBlind).toBeGreaterThan(structuur.levels[0].bigBlind)
   })
@@ -186,7 +187,7 @@ describe('buildStructure — handmatig', () => {
   it('valt terug op verdubbelen bij een lege lijst', () => {
     const structuur = buildStructure(
       { ...huisregel, kind: 'manual', manualBigBlinds: [] },
-      HOUSE_RULES,
+      KLEINE_DOOS,
     )
     expect(structuur.levels.length).toBeGreaterThan(1)
   })
@@ -196,8 +197,8 @@ describe('color-up', () => {
   // De huisregel heeft maar twee waardes en doet dus nooit een color-up. Voor
   // deze regels is een doos met drie waardes nodig; 1 naar 5 blijft te volgen.
   const metColorUp = {
-    ...HOUSE_RULES,
-    chips: [...HOUSE_RULES.chips, { color: '#6b4fa0', value: 25, count: 50 }],
+    ...KLEINE_DOOS,
+    chips: [...KLEINE_DOOS.chips, { color: '#6b4fa0', value: 25, count: 50 }],
   }
 
   it('haalt de kleinste denominatie eruit zodra de kleine blind tien keer zo groot is', () => {
@@ -218,12 +219,12 @@ describe('color-up', () => {
   it('doet geen color-up als de hoogste denominatie bereikt is', () => {
     const structuur = buildStructure(
       { ...huisregel, kind: 'manual', manualBigBlinds: [2, 4] },
-      HOUSE_RULES,
+      KLEINE_DOOS,
     )
     expect(structuur.colorUps).toEqual([])
   })
 
-  it('meldt welke fichewaarde op level 0 nog meedoet', () => {
+  it('meldt welke chipwaarde op level 0 nog meedoet', () => {
     const klein = buildStructure(huisregel, STANDARD_500)
     expect(klein.startDenomination).toBe(1)
 
@@ -236,9 +237,9 @@ describe('color-up', () => {
 })
 
 describe('buildStructure — de 1-2-5 ladder', () => {
-  const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, HOUSE_RULES)
+  const structuur = buildStructure({ ...huisregel, kind: 'ladder' }, KLEINE_DOOS)
 
-  it('geeft de reeks die je met fiches van 1 en 5 kunt leggen', () => {
+  it('geeft de reeks die je met chips van 1 en 5 kunt leggen', () => {
     const paren = structuur.levels.slice(0, 7).map((l) => `${l.smallBlind}/${l.bigBlind}`)
     expect(paren).toEqual(['1/2', '2/4', '5/10', '10/20', '20/40', '50/100', '100/200'])
   })
@@ -249,7 +250,7 @@ describe('buildStructure — de 1-2-5 ladder', () => {
     }
   })
 
-  it('schaalt mee met de kleinste fichewaarde', () => {
+  it('schaalt mee met de kleinste chipwaarde', () => {
     const grofeDoos = {
       id: 'grof',
       name: 'Grof',
@@ -294,11 +295,11 @@ describe('color-up is een keuze per toernooi', () => {
   })
 
   it('slaat hem over bij een doos met maar twee waardes, ook als je hem aanzet', () => {
-    // Bij 5 en 1 hou je na een color-up één soort fiche over: niets te wisselen.
-    expect(kanColorUp(HOUSE_RULES)).toBe(false)
-    const structuur = buildStructure({ ...huisregel, kind: 'ladder', colorUp: true }, HOUSE_RULES)
+    // Bij 5 en 1 hou je na een color-up één soort chip over: niets te wisselen.
+    expect(kanColorUp(KLEINE_DOOS)).toBe(false)
+    const structuur = buildStructure({ ...huisregel, kind: 'ladder', colorUp: true }, KLEINE_DOOS)
     expect(structuur.colorUps).toEqual([])
-    expect(structuur.startDenomination).toBe(denominations(HOUSE_RULES)[0])
+    expect(structuur.startDenomination).toBe(denominations(KLEINE_DOOS)[0])
   })
 
   it('staat hem toe vanaf drie waardes', () => {

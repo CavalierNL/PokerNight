@@ -8,8 +8,9 @@ import {
   savePreferences,
   saveTournament,
 } from './storage'
-import { HOUSE_RULES, PRESETS } from '../domain/chipset'
+import { PRESETS } from '../domain/chipset'
 import { createTournament, reduce, type Settings } from '../domain/tournament'
+import { KLEINE_DOOS } from '../domain/testdozen'
 
 const opslag = new Map<string, string>()
 
@@ -34,7 +35,7 @@ const settings: Settings = {
   structure: 'doubling',
   trigger: 'both',
   colorUp: true,
-  chipsetId: HOUSE_RULES.id,
+  chipsetId: KLEINE_DOOS.id,
 }
 
 describe('chipsets', () => {
@@ -86,7 +87,7 @@ describe('voorkeuren', () => {
 
 describe('toernooi', () => {
   it('overleeft een rondje opslaan en inlezen', () => {
-    const t = createTournament(settings, HOUSE_RULES, 1_000_000)
+    const t = createTournament(settings, KLEINE_DOOS, 1_000_000)
     saveTournament(t)
     const terug = loadTournament()
     expect(terug?.levelIndex).toBe(0)
@@ -97,7 +98,7 @@ describe('toernooi', () => {
   it('bewaart de undo-geschiedenis niet', () => {
     // Die hoeft een refresh niet te overleven, en meeschrijven betekende twintig
     // kopieën van dezelfde blindstructuur bij elke wijziging.
-    let t = createTournament(settings, HOUSE_RULES, 1_000_000)
+    let t = createTournament(settings, KLEINE_DOOS, 1_000_000)
     t = reduce(t, { type: 'playerOut', index: 0, now: 1_000_000 })
     expect(t.history.length).toBeGreaterThan(0)
 
@@ -107,7 +108,7 @@ describe('toernooi', () => {
   })
 
   it('verwijdert de sleutel bij opslaan van null', () => {
-    saveTournament(createTournament(settings, HOUSE_RULES, 1_000_000))
+    saveTournament(createTournament(settings, KLEINE_DOOS, 1_000_000))
     saveTournament(null)
     expect(loadTournament()).toBeNull()
   })
@@ -131,7 +132,7 @@ describe('toernooi', () => {
   })
 
   it('negeert een toernooi uit een oudere versie van de app', () => {
-    const t = createTournament(settings, HOUSE_RULES, 1_000_000)
+    const t = createTournament(settings, KLEINE_DOOS, 1_000_000)
     opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE - 1, data: t }))
     expect(loadTournament()).toBeNull()
   })
@@ -150,6 +151,6 @@ describe('mislukte opslag', () => {
       length: 0,
     })
     expect(saveChipsets(PRESETS)).toBe('mislukt')
-    expect(saveTournament(createTournament(settings, HOUSE_RULES, 1))).toBe('mislukt')
+    expect(saveTournament(createTournament(settings, KLEINE_DOOS, 1))).toBe('mislukt')
   })
 })

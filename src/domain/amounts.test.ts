@@ -30,7 +30,7 @@ describe('roundToPayable', () => {
 
   it('geeft altijd een veelvoud van de eenheid terug', () => {
     // Dit is de eigenschap waar het om draait: een bedrag dat geen veelvoud van
-    // de fichewaarde is, kun je niet leggen. Zonder de correctie in de stap gaf
+    // de chipwaarde is, kun je niet leggen. Zonder de correctie in de stap gaf
     // eenheid 3 bij 102 het bedrag 100 terug.
     for (const eenheid of [1, 2, 3, 4, 5, 6, 7, 10, 25, 40, 200]) {
       for (const bedrag of [1, 4, 17, 64, 102, 124.5, 950, 2677, 48_000]) {
@@ -70,18 +70,18 @@ describe('smallBlindFor', () => {
     expect(smallBlindFor(8, 1)).toBe(4)
   })
 
-  it('rondt naar beneden af op een veelvoud van de fichewaarde', () => {
+  it('rondt naar beneden af op een veelvoud van de chipwaarde', () => {
     // helft van 5 is 2,5 — het grootste veelvoud van 1 daaronder is 2
     expect(smallBlindFor(5, 1)).toBe(2)
     expect(smallBlindFor(150, 25)).toBe(75)
   })
 
-  it('is minimaal één fichewaarde', () => {
+  it('is minimaal één chipwaarde', () => {
     expect(smallBlindFor(1, 1)).toBe(1)
     expect(smallBlindFor(25, 25)).toBe(25)
   })
 
-  it('blijft onder de big blind zodra die minstens twee fichewaardes is', () => {
+  it('blijft onder de big blind zodra die minstens twee chipwaardes is', () => {
     for (const [bb, d] of [
       [2, 1],
       [50, 25],

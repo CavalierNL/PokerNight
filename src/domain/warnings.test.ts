@@ -79,7 +79,7 @@ describe('tekorten uit de chipverdeling', () => {
     expect(fouten(w)[0].message).toContain('2 spelers')
   })
 
-  it('blokkeert niet bij minder kleine fiches dan de richtlijn', () => {
+  it('blokkeert niet bij minder kleine chips dan de richtlijn', () => {
     // De spec noemt dit expliciet een richtlijn. Als error maakte hij elke
     // realistische startstack onstartbaar.
     const verdeling: Distribution = {
@@ -91,7 +91,7 @@ describe('tekorten uit de chipverdeling', () => {
     expect(w.some((x) => x.level === 'warning')).toBe(true)
   })
 
-  it('blokkeert bij een chipset zonder fiches', () => {
+  it('blokkeert bij een pokerdoos zonder chips', () => {
     const verdeling: Distribution = {
       perPlayer: [],
       stackValue: 0,

@@ -11,7 +11,7 @@ import {
   type Settings,
   type Tournament,
 } from './tournament'
-import { HOUSE_RULES } from './chipset'
+import { KLEINE_DOOS } from './testdozen'
 
 const T0 = 1_000_000
 const MINUUT = 60_000
@@ -24,11 +24,11 @@ const basis: Settings = {
   structure: 'doubling',
   trigger: 'both',
   colorUp: true,
-  chipsetId: HOUSE_RULES.id,
+  chipsetId: KLEINE_DOOS.id,
 }
 
 const maak = (overrides: Partial<Settings> = {}) =>
-  createTournament({ ...basis, ...overrides }, HOUSE_RULES, T0)
+  createTournament({ ...basis, ...overrides }, KLEINE_DOOS, T0)
 
 /** Zet het toernooi op het laatste level. */
 function naarLaatsteLevel(t: Tournament, now = T0): Tournament {

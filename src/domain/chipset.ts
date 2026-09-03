@@ -56,18 +56,6 @@ export function longestValueDigits(chipset: Chipset): number {
   return langste
 }
 
-/** Huisregel: één kleur is 5 waard, alle andere kleuren zijn 1 waard. */
-export const HOUSE_RULES: Chipset = {
-  id: 'huisregel',
-  name: 'Huisregel (5 en 1)',
-  chips: [
-    { color: '#f2efe6', value: 1, count: 150 },
-    { color: '#c0392b', value: 1, count: 100 },
-    { color: '#2e6da4', value: 1, count: 100 },
-    { color: '#2e8b57', value: 5, count: 150 },
-  ],
-}
-
 /** Klassieke 500-set met oplopende denominaties. */
 export const STANDARD_500: Chipset = {
   id: 'standaard-500',
@@ -96,7 +84,7 @@ export const TOERNOOI_DOOS: Chipset = {
   ],
 }
 
-export const PRESETS: Chipset[] = [HOUSE_RULES, STANDARD_500, TOERNOOI_DOOS]
+export const PRESETS: Chipset[] = [STANDARD_500, TOERNOOI_DOOS]
 
 /**
  * Een id dat niet botst met een bestaande doos. Oplopend geteld in plaats van
@@ -136,4 +124,33 @@ export function kopieerChipset(bron: Chipset, bestaand: Chipset[]): Chipset {
 export function metPresets(huidig: Chipset[]): Chipset[] {
   const ontbrekend = PRESETS.filter((preset) => !huidig.some((c) => c.id === preset.id))
   return [...huidig, ...ontbrekend]
+}
+
+/**
+ * De huisregel: één kleur is 5 waard, alle andere zijn 1. Geen aparte doos maar
+ * een bewerking op de doos die je die avond op tafel hebt: welke chips er zijn
+ * en hoeveel ligt vast in de doos, wat ze waard zijn niet.
+ *
+ * Staat `vijfKleur` niet in de doos — je hebt van doos gewisseld — dan is alles
+ * 1 waard. De structuur klopt dan nog, hij is alleen niet wat je bedoelde; het
+ * setupscherm zorgt dat er altijd een bestaande kleur gekozen staat.
+ */
+export function metHuisregel(chipset: Chipset, vijfKleur: string): Chipset {
+  return {
+    ...chipset,
+    chips: chipset.chips.map((chip) => ({ ...chip, value: chip.color === vijfKleur ? 5 : 1 })),
+  }
+}
+
+/**
+ * De doos zoals hij voor dit toernooi geldt. Staat op één plek zodat het
+ * setupscherm en een startend toernooi dezelfde doos gebruiken; het scherm dat
+ * er zelf een zou samenstellen is precies hoe die twee uit elkaar gaan lopen.
+ */
+export function metInstellingen(
+  chipset: Chipset,
+  instellingen: { houseRuleFiveColor?: string },
+): Chipset {
+  const vijfKleur = instellingen.houseRuleFiveColor
+  return vijfKleur ? metHuisregel(chipset, vijfKleur) : chipset
 }

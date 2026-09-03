@@ -24,7 +24,7 @@ export function HomeScreen({
       <Kop>PokerNight</Kop>
 
       <div className="home__knoppen">
-        <Button onClick={onNieuw}>Nieuw toernooi</Button>
+        <Button onClick={onNieuw}>Toernooi</Button>
         <Button variant="ghost" onClick={onChipsets}>
           Pokerdozen
         </Button>

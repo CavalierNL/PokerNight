@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { chipFontSize, chipRimColor, chipTextColor, chipTextY } from './ChipIcon'
-import { TOERNOOI_DOOS, HOUSE_RULES, longestValueDigits, STANDARD_500 } from '../domain/chipset'
+import { TOERNOOI_DOOS, longestValueDigits, STANDARD_500 } from '../domain/chipset'
+import { KLEINE_DOOS } from '../domain/testdozen'
 
 describe('chipFontSize', () => {
   it('krimpt naarmate de waardes langer worden', () => {
@@ -27,15 +28,15 @@ describe('chipFontSize', () => {
 
   it('kiest bij zes cijfers leesbaarheid boven passen', () => {
     // Vanaf zes cijfers wint de ondergrens en loopt de tekst tot tegen de rand.
-    // Dat is een bewuste keuze: kleiner dan acht is op een fiche niet meer te
-    // lezen, en fichewaardes boven de honderdduizend komen niet voor.
+    // Dat is een bewuste keuze: kleiner dan acht is op een chip niet meer te
+    // lezen, en chipwaardes boven de honderdduizend komen niet voor.
     expect(chipFontSize(6)).toBe(8)
   })
 })
 
 describe('longestValueDigits', () => {
-  it('kijkt naar de langste waarde in de doos, niet naar één fiche', () => {
-    expect(longestValueDigits(HOUSE_RULES)).toBe(1)
+  it('kijkt naar de langste waarde in de doos, niet naar één chip', () => {
+    expect(longestValueDigits(KLEINE_DOOS)).toBe(1)
     expect(longestValueDigits(STANDARD_500)).toBe(3)
   })
 
@@ -49,7 +50,7 @@ describe('longestValueDigits', () => {
 })
 
 describe('chipTextColor', () => {
-  it('zet donkere tekst op een lichte fiche en lichte tekst op een donkere', () => {
+  it('zet donkere tekst op een lichte chip en lichte tekst op een donkere', () => {
     expect(chipTextColor('#f2efe6')).toContain('0,0,0')
     expect(chipTextColor('#e9c31f')).toContain('0,0,0')
     expect(chipTextColor('#22262b')).toContain('255,255,255')
@@ -64,7 +65,7 @@ describe('chipTextColor', () => {
 })
 
 describe('de toernooidoos', () => {
-  it('telt 500 fiches', () => {
+  it('telt 500 chips', () => {
     expect(TOERNOOI_DOOS.chips.reduce((som, c) => som + c.count, 0)).toBe(500)
   })
 
@@ -74,7 +75,7 @@ describe('de toernooidoos', () => {
     expect(longestValueDigits(TOERNOOI_DOOS)).toBe(5)
   })
 
-  it('geeft elke fiche in deze doos leesbare tekst', () => {
+  it('geeft elke chip in deze doos leesbare tekst', () => {
     for (const chip of TOERNOOI_DOOS.chips) {
       expect(chipTextColor(chip.color), chip.color).toMatch(/rgba\(/)
     }
@@ -82,13 +83,13 @@ describe('de toernooidoos', () => {
 })
 
 describe('chipRimColor', () => {
-  it('zet donkere stippen op een licht fiche', () => {
+  it('zet donkere stippen op een licht chip', () => {
     // Wit op wit is geen versiering maar een onzichtbare rand.
     expect(chipRimColor('#f2efe6')).toContain('0,0,0')
     expect(chipRimColor('#e9c31f')).toContain('0,0,0')
   })
 
-  it('houdt lichte stippen op een donker fiche', () => {
+  it('houdt lichte stippen op een donker chip', () => {
     expect(chipRimColor('#22262b')).toContain('255,255,255')
     expect(chipRimColor('#2e6da4')).toContain('255,255,255')
   })
@@ -100,7 +101,7 @@ describe('chipTextY', () => {
     expect(chipTextY(8)).toBeLessThan(chipTextY(16))
   })
 
-  it('zet elke lettergrootte optisch in het midden van het fiche', () => {
+  it('zet elke lettergrootte optisch in het midden van het chip', () => {
     for (const grootte of [8, 10, 13, 16]) {
       // Bovenkant en onderkant van een cijfer van 0,7 em rond de basislijn.
       const boven = chipTextY(grootte) - grootte * 0.7

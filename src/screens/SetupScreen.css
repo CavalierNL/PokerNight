@@ -236,6 +236,58 @@ input[type='checkbox'] {
   }
 }
 
+.huisregel {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  padding: 0.7rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.huisregel__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--goud-donker);
+}
+
+.huisregel__keuze {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.huisregel__kleuren {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+/* Een kleurknop is de kleur zelf; een rand eromheen wijst de gekozen aan. */
+.huisregel__kleur {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  padding: 0;
+}
+
+.huisregel__kleur--gekozen {
+  border-color: var(--goud);
+  box-shadow: 0 0 0 2px rgba(240, 197, 66, 0.35);
+}
+
+.huisregel__uitkomst {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.huisregel__uitkomst .uitleg {
+  margin: 0;
+}
+
 .knoppenrij {
   display: flex;
   gap: 0.5rem;

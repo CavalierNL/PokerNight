@@ -1,5 +1,5 @@
 import { buildStructure, type BlindLevel, type ColorUp, type StructureKind } from './blinds'
-import type { Chipset } from './chipset'
+import { metInstellingen, type Chipset } from './chipset'
 
 export type Trigger = 'time' | 'elimination' | 'both'
 
@@ -16,6 +16,11 @@ export type Settings = {
    * Bij een doos met minder dan drie waardes gebeurt het sowieso niet.
    */
   colorUp: boolean
+  /**
+   * De huisregel: de kleur die 5 waard is, de rest wordt 1. Leeg betekent dat de
+   * doos zijn eigen waardes houdt.
+   */
+  houseRuleFiveColor?: string
   manualBigBlinds?: number[]
   chipsetId: string
 }
@@ -67,6 +72,7 @@ export type Action =
 const HISTORY_LIMIT = 20
 
 export function createTournament(settings: Settings, chipset: Chipset, now: number): Tournament {
+  const doos = metInstellingen(chipset, settings)
   const { levels, colorUps } = buildStructure(
     {
       kind: settings.structure,
@@ -77,7 +83,7 @@ export function createTournament(settings: Settings, chipset: Chipset, now: numb
       manualBigBlinds: settings.manualBigBlinds,
       colorUp: settings.colorUp,
     },
-    chipset,
+    doos,
   )
 
   return {

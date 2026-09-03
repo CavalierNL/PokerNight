@@ -5,7 +5,8 @@ import { ChipIcon } from '../components/ChipIcon'
 import { Kop } from '../components/Kop'
 import { useAppState } from '../state/AppState'
 import { prepareSetup } from '../domain/setup'
-import { kanColorUp, longestValueDigits } from '../domain/chipset'
+import { kanColorUp, longestValueDigits, metInstellingen } from '../domain/chipset'
+import { MultiChip } from '../components/MultiChip'
 import type { StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import './SetupScreen.css'
@@ -32,9 +33,25 @@ export function SetupScreen({
   const [structure, setStructure] = useState<StructureKind>(settings?.structure ?? 'ladder')
   const [trigger, setTrigger] = useState<Trigger>(settings?.trigger ?? 'both')
   const [colorUp, setColorUp] = useState(settings?.colorUp ?? true)
+  const [huisregel, setHuisregel] = useState(settings?.houseRuleFiveColor !== undefined)
+  const [vijfKleur, setVijfKleur] = useState(settings?.houseRuleFiveColor)
   const [chipsetId, setChipsetId] = useState(settings?.chipsetId ?? chipsets[0].id)
 
-  const chipset = chipsets.find((c) => c.id === chipsetId) ?? chipsets[0]
+  const doos = chipsets.find((c) => c.id === chipsetId) ?? chipsets[0]
+
+  // Wisselen van doos maakt een eerder gekozen kleur ongeldig; dan valt de keuze
+  // terug op de duurste chip, want die is aan tafel de logische "5".
+  const kleuren = doos.chips.map((c) => c.color)
+  const gekozenVijf =
+    vijfKleur && kleuren.includes(vijfKleur)
+      ? vijfKleur
+      : [...doos.chips].sort((a, b) => b.value - a.value)[0]?.color
+  const restKleuren = kleuren.filter((k) => k !== gekozenVijf)
+
+  // Alles onder deze regel rekent met de doos zoals hij vanavond geldt.
+  const chipset = metInstellingen(doos, {
+    houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
+  })
   // Eén lettergrootte voor alle fiches van deze doos.
   const cijfers = longestValueDigits(chipset)
   // Met twee waardes hou je na een color-up één soort fiche over; dan is er
@@ -53,6 +70,7 @@ export function SetupScreen({
       structure,
       trigger,
       colorUp: colorUp && colorUpMogelijk,
+      houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
       chipsetId: chipset.id,
     }),
     [
@@ -64,6 +82,8 @@ export function SetupScreen({
       trigger,
       colorUp,
       colorUpMogelijk,
+      huisregel,
+      gekozenVijf,
       chipset,
     ],
   )
@@ -126,6 +146,44 @@ export function SetupScreen({
           <label className="veld veld--schakelaar">
             <input
               type="checkbox"
+              checked={huisregel}
+              onChange={(e) => setHuisregel(e.target.checked)}
+            />
+            <span>Huisregel: één kleur is 5, de rest is 1</span>
+          </label>
+
+          {huisregel && (
+            <div className="huisregel">
+              <div className="huisregel__keuze">
+                <span className="huisregel__label">Welke kleur is 5</span>
+                <div className="huisregel__kleuren">
+                  {doos.chips.map((chip) => (
+                    <button
+                      key={chip.color}
+                      type="button"
+                      className={`huisregel__kleur${
+                        chip.color === gekozenVijf ? ' huisregel__kleur--gekozen' : ''
+                      }`}
+                      style={{ background: chip.color }}
+                      aria-label={`kleur ${chip.color} is 5 waard`}
+                      aria-pressed={chip.color === gekozenVijf}
+                      onClick={() => setVijfKleur(chip.color)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="huisregel__uitkomst">
+                <ChipIcon color={gekozenVijf} value={5} size={38} digits={1} />
+                <span className="uitleg">en de rest is</span>
+                <MultiChip colors={restKleuren} value={1} size={38} digits={1} />
+              </div>
+            </div>
+          )}
+
+          <label className="veld veld--schakelaar">
+            <input
+              type="checkbox"
               checked={colorUp && colorUpMogelijk}
               disabled={!colorUpMogelijk}
               onChange={(e) => setColorUp(e.target.checked)}
@@ -135,7 +193,7 @@ export function SetupScreen({
           {!colorUpMogelijk && (
             <p className="uitleg">
               Kan niet met deze doos: er zijn maar twee waardes, dus na een color-up hou je één
-              soort fiche over en valt er niets meer te wisselen.
+              soort chip over en valt er niets meer te wisselen.
             </p>
           )}
         </Panel>

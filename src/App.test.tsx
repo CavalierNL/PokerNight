@@ -8,7 +8,9 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { createTournament, type Settings } from './domain/tournament'
-import { HOUSE_RULES, STANDARD_500 } from './domain/chipset'
+import { STANDARD_500 } from './domain/chipset'
+import { prepareSetup } from './domain/setup'
+import { KLEINE_DOOS } from './domain/testdozen'
 
 /**
  * Rendert de app zonder browser. Vangt geen klikgedrag af — daarvoor is de
@@ -38,11 +40,11 @@ const settings: Settings = {
   structure: 'doubling',
   trigger: 'both',
   colorUp: true,
-  chipsetId: HOUSE_RULES.id,
+  chipsetId: KLEINE_DOOS.id,
 }
 
 /** Zet een toernooi in de opslag, in dezelfde vorm als de app zelf schrijft. */
-function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = HOUSE_RULES) {
+function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = KLEINE_DOOS) {
   const { history: _h, ...core } = createTournament(
     { ...settings, ...overrides },
     chipset,
@@ -63,7 +65,7 @@ describe('App', () => {
   it('opent op het startscherm en toont nog geen formulier', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('PokerNight')
-    expect(html).toContain('Nieuw toernooi')
+    expect(html).toContain('Toernooi')
     expect(html).toContain('Pokerdozen')
     expect(html).toContain('Instellingen')
     // De instellingen van het toernooi komen pas na "Nieuw toernooi".
@@ -71,7 +73,7 @@ describe('App', () => {
     expect(html).not.toContain('Namen, één per regel')
   })
 
-  it('toont de blindstructuur en de fiches', () => {
+  it('toont de blindstructuur en de chips', () => {
     const html = opgezetScherm()
     expect(html).toContain('Blindstructuur')
     expect(html).toContain('Chips per speler')
@@ -91,18 +93,13 @@ describe('App', () => {
     }
   })
 
-  it('biedt de color-up aan, maar niet bij een doos met twee waardes', () => {
+  it('biedt de color-up aan bij een doos met genoeg waardes', () => {
     const html = opgezetScherm()
     expect(html).toContain('Color-up: de kleinste kleur gaat onderweg uit het spel')
-    // De huisregel staat voorgeselecteerd en heeft er maar twee.
-    expect(html).toContain('disabled')
-    expect(html).toContain('er zijn maar twee waardes')
-  })
-
-  it('doet bij de huisregel geen color-up', () => {
-    const html = opgezetScherm()
+    // De standaardset staat voorgeselecteerd en heeft vijf waardes.
+    expect(html).not.toContain('er zijn maar twee waardes')
     // De melding onder de blindstructuur begint met "Vanaf level N:".
-    expect(html).not.toContain('Vanaf level')
+    expect(html).toContain('Vanaf level')
   })
 
   it('vraagt om te hervatten als er een toernooi in de opslag staat', () => {
@@ -121,7 +118,7 @@ describe('App', () => {
     )
     const html = renderToStaticMarkup(<App />)
     expect(html).not.toContain('Er loopt nog een toernooi')
-    expect(html).toContain('Nieuw toernooi')
+    expect(html).toContain('Toernooi')
   })
 })
 
@@ -140,7 +137,7 @@ describe('tafelscherm', () => {
     expect(html).toContain('Pauze')
   })
 
-  it('toont de color-up als fiches, niet als kleurnamen', () => {
+  it('toont de color-up als chips, niet als kleurnamen', () => {
     // Grote startstack met de 500-set: de kleinste kleur is meteen op level 0
     // overbodig, dus de melding staat er vanaf het begin.
     bewaarToernooi({ startingStack: 10_000, chipsetId: STANDARD_500.id }, STANDARD_500)
@@ -150,7 +147,7 @@ describe('tafelscherm', () => {
       </AppStateProvider>,
     )
     expect(html).toContain('Color-up: haal')
-    // De fiches die uit het spel gaan, als svg met hun eigen kleur.
+    // De chips die uit het spel gaan, als svg met hun eigen kleur.
     expect(html).toContain(STANDARD_500.chips[0].color)
     for (const kleurnaam of ['wit', 'rood', 'groen', 'zwart', 'paars']) {
       expect(html, kleurnaam).not.toContain(`>${kleurnaam}<`)
@@ -180,7 +177,7 @@ describe('tafelscherm', () => {
 
 describe('setup met een grotere startstack', () => {
   it('is startbaar met de standaardset', () => {
-    // De knop was hier uitgeschakeld: de app eiste honderden kleine fiches per
+    // De knop was hier uitgeschakeld: de app eiste honderden kleine chips per
     // speler en meldde een tekort dat niet op te lossen was.
     const html = renderToStaticMarkup(
       <AppStateProvider>
@@ -244,4 +241,31 @@ describe('instellingen', () => {
     expect(html).toContain('Doos verwijderen')
   })
 
+})
+
+describe('de huisregel op het setupscherm', () => {
+  it('biedt hem aan bij elke doos', () => {
+    const html = opgezetScherm()
+    expect(html).toContain('Huisregel: één kleur is 5, de rest is 1')
+  })
+
+  it('toont de kleurkeuze pas als de regel aan staat', () => {
+    const html = opgezetScherm()
+    expect(html).not.toContain('Welke kleur is 5')
+  })
+
+  it('rekent met de platgeslagen doos zodra de regel aan staat', () => {
+    const paars = STANDARD_500.chips[4].color
+    const instellingen: Settings = {
+      ...settings,
+      chipsetId: STANDARD_500.id,
+      houseRuleFiveColor: paars,
+      structure: 'ladder',
+    }
+    const setup = prepareSetup(instellingen, STANDARD_500)
+
+    // Twee waardes betekent geen color-up en blinds die op 1 en 5 te leggen zijn.
+    expect(setup.structure.colorUps).toEqual([])
+    expect(setup.structure.levels[0].bigBlind).toBe(2)
+  })
 })
