@@ -92,12 +92,13 @@ describe('distributeChips — tekorten', () => {
 
 describe('distributeChips — samen met de blindstructuur', () => {
   it('reserveert geen chips die op level 0 al door een color-up van tafel gaan', () => {
-    // Standaardset met een grote startstack: de blinds beginnen op 50/100, dus
-    // chips van 1 zijn meteen overbodig. Zonder de startDenomination vroeg de
-    // app 1000 witte chips per speler en blokkeerde hij de start.
+    // Blinds die zelf hoog beginnen: chips van 1 zijn dan meteen overbodig.
+    // Zonder de startDenomination vroeg de app 1000 witte chips per speler en
+    // blokkeerde hij de start.
     const structuur = buildStructure(
       {
-        kind: 'doubling',
+        kind: 'manual',
+        manualBigBlinds: [100, 200, 400, 800],
         colorUp: true,
         players: 8,
         startingStack: 10_000,

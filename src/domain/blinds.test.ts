@@ -8,7 +8,7 @@ import {
   targetEndBigBlind,
   LEVELS_ZONDER_DUUR,
 } from './blinds'
-import { denominations, kanColorUp, STANDARD_500 } from './chipset'
+import { denominations, kanColorUp, STANDARD_500, TOERNOOI_DOOS } from './chipset'
 import type { StructureInput } from './blinds'
 import { KLEINE_DOOS } from './testdozen'
 
@@ -236,11 +236,15 @@ describe('color-up', () => {
     const klein = buildStructure(huisregel, STANDARD_500)
     expect(klein.startDenomination).toBe(1)
 
-    // Bij een grote startstack beginnen de blinds zo hoog dat de kleinste kleur
-    // meteen overbodig is; die hoort de chipverdeling dan niet uit te delen.
-    const groot = buildStructure({ ...huisregel, startingStack: 10_000 }, STANDARD_500)
-    expect(groot.colorUps[0]?.levelIndex).toBe(0)
-    expect(groot.startDenomination).toBeGreaterThan(1)
+    // Beginnen de blinds zelf hoog, dan is de kleinste kleur meteen overbodig en
+    // hoort de chipverdeling die niet uit te delen. Elke gerekende reeks begint
+    // tegenwoordig op de kleinste chip, dus dit kan alleen met eigen blinds.
+    const hoog = buildStructure(
+      { ...huisregel, kind: 'manual', manualBigBlinds: [100, 200, 400, 800] },
+      STANDARD_500,
+    )
+    expect(hoog.colorUps[0]?.levelIndex).toBe(0)
+    expect(hoog.startDenomination).toBeGreaterThan(1)
   })
 })
 
@@ -398,5 +402,47 @@ describe('levelOpties', () => {
     // Een priemduur kan niet in gelijke levels; het scherm moet dat opvangen in
     // plaats van dat de rekenkern een onzinnige verdeling verzint.
     expect(levelOpties(37)).toEqual([])
+  })
+})
+
+describe('elke reeks begint op de kleinste chip', () => {
+  it('geldt voor de ladder, verdubbelen en berekend', () => {
+    const doos = TOERNOOI_DOOS
+    const kleinste = denominations(doos)[0]
+
+    for (const kind of ['ladder', 'doubling', 'calculated'] as const) {
+      const structuur = buildStructure(
+        {
+          kind,
+          colorUp: false,
+          players: 8,
+          startingStack: 12_500,
+          durationMinutes: 90,
+          levelMinutes: 15,
+        },
+        doos,
+      )
+      expect(structuur.levels[0].smallBlind, kind).toBe(kleinste)
+      expect(structuur.levels[0].bigBlind, kind).toBe(kleinste * 2)
+    }
+  })
+
+  it('schuift niet mee omhoog met een diepere stack', () => {
+    // Vroeger begon de reeks honderd big blinds diep, en dan bepaalde de stack
+    // de beginblinds. Nu bepaalt de stack alleen hoe lang het duurt.
+    const maak = (stack: number) =>
+      buildStructure(
+        {
+          kind: 'doubling',
+          colorUp: false,
+          players: 8,
+          startingStack: stack,
+          durationMinutes: 90,
+          levelMinutes: 15,
+        },
+        TOERNOOI_DOOS,
+      ).levels[0].bigBlind
+
+    expect(maak(5000)).toBe(maak(50_000))
   })
 })

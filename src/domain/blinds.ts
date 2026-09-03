@@ -134,7 +134,7 @@ export function laatsteBigBlind(players: number, startingStack: number): number 
  */
 function rawBigBlinds(input: StructureInput, smallestDenomination: number): number[] {
   const aantal = levelCount(input.durationMinutes, input.levelMinutes)
-  const start = Math.max(input.startingStack / 100, smallestDenomination * 2)
+  const start = smallestDenomination * 2
 
   if (input.kind === 'manual' && input.manualBigBlinds && input.manualBigBlinds.length > 0) {
     return input.manualBigBlinds
@@ -205,10 +205,7 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
   let vorigeBigBlind = 0
   let startDenomination = kleinste
 
-  // De ladder begint op de kleinste chip, niet op honderd big blinds. Anders
-  // schuift de beginblind mee omhoog met de stack, blijft de verhouding tussen
-  // begin en eind gelijk, en levert een diepere stack geen enkel extra level op
-  // — precies wat je wél wilt als je langer wilt spelen.
+  // Hetzelfde beginpunt als `rawBigBlinds` hanteert: de kleinste chip.
   const start = kleinste * 2
   // Met twee waardes hou je na een color-up één soort fiche over; dan valt er
   // niets meer te wisselen en heeft het geen zin.

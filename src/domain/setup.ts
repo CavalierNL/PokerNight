@@ -76,11 +76,9 @@ export function prepareSetup(settings: Settings, ruweChipset: Chipset): Setup {
  * Langer spelen of kortere levels betekent dus een diepere stack, terwijl de
  * blinds op dezelfde chip blijven beginnen.
  *
- * Alleen zinvol bij een structuur met een vaste groei die ook echt op de
- * kleinste chip begint — dat is de ladder. Bij `verdubbelen` en `berekend`
- * begint de reeks op honderd big blinds, dus schuift een diepere stack de
- * beginblinds mee omhoog en levert hij geen extra levels op; daar valt het
- * voorstel terug op honderd big blinds diep.
+ * Werkt voor elke reeks met een vaste groei per level: de ladder en verdubbelen.
+ * `Berekend` past zijn groei juist aan het aantal levels aan en haalt dat dus
+ * altijd; daar valt het voorstel terug op honderd big blinds diep.
  *
  * Alleen blokkerende tekorten tellen. "Weinig kleine chips" is een waarschuwing
  * en geen beletsel; bij een doos die zwaar op de hoge waardes leunt is die vanaf
@@ -100,7 +98,7 @@ export function suggestStartingStack(
   const groei = opties.kind === undefined ? Math.cbrt(10) : groeiPerLevel(opties.kind)
   const levels = opties.levels
   const ideaal =
-    groei !== undefined && levels !== undefined && levels >= 2 && opties.kind !== 'doubling'
+    groei !== undefined && levels !== undefined && levels >= 2
       ? (60 * kleinste * groei ** (levels - 1)) / players
       : 200 * kleinste
 

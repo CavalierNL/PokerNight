@@ -173,9 +173,17 @@ describe('tafelscherm', () => {
   })
 
   it('toont de color-up als chips, niet als kleurnamen', () => {
-    // Grote startstack met de 500-set: de kleinste kleur is meteen op level 0
+    // Eigen blinds die hoog beginnen: de kleinste kleur is dan op level 0 al
     // overbodig, dus de melding staat er vanaf het begin.
-    bewaarToernooi({ startingStack: 10_000, chipsetId: STANDARD_500.id }, STANDARD_500)
+    bewaarToernooi(
+      {
+        startingStack: 10_000,
+        chipsetId: STANDARD_500.id,
+        structure: 'manual',
+        manualBigBlinds: [100, 200, 400, 800],
+      },
+      STANDARD_500,
+    )
     const html = renderToStaticMarkup(
       <AppStateProvider>
         <TournamentScreen />
