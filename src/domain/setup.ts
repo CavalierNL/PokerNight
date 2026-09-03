@@ -16,6 +16,38 @@ export type Setup = {
   warnings: Warning[]
   /** Of de startknop ingedrukt mag worden. */
   canStart: boolean
+  /**
+   * Hoeveel spelers er met deze doos en startstack nog bij kunnen. Alleen
+   * berekend als laatkomers aanstaan, want het kost een verdeling per speler.
+   */
+  ruimteVoorLaatkomers?: number
+}
+
+/** Verder tellen dan dit heeft geen zin: dan is de doos ruim genoeg. */
+export const MAX_LAATKOMERS = 8
+
+/**
+ * Een tekort dat de startstack onmogelijk maakt. "Weinig kleine chips" hoort daar
+ * niet bij: dat is hinderlijk maar speelbaar.
+ */
+function blokkeert(soort: Shortage['kind']): boolean {
+  return soort === 'geenFiches' || soort === 'startstackNietGehaald'
+}
+
+function telLaatkomers(
+  chipset: Chipset,
+  spelers: number,
+  stack: number,
+  smallBlind: number,
+  startDenomination: number,
+): number {
+  let extra = 0
+  while (extra < MAX_LAATKOMERS) {
+    const poging = distributeChips(chipset, spelers + extra + 1, stack, smallBlind, startDenomination)
+    if (poging.shortages.some((t) => blokkeert(t.kind))) break
+    extra += 1
+  }
+  return extra
 }
 
 /**
@@ -59,6 +91,16 @@ export function prepareSetup(settings: Settings, ruweChipset: Chipset): Setup {
     distribution,
     warnings,
     canStart: !warnings.some((w) => w.level === 'error'),
+    ruimteVoorLaatkomers:
+      settings.laatkomers === undefined
+        ? undefined
+        : telLaatkomers(
+            chipset,
+            spelers,
+            settings.startingStack,
+            structure.levels[0]?.smallBlind ?? 1,
+            structure.startDenomination,
+          ),
   }
 }
 
@@ -109,9 +151,6 @@ export function suggestStartingStack(
     kandidaten.push(kleinste * rondBedrag(i))
     if (kandidaten[kandidaten.length - 1] >= ideaal) break
   }
-
-  const blokkeert = (soort: Shortage['kind']) =>
-    soort === 'geenFiches' || soort === 'startstackNietGehaald'
 
   for (const stack of [...kandidaten].reverse()) {
     const tekorten = distributeChips(chipset, players, stack, kleinste, kleinste).shortages

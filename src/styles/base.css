@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: radial-gradient(ellipse at 50% 15%, var(--felt-licht) 0%, var(--felt-diep) 75%);
   background-attachment: fixed;
   color: var(--creme);

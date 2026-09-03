@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { useNow } from '../hooks/useNow'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
-import { useLaatsteMinuut, WAARSCHUWING_MS } from '../hooks/useLaatsteMinuut'
+import { useEindeWaarschuwing, waarschuwingsGrensMs } from '../hooks/useEindeWaarschuwing'
 import { useAppState } from '../state/AppState'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
@@ -13,6 +13,7 @@ import { roundToPayable } from '../domain/amounts'
 import { prepareSetup } from '../domain/setup'
 import type { Chipset } from '../domain/chipset'
 import {
+  afgevallen,
   averageStack,
   averageStackInBigBlinds,
   colorUpAt,
@@ -21,10 +22,12 @@ import {
   isAfgelopen,
   laatkomerStack,
   nextLevel,
+  nogInHetSpel,
   playersLeft,
   remainingMs,
   speelduurMs,
   uitslag,
+  winnaar,
   type Tournament,
 } from '../domain/tournament'
 import './TournamentScreen.css'
@@ -77,8 +80,10 @@ export function TournamentScreen() {
   // er geen minuut om te waarschuwen.
   const telAfOpTijd = tournament !== null && tournament.settings.trigger !== 'elimination'
   const resterend = tournament ? remainingMs(tournament, now) : 0
-  useLaatsteMinuut(
+  const waarschuwingsGrens = waarschuwingsGrensMs(tournament?.settings.levelMinutes ?? 15)
+  useEindeWaarschuwing(
     resterend,
+    waarschuwingsGrens,
     preferences.sound && telAfOpTijd && tournament?.clock.state === 'running',
     tournament?.levelIndex ?? 0,
   )
@@ -94,13 +99,14 @@ export function TournamentScreen() {
 
   const volgende = nextLevel(tournament)
   const afgelopen = isAfgelopen(tournament)
+  const gewonnenDoor = winnaar(tournament)
   const { shuffleSeats, randomDealer, laatkomers } = tournament.settings
   const geloot = shuffleSeats === true || randomDealer === true
   const dealer =
     tournament.dealer === undefined ? undefined : tournament.players[tournament.dealer]?.name
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
   const eindtijd = expectedEndAt(tournament, now)
-  const bijnaOm = telAfOpTijd && resterend <= WAARSCHUWING_MS
+  const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
 
   // Bij de trigger "alleen eliminatie" gebeurt er niets als de tijd om is, dus
   // toont de klok de verstreken toernooitijd in plaats van een aftelling.
@@ -171,6 +177,18 @@ export function TournamentScreen() {
               {roundToPayable(averageStack(tournament), tournament.kleinsteChip ?? 1)} chips
             </span>
             {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
+            {/*
+              Als link en niet als knop tussen de andere: opzoekwerk hoort niet
+              even zwaar te wegen als pauzeren of iemand aftikken, en in portrait
+              duwde een vierde knop de rest van de rij van het scherm af.
+            */}
+            <button
+              className="tafel__schemalink"
+              disabled={gepauzeerd}
+              onClick={() => setSchemaOpen(true)}
+            >
+              Hele schema
+            </button>
           </div>
           {colorUp && <ColorUpRegel label="Color-up:" colorUp={colorUp} />}
         </div>
@@ -198,10 +216,6 @@ export function TournamentScreen() {
             )}
           </div>
           <div className="tafel__knoppen">
-            {/* Het schema is opzoekwerk, geen ingreep: de klok loopt gewoon door. */}
-            <Button variant="ghost" disabled={gepauzeerd} onClick={() => setSchemaOpen(true)}>
-              Schema
-            </Button>
             <Button
               variant="ghost"
               disabled={gepauzeerd}
@@ -281,11 +295,20 @@ export function TournamentScreen() {
                 {shuffleSeats === true && (
                   <ol className="loting__plaatsen">
                     {tournament.players.map((speler, i) => (
-                      <li key={speler.name + i}>{speler.name}</li>
+                      // De dealer wordt in de lijst aangewezen. Los eronder
+                      // "X deelt" laat je zoeken naar de naam die er al staat.
+                      <li
+                        key={speler.name + i}
+                        className={i === tournament.dealer ? 'loting__dealer-plaats' : undefined}
+                      >
+                        {speler.name}
+                        {i === tournament.dealer && <span className="loting__knop">deelt</span>}
+                      </li>
                     ))}
                   </ol>
                 )}
-                {dealer !== undefined && (
+                {/* Zonder gelote plaatsen is er geen lijst om het in aan te wijzen. */}
+                {dealer !== undefined && shuffleSeats !== true && (
                   <p className="loting__dealer">{dealer} deelt de eerste hand</p>
                 )}
               </div>
@@ -308,7 +331,7 @@ export function TournamentScreen() {
                 </Button>
               )}
               <Button onClick={() => dispatch({ type: 'bevestigLevel', now: Date.now() })}>
-                De klok mag lopen
+                Start
               </Button>
             </div>
           </div>
@@ -334,17 +357,46 @@ export function TournamentScreen() {
       {afgelopen && (
         <div className="levelscherm">
           <div className="levelscherm__kaart eindscherm">
-            <span className="levelscherm__kop">Afgelopen</span>
-            <span className="eindscherm__winnaar">{uitslag(tournament)[0]?.name}</span>
-            <span className="eindscherm__duur">
-              wint na {formatteerDuur(speelduurMs(tournament, now))} spelen
-            </span>
-            {/* Genummerd van boven af: de winnaar is nummer één. */}
-            <ol className="eindscherm__uitslag">
-              {uitslag(tournament).map((speler, i) => (
-                <li key={speler.name + i}>{speler.name}</li>
-              ))}
-            </ol>
+            {/*
+              Twee manieren om te eindigen. Is er één over, dan is dat de
+              winnaar. Loopt de speelduur af terwijl er nog meerderen zitten,
+              dan is er geen winnaar: zonder de stacks te tellen valt niet te
+              zeggen wie voorstaat, en dat verzint de app niet.
+            */}
+            {gewonnenDoor !== undefined ? (
+              <>
+                <span className="levelscherm__kop">Afgelopen</span>
+                <span className="eindscherm__winnaar">{gewonnenDoor.name}</span>
+                <span className="eindscherm__duur">
+                  wint na {formatteerDuur(speelduurMs(tournament, now))} spelen
+                </span>
+                {/* Genummerd van boven af: de winnaar is nummer één. */}
+                <ol className="eindscherm__uitslag">
+                  {uitslag(tournament).map((speler, i) => (
+                    <li key={speler.name + i}>{speler.name}</li>
+                  ))}
+                </ol>
+              </>
+            ) : (
+              <>
+                <span className="levelscherm__kop">De speelduur is om</span>
+                <span className="eindscherm__winnaar eindscherm__winnaar--samen">
+                  {nogInHetSpel(tournament)
+                    .map((p) => p.name)
+                    .join(', ')}
+                </span>
+                <span className="eindscherm__duur">
+                  staan er na {formatteerDuur(speelduurMs(tournament, now))} nog; de meeste chips
+                  wint
+                </span>
+                {/* Doorgenummerd vanaf wie er nog zitten: dit zijn de plaatsen eronder. */}
+                <ol className="eindscherm__uitslag" start={nogInHetSpel(tournament).length + 1}>
+                  {afgevallen(tournament).map((speler, i) => (
+                    <li key={speler.name + i}>{speler.name}</li>
+                  ))}
+                </ol>
+              </>
+            )}
             <div className="levelscherm__knoppen">
               {/* Voor als de verkeerde is afgetikt: dan is het toernooi nog bezig. */}
               <Button variant="ghost" onClick={() => dispatch({ type: 'undo', now: Date.now() })}>

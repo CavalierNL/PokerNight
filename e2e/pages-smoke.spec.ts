@@ -207,8 +207,8 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.waitForTimeout(1200)
     await expect(page.locator('.tafel__klok')).toHaveText('15:00')
 
-    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
-    await expect(page.getByRole('button', { name: 'De klok mag lopen' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveCount(0)
     await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
   })
 
@@ -281,7 +281,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
-    await page.getByRole('button', { name: 'Schema' }).click()
+    await page.getByRole('button', { name: 'Hele schema' }).click()
     await expect(page.locator('.schema .structuur__nu')).toContainText('1')
 
     // De klok loopt door terwijl je opzoekt: dit is geen pauze.
@@ -297,11 +297,11 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
     await page.getByRole('button', { name: 'Een level vooruit' }).click()
-    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
     await expect(page.locator('.tafel__level')).toContainText('Level 2')
 
     await page.getByRole('button', { name: 'Een level terug' }).click()
-    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
     await expect(page.locator('.tafel__level')).toContainText('Level 1')
 
     // Het teruggekregen level begint vol; stond de klok op nul, dan zou de
@@ -313,7 +313,7 @@ test.describe.serial('de gepubliceerde site', () => {
   test('loot de tafel en wacht met de klok tot iedereen zit', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByLabel('Loot wie de eerste hand deelt').check()
+    await page.getByLabel('Willekeurige dealer').check()
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
     await expect(page.getByText('deelt de eerste hand')).toBeVisible()
@@ -321,7 +321,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.waitForTimeout(1200)
     await expect(page.locator('.tafel__klok')).toHaveText('15:00')
 
-    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
     await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
   })
 

@@ -205,18 +205,36 @@ export function isAfgelopen(state: Tournament): boolean {
   return state.finishedAt !== undefined
 }
 
+/** Wie er nog meedoet, in de volgorde waarin ze aan tafel zitten. */
+export function nogInHetSpel(state: Tournament): Player[] {
+  return state.players.filter((p) => !p.out)
+}
+
+/**
+ * Wie eruit liggen, de laatste eerst. Bij een toernooi van vóór `outAt` zijn de
+ * tijdstippen onbekend; dan blijft de volgorde staan zoals ze aan tafel zaten,
+ * wat eerlijker is dan een verzonnen rangschikking.
+ */
+export function afgevallen(state: Tournament): Player[] {
+  return state.players.filter((p) => p.out).sort((a, b) => (b.outAt ?? 0) - (a.outAt ?? 0))
+}
+
+/**
+ * De winnaar: de enige die nog meedoet. Loopt de speelduur af terwijl er nog
+ * meerderen zitten, dan is er geen winnaar — zonder de stacks te tellen valt niet
+ * te zeggen wie voorstaat, en dat gokt de app niet.
+ */
+export function winnaar(state: Tournament): Player | undefined {
+  const over = nogInHetSpel(state)
+  return over.length === 1 ? over[0] : undefined
+}
+
 /**
  * De uitslag: de winnaar voorop, daarna de spelers in omgekeerde volgorde van
  * uitvallen. Wie het langst meedeed, staat het hoogst.
- *
- * Er wordt eerst op `out` gesorteerd en pas daarna op het tijdstip. Dat houdt de
- * winnaar bovenaan bij een toernooi dat nog van vóór `outAt` komt, waar de
- * tijdstippen ontbreken en de volgorde onbekend is.
  */
 export function uitslag(state: Tournament): Player[] {
-  return [...state.players].sort(
-    (a, b) => Number(a.out) - Number(b.out) || (b.outAt ?? 0) - (a.outAt ?? 0),
-  )
+  return [...nogInHetSpel(state), ...afgevallen(state)]
 }
 
 /** De tijd die er werkelijk gespeeld is: zonder de pauzes. */
@@ -294,6 +312,18 @@ function goToNextLevel(state: TournamentCore, now: number): TournamentCore | nul
   return naarLevel(state, state.levelIndex + 1, now)
 }
 
+/**
+ * Zet het toernooi op afgelopen: de klok stopt en er verandert niets meer aan de
+ * levels. Wat er daarna verstrijkt is opruimen en telt niet als speeltijd.
+ */
+function klaar(state: TournamentCore, now: number, resterendMs: number): TournamentCore {
+  return {
+    ...state,
+    finishedAt: now,
+    clock: { state: 'paused', remainingMs: resterendMs, pausedAt: now },
+  }
+}
+
 const advancesOnTime = (t: Trigger) => t === 'time' || t === 'both'
 const advancesOnElimination = (t: Trigger) => t === 'elimination' || t === 'both'
 
@@ -319,8 +349,15 @@ export function reduce(state: Tournament, action: Action): Tournament {
       if (state.clock.state === 'paused') return state
       if (!advancesOnTime(state.settings.trigger)) return state
       if (remainingMs(state, action.now) > 0) return state
+
       const volgende = goToNextLevel(core(state), action.now)
-      return volgende ? withHistory(state, volgende, action.now) : state
+      if (volgende) return withHistory(state, volgende, action.now)
+
+      // Het laatste level is uitgespeeld. Met een afgesproken speelduur is het
+      // toernooi daarmee afgelopen; zonder duur wordt er doorgespeeld tot er één
+      // over is, en blijven de blinds staan waar ze staan.
+      if (state.settings.durationMinutes === undefined) return state
+      return withHistory(state, klaar(core(state), action.now, 0), action.now)
     }
 
     case 'playerOut': {
@@ -334,19 +371,8 @@ export function reduce(state: Tournament, action: Action): Tournament {
       // De laatste die afvalt maakt de ander winnaar. Dan gaan de blinds niet
       // meer omhoog en stopt de klok: wat daarna verstrijkt is opruimen.
       if (spelers.filter((p) => !p.out).length <= 1) {
-        return withHistory(
-          state,
-          {
-            ...volgende,
-            finishedAt: action.now,
-            clock: {
-              state: 'paused',
-              remainingMs: remainingMs(state, action.now),
-              pausedAt: action.now,
-            },
-          },
-          action.now,
-        )
+        const over = remainingMs(state, action.now)
+        return withHistory(state, klaar(volgende, action.now, over), action.now)
       }
 
       // Tijdens een pauze wordt er niet gespeeld, dus verhoogt een eliminatie

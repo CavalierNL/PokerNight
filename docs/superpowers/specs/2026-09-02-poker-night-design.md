@@ -163,11 +163,14 @@ dat daar niet bij hoort door te gaan is het geluid, en daar zit een knop voor di
 alleen dit ene signaal stilzet — de instelling zelf blijft staan en het volgende
 level geeft weer geluid.
 
-De laatste minuut van een level wordt eenmalig gemeld: één lage toon, duidelijk
-anders dan de twee stijgende van een verhoging, plus de klok in het goud. Het
-signaal klinkt alleen op het moment dat de klok de grens passeert; wie de app
-opent met nog veertig seconden te gaan krijgt geen waarschuwing voor iets wat de
-tafel allang weet.
+Het einde van een level wordt eenmalig gemeld: twee gelijke lage stoten met een
+blokgolf, hoorbaar anders dan de twee stijgende van een verhoging, plus de klok
+in het goud. De grens is een vijfde van het level, met een minimum van één minuut
+en een maximum van twee — één vaste minuut is bij een kwartier te laat om nog een
+hand te beginnen, en twee minuten zou bij een level van vijf minuten bijna het
+halve level zijn. Het signaal klinkt alleen op het moment dat de klok die grens
+passeert; wie de app opent met nog veertig seconden te gaan krijgt geen
+waarschuwing voor iets wat de tafel allang weet.
 
 ### Het level met de hand verzetten
 
@@ -283,12 +286,21 @@ al, en de enige vrije stoel is de zijne. Bij het toevoegen wordt dezelfde
 setup-berekening gedraaid met één speler erbij; haalt de doos dat niet meer, dan
 staat er dat er gewisseld zal moeten worden.
 
+Staat de instelling aan, dan meldt de configuratie bij de startstack hoeveel
+spelers de doos er nog bij aankan: de verdeling wordt herhaald met telkens een
+speler meer tot het niet meer lukt. Dat is precies de vraag die je vooraf stelt —
+"kan er nog iemand bij?" — en achteraf niet meer te herstellen valt.
+
 ### Loten bij de start
 
-Twee losse keuzes vooraf: de zitplaatsen loten en wie de eerste hand deelt. Is er
-geloot, dan begint het toernooi bij het levelscherm — daar staat wie waar zit en
-wie deelt, en de klok wacht tot iedereen zit. Op dat ene scherm klinkt geen gong:
-iedereen kijkt op dat moment al mee.
+Twee losse keuzes vooraf: willekeurige zitplaatsen en een willekeurige dealer. Is
+er geloot, dan begint het toernooi bij het levelscherm — daar staat wie waar zit
+en wie deelt, en de klok wacht tot iedereen zit. Op dat ene scherm klinkt geen
+gong: iedereen kijkt op dat moment al mee.
+
+De dealer wordt in de lijst met plaatsen aangewezen en niet als losse regel
+eronder: anders zoek je naar een naam die er al staat. Zonder gelote plaatsen is
+er geen lijst, en dan staat het er alsnog als zin.
 
 De toevalsbron is een argument van `createTournament` en geen aanroep van
 `Math.random` binnenin. Bij loten is "het lijkt willekeurig" niet te controleren;
@@ -297,10 +309,18 @@ komt te zitten.
 
 ## Het einde van het toernooi
 
-Zodra er nog één speler over is, is het toernooi afgelopen: de klok stopt, de
-blinds gaan niet meer omhoog — een level dat niemand meer speelt hoort niet in de
-structuur — en er verschijnt een scherm met de winnaar, de uitslag en de netto
-speelduur. De uitslag is de omgekeerde volgorde van uitvallen, waarvoor per
+Een toernooi eindigt op twee manieren.
+
+Zodra er nog één speler over is, is het afgelopen: de klok stopt, de blinds gaan
+niet meer omhoog — een level dat niemand meer speelt hoort niet in de structuur —
+en er verschijnt een scherm met de winnaar, de uitslag en de netto speelduur.
+
+Is er een speelduur afgesproken, dan eindigt het toernooi ook als het laatste
+level uitgespeeld is. Er is dan geen winnaar: zonder de stacks te tellen valt niet
+te zeggen wie voorstaat, en dat verzint de app niet. Het scherm noemt wie er nog
+zitten en nummert de afgevallenen door vanaf de plaats eronder. Zonder afgesproken
+duur gebeurt dit niet — dan wordt er op het laatste level doorgespeeld tot er één
+over is. De uitslag is de omgekeerde volgorde van uitvallen, waarvoor per
 speler het moment van uitschakelen wordt bewaard.
 
 Het einde staat in dezelfde toestand als de rest, zodat ongedaan maken het ook

@@ -4,7 +4,7 @@ import { Panel } from '../components/Panel'
 import { ChipIcon } from '../components/ChipIcon'
 import { Kop } from '../components/Kop'
 import { useAppState } from '../state/AppState'
-import { prepareSetup, suggestStartingStack } from '../domain/setup'
+import { MAX_LAATKOMERS, prepareSetup, suggestStartingStack } from '../domain/setup'
 import {
   kanColorUp,
   ladderHeeftZin,
@@ -186,7 +186,13 @@ export function SetupScreen({
   )
 
   const setup = useMemo(() => prepareSetup(huidigeSettings, chipset), [huidigeSettings, chipset])
-  const { structure: structuur, distribution: verdeling, warnings, canStart } = setup
+  const {
+    structure: structuur,
+    distribution: verdeling,
+    warnings,
+    canStart,
+    ruimteVoorLaatkomers,
+  } = setup
   // Het aantal chips, tegenover verdeling.stackValue dat de wáárde optelt.
   const aantalChips = verdeling.perPlayer.reduce((som, a) => som + a.count, 0)
 
@@ -245,7 +251,7 @@ export function SetupScreen({
               checked={shuffleSeats}
               onChange={(e) => setShuffleSeats(e.target.checked)}
             />
-            <span>Loot de zitplaatsen</span>
+            <span>Willekeurige zitplaatsen</span>
           </label>
           <label className="veld veld--schakelaar">
             <input
@@ -253,7 +259,7 @@ export function SetupScreen({
               checked={randomDealer}
               onChange={(e) => setRandomDealer(e.target.checked)}
             />
-            <span>Loot wie de eerste hand deelt</span>
+            <span>Willekeurige dealer</span>
           </label>
 
           <label className="veld veld--schakelaar">
@@ -419,6 +425,18 @@ export function SetupScreen({
             value={gekozenStack}
             onValue={setStartingStack}
           />
+
+          {/* Wat de doos nog aankan boven dit gezelschap, als er laatkomers
+              verwacht worden. Zonder die instelling is het ruis. */}
+          {ruimteVoorLaatkomers !== undefined && (
+            <p className="uitleg">
+              {ruimteVoorLaatkomers === 0
+                ? 'Met deze startstack heeft de doos geen chips over voor een laatkomer.'
+                : `De doos heeft met deze startstack chips voor nog ` +
+                  `${ruimteVoorLaatkomers}${ruimteVoorLaatkomers === MAX_LAATKOMERS ? ' of meer' : ''} ` +
+                  `${ruimteVoorLaatkomers === 1 ? 'speler' : 'spelers'}.`}
+            </p>
+          )}
         </Panel>
       </div>
 

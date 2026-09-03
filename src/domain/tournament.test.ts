@@ -6,12 +6,14 @@ import {
   currentLevel,
   expectedEndAt,
   isAfgelopen,
+  nogInHetSpel,
   playersLeft,
   reduce,
   remainingMs,
   speelduurMs,
   totalChips,
   uitslag,
+  winnaar,
   type Settings,
   type Tournament,
 } from './tournament'
@@ -81,8 +83,10 @@ describe('tick', () => {
     // Anders levert elke tick een nieuw object op. Het tafelscherm tikt vier keer
     // per seconde, dus dat betekent vier renders en vier schrijfacties naar
     // localStorage per seconde, en een undo-geschiedenis die binnen vijf seconden
-    // vol staat met lege stappen.
-    const laatste = naarLaatsteLevel(maak({ trigger: 'time' }))
+    // vol staat met lege stappen. Zonder afgesproken duur wordt er op het laatste
+    // level doorgespeeld tot er één over is: de klok loopt dus echt door.
+    let laatste = naarLaatsteLevel(maak({ trigger: 'time', durationMinutes: undefined }))
+    laatste = reduce(laatste, { type: 'bevestigLevel', now: T0 })
     const veelLater = T0 + 999 * MINUUT
     const na = reduce(laatste, { type: 'tick', now: veelLater })
     expect(na).toBe(laatste)
@@ -543,5 +547,45 @@ describe('een laatkomer', () => {
   it('is terug te draaien', () => {
     const t = erbij(maak({ laatkomers: 'startstack' }))
     expect(reduce(t, { type: 'undo', now: T0 + 2 * MINUUT }).players).toHaveLength(4)
+  })
+})
+
+describe('het einde van de speelduur', () => {
+  /** Speelt het laatste level uit met een lopende klok. */
+  function totHetLaatsteLevelOm(t: Tournament): Tournament {
+    const uitgespeeld = reduce(naarLaatsteLevel(t), { type: 'bevestigLevel', now: T0 })
+    return reduce(uitgespeeld, { type: 'tick', now: T0 + 15 * MINUUT })
+  }
+
+  it('sluit het toernooi af als het laatste level uitgespeeld is', () => {
+    const t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    expect(isAfgelopen(t)).toBe(true)
+  })
+
+  it('wijst geen winnaar aan als er nog meerderen zitten', () => {
+    // Zonder de stacks te tellen valt niet te zeggen wie voorstaat, en dat
+    // gokt de app niet.
+    const t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    expect(winnaar(t)).toBeUndefined()
+    expect(nogInHetSpel(t)).toHaveLength(4)
+  })
+
+  it('speelt zonder afgesproken duur gewoon door', () => {
+    const t = totHetLaatsteLevelOm(maak({ trigger: 'time', durationMinutes: undefined }))
+    expect(isAfgelopen(t)).toBe(false)
+  })
+
+  it('houdt op met tikken zodra het klaar is', () => {
+    let t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    const naHetEinde = t
+    for (let i = 0; i < 40; i++) t = reduce(t, { type: 'tick', now: T0 + 99 * MINUUT + i })
+    expect(t).toBe(naHetEinde)
+  })
+
+  it('is terug te draaien naar het laatste level', () => {
+    const t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    const terug = reduce(t, { type: 'undo', now: T0 + 16 * MINUUT })
+    expect(isAfgelopen(terug)).toBe(false)
+    expect(terug.levelIndex).toBe(t.levelIndex)
   })
 })

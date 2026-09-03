@@ -3,11 +3,19 @@
  */
 type Toon = readonly [start: number, frequentie: number]
 
+type Opties = {
+  duur?: number
+  /** De golfvorm. `square` heeft veel boventonen en snijdt door gepraat heen. */
+  vorm?: OscillatorType
+  volume?: number
+}
+
 /**
  * Speelt een reeks tonen af met de Web Audio API. Bewust geen geluidsbestand:
  * geen download, geen asset die kan ontbreken.
  */
-function speel(tonen: readonly Toon[], duur = 0.18): void {
+function speel(tonen: readonly Toon[], opties: Opties = {}): void {
+  const { duur = 0.18, vorm = 'triangle', volume = 0.3 } = opties
   try {
     const context = new AudioContext()
 
@@ -21,9 +29,9 @@ function speel(tonen: readonly Toon[], duur = 0.18): void {
       const oscillator = context.createOscillator()
       const gain = context.createGain()
       oscillator.frequency.value = frequentie
-      oscillator.type = 'triangle'
+      oscillator.type = vorm
       gain.gain.setValueAtTime(0.0001, nu + start)
-      gain.gain.exponentialRampToValueAtTime(0.3, nu + start + 0.02)
+      gain.gain.exponentialRampToValueAtTime(volume, nu + start + 0.02)
       gain.gain.exponentialRampToValueAtTime(0.0001, nu + start + duur - 0.02)
       oscillator.connect(gain).connect(context.destination)
       oscillator.start(nu + start)
@@ -52,12 +60,21 @@ export function speelBlindToon(): void {
 }
 
 /**
- * De waarschuwing dat het level bijna om is. Eén lange lage toon, en daarmee
- * hoorbaar iets anders dan de twee stijgende van een verhoging: deze zegt "maak
- * de hand af", niet "de blinds zijn omhoog". Klinkt eenmalig.
+ * De waarschuwing dat het level bijna om is. Klinkt eenmalig, en hoorbaar anders
+ * dan een verhoging: twee gelijke lage stoten in plaats van twee stijgende.
+ *
+ * Met een blokgolf en luider dan de gong. Een driehoeksgolf op deze toonhoogte
+ * is zacht en verdwijnt onder het gepraat; de boventonen van een blokgolf vallen
+ * midden in het bereik waarin gepraat wordt en komen er daardoor bovenuit.
  */
-export function speelLaatsteMinuutToon(): void {
-  speel([[0, 392]], 0.45)
+export function speelEindeLevelToon(): void {
+  speel(
+    [
+      [0, 392],
+      [0.3, 392],
+    ],
+    { duur: 0.26, vorm: 'square', volume: 0.45 },
+  )
 }
 
 /** Tussenpauze in de herhaling: lang genoeg om niet als alarm te klinken. */
