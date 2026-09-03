@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { kiesDealer, schud, type Toeval } from './loting'
+import { schud, type Toeval } from './loting'
 
 /** Een bron die de opgegeven getallen op volgorde teruggeeft en dan herhaalt. */
 function reeks(...getallen: number[]): Toeval {
@@ -31,16 +31,3 @@ describe('schud', () => {
   })
 })
 
-describe('kiesDealer', () => {
-  it('wijst iemand aan tafel aan', () => {
-    expect(kiesDealer(4, reeks(0.5))).toBe(2)
-  })
-
-  it('wijst niemand aan zonder spelers', () => {
-    expect(kiesDealer(0, reeks(0.5))).toBeUndefined()
-  })
-
-  it('blijft binnen de tafel als de bron precies 1 geeft', () => {
-    expect(kiesDealer(4, reeks(1))).toBe(3)
-  })
-})

@@ -36,6 +36,16 @@ function verzamelProblemen(page: Page): string[] {
   return problemen
 }
 
+/**
+ * Start een toernooi en zet de tafel. Elk toernooi begint bij het scherm met de
+ * tafelindeling; pas als die weggeklikt is loopt de klok en zijn de knoppen
+ * eronder bereikbaar.
+ */
+async function startEnGaZitten(page: Page) {
+  await page.getByRole('button', { name: 'Start het toernooi' }).click()
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+}
+
 // Serieel: slaat de site nog de vorige versie op, dan zeggen de tests daarna
 // niets zinnigs meer en kunnen ze beter overgeslagen worden.
 test.describe.serial('de gepubliceerde site', () => {
@@ -197,7 +207,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
     // De standaard is "op de klok én als iemand eruit gaat": één klik zet dus
     // een level om, en de klok telt af zodat je kunt zien dat hij stilstaat.
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await page.getByRole('button', { name: 'Speler 1' }).click()
     await expect(page.getByText('Level 2', { exact: true })).toBeVisible()
@@ -215,7 +225,7 @@ test.describe.serial('de gepubliceerde site', () => {
   test('hervat een pauze door op het scherm te tikken', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await page.getByRole('button', { name: 'Pauze' }).click()
     await expect(page.getByText('GEPAUZEERD')).toBeVisible()
@@ -232,7 +242,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
     await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await page.getByRole('button', { name: 'Stoppen' }).click()
     await page.getByRole('button', { name: 'Ja, stop het toernooi' }).click()
@@ -249,7 +259,7 @@ test.describe.serial('de gepubliceerde site', () => {
 
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     // Het toernooischerm is een tweede laadpad met een eigen render en een
     // schrijfactie naar localStorage, die geen van beide in het setupscherm
@@ -266,7 +276,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
     await page.getByLabel('Namen, één per regel').fill('Ann\nBob\n')
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await page.getByRole('button', { name: 'Ann' }).click()
 
@@ -279,7 +289,7 @@ test.describe.serial('de gepubliceerde site', () => {
   test('toont het hele schema met het huidige level erin', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await page.getByRole('button', { name: 'Hele schema' }).click()
     await expect(page.locator('.schema .structuur__nu')).toContainText('1')
@@ -294,7 +304,7 @@ test.describe.serial('de gepubliceerde site', () => {
   test('gaat een level terug zonder er meteen weer doorheen te schieten', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await page.getByRole('button', { name: 'Een level vooruit' }).click()
     await page.getByRole('button', { name: 'Start', exact: true }).click()
@@ -313,10 +323,11 @@ test.describe.serial('de gepubliceerde site', () => {
   test('loot de tafel en wacht met de klok tot iedereen zit', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByLabel('Willekeurige dealer').check()
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
-    await expect(page.getByText('is dealer')).toBeVisible()
+    // Acht plaatsen in een geloote volgorde, met plaats een als dealer.
+    await expect(page.locator('.loting__plaatsen li')).toHaveCount(8)
+    await expect(page.locator('.loting__eerste')).toHaveCount(1)
     await expect(page.locator('.tafel__klok')).toHaveText('15:00')
     await page.waitForTimeout(1200)
     await expect(page.locator('.tafel__klok')).toHaveText('15:00')
@@ -329,7 +340,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
     await page.getByLabel('Laatkomers mogen instappen').check()
-    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+    await startEnGaZitten(page)
 
     await expect(page.getByText('8 spelers')).toBeVisible()
     await page.getByRole('button', { name: '+ speler' }).click()

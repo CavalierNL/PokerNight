@@ -33,8 +33,22 @@ const basis: Settings = {
   chipsetId: KLEINE_DOOS.id,
 }
 
+/**
+ * Een bron die de tafel op volgorde laat zitten: bij 1 wisselt elke plaats met
+ * zichzelf. Zo blijven de namen in de tests voorspelbaar, en gaat de loting zelf
+ * apart getest met een bron die wél schudt.
+ */
+const opVolgorde = () => 1
+
+const nieuw = (overrides: Partial<Settings> = {}) =>
+  createTournament({ ...basis, ...overrides }, KLEINE_DOOS, T0, opVolgorde)
+
+/**
+ * Een toernooi zoals het aan tafel staat: de tafelindeling is gezien en de klok
+ * loopt. Elk toernooi begint bij dat scherm, en bijna geen test gaat daarover.
+ */
 const maak = (overrides: Partial<Settings> = {}) =>
-  createTournament({ ...basis, ...overrides }, KLEINE_DOOS, T0)
+  reduce(nieuw(overrides), { type: 'bevestigLevel', now: T0 })
 
 /** Zet het toernooi op het laatste level. */
 function naarLaatsteLevel(t: Tournament, now = T0): Tournament {
@@ -43,10 +57,14 @@ function naarLaatsteLevel(t: Tournament, now = T0): Tournament {
 }
 
 describe('createTournament', () => {
-  it('begint op level 0 met een lopende klok', () => {
-    const t = maak()
+  it('begint op level 0 bij het levelscherm', () => {
+    const t = nieuw()
     expect(t.levelIndex).toBe(0)
-    expect(t.clock.state).toBe('running')
+    expect(t.wachtOpLevel).toBe(true)
+  })
+
+  it('laat de klok lopen zodra de tafel zit', () => {
+    expect(maak().clock.state).toBe('running')
   })
 
   it('zet alle spelers in het toernooi', () => {
@@ -465,35 +483,18 @@ describe('handmatig een level terug', () => {
 })
 
 describe('loten bij de start', () => {
-  const opVolgorde = () => 0
-
-  it('laat de tafel met rust als er niet geloot wordt', () => {
-    const t = maak()
-    expect(t.players.map((p) => p.name)).toEqual(basis.playerNames)
-    expect(t.dealer).toBeUndefined()
-    expect(t.clock.state).toBe('running')
-  })
+  const schudt = () => 0
 
   it('zet de spelers in de geloote volgorde', () => {
-    const t = createTournament(
-      { ...basis, shuffleSeats: true },
-      KLEINE_DOOS,
-      T0,
-      opVolgorde,
-    )
+    const t = createTournament(basis, KLEINE_DOOS, T0, schudt)
     expect([...t.players.map((p) => p.name)].sort()).toEqual([...basis.playerNames].sort())
     expect(t.players.map((p) => p.name)).not.toEqual(basis.playerNames)
   })
 
-  it('wijst een dealer aan', () => {
-    const t = createTournament({ ...basis, randomDealer: true }, KLEINE_DOOS, T0, () => 0.5)
-    expect(t.dealer).toBe(2)
-  })
-
   it('wacht met de klok tot de tafel zit', () => {
-    // De uitslag van de loting staat op het levelscherm; zolang die er staat
-    // wordt er niet gespeeld en loopt de tijd niet.
-    const t = createTournament({ ...basis, randomDealer: true }, KLEINE_DOOS, T0, opVolgorde)
+    // De tafelindeling staat op het levelscherm; zolang die er staat wordt er
+    // niet gespeeld en loopt de tijd niet.
+    const t = createTournament(basis, KLEINE_DOOS, T0, schudt)
     expect(t.wachtOpLevel).toBe(true)
     expect(t.clock.state).toBe('paused')
     expect(remainingMs(t, T0 + 5 * MINUUT)).toBe(15 * MINUUT)

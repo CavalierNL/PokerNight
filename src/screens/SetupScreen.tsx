@@ -82,8 +82,6 @@ export function SetupScreen({
   const [huisregel, setHuisregel] = useState(settings?.houseRuleFiveColor !== undefined)
   const [vijfKleur, setVijfKleur] = useState(settings?.houseRuleFiveColor)
   const [chipsetId, setChipsetId] = useState(settings?.chipsetId ?? chipsets[0].id)
-  const [shuffleSeats, setShuffleSeats] = useState(settings?.shuffleSeats === true)
-  const [randomDealer, setRandomDealer] = useState(settings?.randomDealer === true)
   const [laatkomers, setLaatkomers] = useState<Settings['laatkomers']>(settings?.laatkomers)
 
   const doos = chipsets.find((c) => c.id === chipsetId) ?? chipsets[0]
@@ -163,8 +161,6 @@ export function SetupScreen({
       colorUp: colorUp && colorUpMogelijk,
       houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
       chipsetId: chipset.id,
-      shuffleSeats,
-      randomDealer,
       laatkomers,
     }),
     [
@@ -179,8 +175,6 @@ export function SetupScreen({
       huisregel,
       gekozenVijf,
       chipset,
-      shuffleSeats,
-      randomDealer,
       laatkomers,
     ],
   )
@@ -242,24 +236,6 @@ export function SetupScreen({
           <label className="veld">
             <span>Namen, één per regel</span>
             <textarea rows={8} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
-          </label>
-
-          {/* Wat er bij de start geloot wordt, staat bij wie er meedoen. */}
-          <label className="veld veld--schakelaar">
-            <input
-              type="checkbox"
-              checked={shuffleSeats}
-              onChange={(e) => setShuffleSeats(e.target.checked)}
-            />
-            <span>Willekeurige zitplaatsen</span>
-          </label>
-          <label className="veld veld--schakelaar">
-            <input
-              type="checkbox"
-              checked={randomDealer}
-              onChange={(e) => setRandomDealer(e.target.checked)}
-            />
-            <span>Willekeurige dealer</span>
           </label>
 
           <label className="veld veld--schakelaar">

@@ -293,14 +293,16 @@ speler meer tot het niet meer lukt. Dat is precies de vraag die je vooraf stelt 
 
 ### Loten bij de start
 
-Twee losse keuzes vooraf: willekeurige zitplaatsen en een willekeurige dealer. Is
-er geloot, dan begint het toernooi bij het levelscherm — daar staat wie waar zit
-en wie deelt, en de klok wacht tot iedereen zit. Op dat ene scherm klinkt geen
-gong: iedereen kijkt op dat moment al mee.
+De zitplaatsen worden altijd geloot, en de tafelindeling is het eerste dat op het
+scherm staat: het toernooi begint bij het levelscherm en de klok wacht tot
+iedereen zit. Het is geen instelling waard — wie er niets om geeft gaat eraan
+voorbij en drukt op Start.
 
-De dealer wordt in de lijst met plaatsen aangewezen en niet als losse regel
-eronder: anders zoek je naar een naam die er al staat. Zonder gelote plaatsen is
-er geen lijst, en dan staat het er alsnog als zin.
+Wie de eerste hand deelt volgt uit de loting zelf: dat is plaats een. Daarmee is
+er niets aparts te loten, te bewaren of aan te wijzen, en past een lange voornaam
+nog steeds op een telefoon — een label achter de naam deed dat niet.
+
+Op dat ene scherm klinkt geen gong: iedereen kijkt op dat moment al mee.
 
 De toevalsbron is een argument van `createTournament` en geen aanroep van
 `Math.random` binnenin. Bij loten is "het lijkt willekeurig" niet te controleren;

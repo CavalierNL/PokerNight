@@ -100,10 +100,7 @@ export function TournamentScreen() {
   const volgende = nextLevel(tournament)
   const afgelopen = isAfgelopen(tournament)
   const gewonnenDoor = winnaar(tournament)
-  const { shuffleSeats, randomDealer, laatkomers } = tournament.settings
-  const geloot = shuffleSeats === true || randomDealer === true
-  const dealer =
-    tournament.dealer === undefined ? undefined : tournament.players[tournament.dealer]?.name
+  const { laatkomers } = tournament.settings
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
   const eindtijd = expectedEndAt(tournament, now)
   const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
@@ -286,31 +283,25 @@ export function TournamentScreen() {
             {colorUp && <ColorUpRegel label="Color-up:" colorUp={colorUp} />}
 
             {/*
-              De uitslag van de loting hoort bij de eerste hand en nergens
-              anders: daarna zit iedereen en heeft de knop de tafel al rond
-              gehad.
+              De tafelindeling hoort bij de eerste hand en nergens anders:
+              daarna zit iedereen en heeft de knop de tafel al rond gehad. Wie
+              er niets om geeft, drukt gewoon op Start.
             */}
-            {tournament.levelIndex === 0 && geloot && (
+            {tournament.levelIndex === 0 && (
               <div className="loting">
-                {shuffleSeats === true && (
-                  <ol className="loting__plaatsen">
-                    {tournament.players.map((speler, i) => (
-                      // De dealer wordt in de lijst aangewezen. Los eronder
-                      // "X is dealer" laat je zoeken naar de naam die er al staat.
-                      <li
-                        key={speler.name + i}
-                        className={i === tournament.dealer ? 'loting__dealer-plaats' : undefined}
-                      >
-                        {speler.name}
-                        {i === tournament.dealer && <span className="loting__knop">dealer</span>}
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                {/* Zonder gelote plaatsen is er geen lijst om het in aan te wijzen. */}
-                {dealer !== undefined && shuffleSeats !== true && (
-                  <p className="loting__dealer">{dealer} is dealer</p>
-                )}
+                {/*
+                  De dealer volgt uit de indeling in plaats van apart aangewezen
+                  te worden. Een label achter de naam paste niet naast een lange
+                  voornaam, en de volgorde is toch al willekeurig.
+                */}
+                <p className="loting__uitleg">Plaats 1 deelt de eerste hand</p>
+                <ol className="loting__plaatsen">
+                  {tournament.players.map((speler, i) => (
+                    <li key={speler.name + i} className={i === 0 ? 'loting__eerste' : undefined}>
+                      {speler.name}
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 

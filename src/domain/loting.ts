@@ -20,9 +20,3 @@ export function schud<T>(items: readonly T[], toeval: Toeval = Math.random): T[]
   }
   return uit
 }
-
-/** De index van wie de eerste hand deelt, of `undefined` zonder spelers. */
-export function kiesDealer(aantal: number, toeval: Toeval = Math.random): number | undefined {
-  if (aantal <= 0) return undefined
-  return tot(aantal - 1, toeval)
-}

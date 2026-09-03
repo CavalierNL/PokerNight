@@ -1,6 +1,6 @@
 import { buildStructure, type BlindLevel, type ColorUp, type StructureKind } from './blinds'
 import { denominations, metInstellingen, type Chipset } from './chipset'
-import { kiesDealer, schud, type Toeval } from './loting'
+import { schud, type Toeval } from './loting'
 import { roundToPayable } from './amounts'
 
 export type Trigger = 'time' | 'elimination' | 'both'
@@ -26,10 +26,6 @@ export type Settings = {
   houseRuleFiveColor?: string
   manualBigBlinds?: number[]
   chipsetId: string
-  /** Loot de zitplaatsen bij de start; de volgorde aan tafel volgt de loting. */
-  shuffleSeats?: boolean
-  /** Loot wie de eerste hand deelt. */
-  randomDealer?: boolean
   /**
    * Of er onderweg nog iemand mag instappen, en waarmee. `startstack` is wat een
    * echt toernooi doet: laat binnenkomen met de blinds hoog is het nadeel van
@@ -89,8 +85,6 @@ type TournamentCore = {
    * ook het einde terugdraait — je tikt de laatste speler zo verkeerd af.
    */
   finishedAt?: number
-  /** Wie de eerste hand deelt, als daarom geloot is. */
-  dealer?: number
   /**
    * De kleinste chipwaarde van de doos waarmee gespeeld wordt. Bewaard omdat de
    * stack van een laatkomer erop afgerond wordt en de doos zelf hier niet is —
@@ -140,12 +134,11 @@ export function createTournament(
     doos,
   )
 
-  const namen = settings.shuffleSeats ? schud(settings.playerNames, toeval) : settings.playerNames
-  const dealer = settings.randomDealer ? kiesDealer(namen.length, toeval) : undefined
-
-  // Is er geloot, dan begint het toernooi bij het levelscherm: daar staat wie
-  // waar zit en wie deelt, en de klok wacht tot iedereen zit.
-  const geloot = settings.shuffleSeats === true || settings.randomDealer === true
+  // Er wordt altijd geloot. Het is geen instelling waard: wie er niets om geeft
+  // gaat aan de tafelindeling voorbij en drukt op Start. Wie de eerste hand
+  // deelt volgt uit de loting zelf: dat is plaats een, en daarmee is er niets
+  // aparts te bewaren of aan te wijzen.
+  const namen = schud(settings.playerNames, toeval)
   const volleKlok = settings.levelMinutes * 60_000
 
   return {
@@ -154,13 +147,12 @@ export function createTournament(
     colorUps,
     levelIndex: 0,
     players: namen.map((name) => ({ name, out: false })),
-    clock: geloot
-      ? { state: 'paused', remainingMs: volleKlok, pausedAt: now }
-      : { state: 'running', endsAt: now + volleKlok },
+    // Het toernooi begint bij het levelscherm: daar staat wie waar zit en wie
+    // deelt, en de klok wacht tot iedereen zit.
+    clock: { state: 'paused', remainingMs: volleKlok, pausedAt: now },
     startedAt: now,
     pausedMs: 0,
-    wachtOpLevel: geloot,
-    dealer,
+    wachtOpLevel: true,
     kleinsteChip: denominations(doos)[0],
     history: [],
   }

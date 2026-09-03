@@ -344,11 +344,17 @@
   font-weight: 700;
 }
 
-/* De uitslag van de loting, op het scherm waarmee het toernooi begint. */
+/* De tafelindeling, op het scherm waarmee het toernooi begint. */
 .loting {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
   justify-items: center;
+}
+
+.loting__uitleg {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--creme-zacht);
 }
 
 .loting__plaatsen {
@@ -361,11 +367,6 @@
 
 .loting__plaatsen li::marker {
   color: var(--goud-donker);
-}
-
-.loting__dealer {
-  margin: 0;
-  color: var(--goud);
 }
 
 /* De knop om iemand toe te voegen staat tussen de spelers, maar is geen speler:
@@ -403,19 +404,10 @@
   cursor: default;
 }
 
-/* De dealer, aangewezen in de lijst met plaatsen. */
-.loting__dealer-plaats {
+/* Plaats een deelt; die staat er in dezelfde kleur bij als de blinds. */
+.loting__eerste {
   color: var(--goud);
   font-weight: 700;
-}
-
-.loting__knop {
-  margin-left: 0.4rem;
-  font-size: 0.7em;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--goud-donker);
 }
 
 /* Meerdere namen naast elkaar passen niet op de maat van één winnaar. */
