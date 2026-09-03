@@ -34,6 +34,21 @@ export type Distribution = {
 /** Zoveel keer de start-kleine-blind wil je aan kleine fiches hebben. */
 const KLEINE_FICHES_IN_BLINDS = 20
 
+/**
+ * Hoeveel chips van elke volgende waarde een speler krijgt voordat er naar een
+ * hogere gegrepen wordt.
+ *
+ * Zonder deze stap werd de rest van de stack met de grootste chips gevuld die
+ * pasten: bij een stack van 12.500 kreeg je een chip van 10.000 die je bij
+ * blinds van 25/50 meteen moet wisselen. Van onderaf opbouwen geeft een stapel
+ * waarmee je een avond vooruit kunt.
+ *
+ * Zes is een afweging: hoger vult de stapel met kleingeld en laat te weinig
+ * chips over om een diepe stack nog te halen — bij acht liep de standaardset
+ * tien procent onder zijn startstack.
+ */
+const STREEF_PER_DENOMINATIE = 6
+
 /** Onder deze fractie van de gewenste startstack is de doos echt te klein. */
 const STACK_ONDERGRENS = 0.9
 
@@ -80,40 +95,57 @@ function attempt(
   // Denominaties die op level 0 al door een color-up uit het spel zijn, deel je
   // niet uit. Zonder deze filter reserveert de app fiches die dezelfde avond nog
   // van tafel gaan, en meldt hij een tekort dat er niet toe doet.
+  // Denominaties die op level 0 al door een color-up uit het spel zijn, deel je
+  // niet uit. Zonder deze filter reserveert de app chips die dezelfde avond nog
+  // van tafel gaan, en meldt hij een tekort dat er niet toe doet.
   const denoms = denominations(chipset).filter((d) => d >= startDenomination)
   const shortages: Shortage[] = []
-  const allocaties: Allocation[] = []
+
+  // Eerst wordt per waarde geteld hoeveel chips een speler krijgt, en pas aan het
+  // eind wordt dat over de kleuren verdeeld. Dat scheelt lijsten die elkaar
+  // moeten overschrijven zodra een waarde in twee ronden aan bod komt.
+  const perWaarde = new Map<number, number>()
+  const beschikbaar = (waarde: number) =>
+    Math.floor(totalCountForValue(chipset, waarde) / players) - (perWaarde.get(waarde) ?? 0)
+  const geef = (waarde: number, aantal: number) => {
+    if (aantal > 0) perWaarde.set(waarde, (perWaarde.get(waarde) ?? 0) + aantal)
+  }
 
   const kleinste = denoms[0]
   const gewenstKlein = Math.ceil((KLEINE_FICHES_IN_BLINDS * startSmallBlind) / kleinste)
-  const beschikbaarKlein = Math.floor(totalCountForValue(chipset, kleinste) / players)
-  allocaties.push(
-    ...spreadOverColors(chipset, kleinste, Math.min(gewenstKlein, beschikbaarKlein), players),
-  )
+  geef(kleinste, Math.min(gewenstKlein, beschikbaar(kleinste)))
 
-  // Vul de rest van de stack met de grootste denominaties die passen.
-  let rest = targetStack - tel(allocaties, kleinste) * kleinste
+  const uitgedeeld = () =>
+    [...perWaarde].reduce((som, [waarde, aantal]) => som + waarde * aantal, 0)
+
+  // Van onderaf een handvol van elke waarde, van klein naar groot. Zo bouw je een
+  // stapel aan tafel op: genoeg kleingeld om de eerste levels mee te spelen.
+  for (const waarde of denoms) {
+    if (waarde === kleinste) continue
+    const rest = targetStack - uitgedeeld()
+    geef(
+      waarde,
+      Math.min(Math.floor(rest / waarde), beschikbaar(waarde), STREEF_PER_DENOMINATIE),
+    )
+  }
+
+  // Wat dan nog overblijft — bij een diepe stack het meeste — gaat in de grootste
+  // chips die passen. Daar valt niet omheen te komen: honderd kleine chips per
+  // speler zitten niet in een doos.
   for (const waarde of [...denoms].reverse()) {
-    if (waarde === kleinste || rest < waarde) continue
-    const beschikbaar = Math.floor(totalCountForValue(chipset, waarde) / players)
-    const aantal = Math.min(Math.floor(rest / waarde), beschikbaar)
-    if (aantal > 0) {
-      const bij = spreadOverColors(chipset, waarde, aantal, players)
-      allocaties.push(...bij)
-      rest -= tel(bij, waarde) * waarde
-    }
+    if (waarde === kleinste) continue
+    const rest = targetStack - uitgedeeld()
+    geef(waarde, Math.min(Math.floor(rest / waarde), beschikbaar(waarde)))
   }
 
-  // Vul het laatste restje aan met kleine fiches. De hele lijst wordt daarvoor
-  // opnieuw opgebouwd, met de kleinste denominatie vooraan — dat is ook de
-  // volgorde waarin het setupscherm de fiches toont.
-  const alKlein = tel(allocaties, kleinste)
-  const extra = Math.min(Math.floor(rest / kleinste), beschikbaarKlein - alKlein)
-  if (extra > 0) {
-    const overige = allocaties.filter((a) => a.value !== kleinste)
-    allocaties.length = 0
-    allocaties.push(...spreadOverColors(chipset, kleinste, alKlein + extra, players), ...overige)
-  }
+  // En het laatste restje in kleine chips, voor zover de doos ze heeft.
+  const restje = targetStack - uitgedeeld()
+  geef(kleinste, Math.min(Math.floor(restje / kleinste), beschikbaar(kleinste)))
+
+  // Kleinste waarde vooraan: dat is ook de volgorde waarin het setupscherm ze toont.
+  const allocaties: Allocation[] = denoms.flatMap((waarde) =>
+    spreadOverColors(chipset, waarde, perWaarde.get(waarde) ?? 0, players),
+  )
 
   // Pas hier tellen wat er werkelijk is uitgedeeld: het spreiden over kleuren
   // rondt per kleur naar beneden af, dus de som kan lager uitvallen dan gevraagd.

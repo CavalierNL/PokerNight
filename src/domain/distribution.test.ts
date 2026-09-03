@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { distributeChips } from './distribution'
 import { buildStructure } from './blinds'
-import { STANDARD_500, type Chipset } from './chipset'
+import { STANDARD_500, type Chipset, TOERNOOI_DOOS } from './chipset'
 import { KLEINE_DOOS } from './testdozen'
 
 const kleineDoos: Chipset = {
@@ -139,5 +139,41 @@ describe('distributeChips — samen met de blindstructuur', () => {
     )
     expect(verdeling.shortages.filter((s) => s.kind === 'startstackNietGehaald')).toEqual([])
     expect(verdeling.stackValue).toBeGreaterThanOrEqual(1800)
+  })
+})
+
+describe('de stapel wordt van onderaf opgebouwd', () => {
+  it('gebruikt geen chip die de halve stack waard is', () => {
+    // Bij 12500 leverde de oude verdeling een chip van 10000 op: die moet je bij
+    // blinds van 25/50 meteen wisselen en speelt de hele avond niet mee.
+    const verdeling = distributeChips(TOERNOOI_DOOS, 8, 12_500, 25, 25)
+    for (const allocatie of verdeling.perPlayer) {
+      expect(allocatie.value, `${allocatie.value}`).toBeLessThanOrEqual(12_500 / 2)
+    }
+    expect(verdeling.perPlayer.some((a) => a.value === 10_000)).toBe(false)
+  })
+
+  it('geeft van elke waarde onderaan een handvol chips', () => {
+    const verdeling = distributeChips(TOERNOOI_DOOS, 8, 12_500, 25, 25)
+    const perWaarde = new Map(verdeling.perPlayer.map((a) => [a.value, a.count]))
+
+    for (const waarde of [25, 50, 100, 500]) {
+      expect(perWaarde.get(waarde) ?? 0, `${waarde}`).toBeGreaterThanOrEqual(5)
+    }
+  })
+
+  it('zet de kleinste waarde vooraan en telt elke waarde één keer', () => {
+    const verdeling = distributeChips(TOERNOOI_DOOS, 8, 50_000, 25, 25)
+    const waardes = verdeling.perPlayer.map((a) => a.value)
+
+    expect(waardes).toEqual([...waardes].sort((a, b) => a - b))
+    expect(new Set(waardes).size).toBe(waardes.length)
+  })
+
+  it('grijpt bij een diepe stack alsnog naar de grote chips', () => {
+    // Van onderaf beginnen mag niet betekenen dat een diepe stack onbereikbaar
+    // wordt; de doos heeft de hoge waardes daar juist voor.
+    const verdeling = distributeChips(TOERNOOI_DOOS, 8, 50_000, 25, 25)
+    expect(verdeling.perPlayer.some((a) => a.value >= 5000)).toBe(true)
   })
 })
