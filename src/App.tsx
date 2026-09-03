@@ -6,14 +6,13 @@ import { SetupScreen } from './screens/SetupScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
 import { ResumePrompt } from './screens/ResumePrompt'
-
-type Scherm = 'home' | 'nieuw' | 'chipsets' | 'instellingen'
+import { useScherm } from './hooks/useScherm'
 
 function Inhoud() {
   const { tournament, discard } = useAppState()
   // Alleen bij het openen van de app vragen, niet nadat je zelf gestart bent.
   const [moetVragen, setMoetVragen] = useState(() => tournament !== null)
-  const [scherm, setScherm] = useState<Scherm>('home')
+  const { scherm, ga, terug, vergeetStap } = useScherm()
 
   if (tournament && moetVragen) {
     return (
@@ -30,23 +29,21 @@ function Inhoud() {
 
   if (tournament) return <TournamentScreen />
 
-  const naarHome = () => setScherm('home')
-
   switch (scherm) {
     case 'nieuw':
-      // Na de start staat het toernooi bovenaan; terugvallen op de setup zou
-      // betekenen dat je na "Stoppen" opnieuw in het formulier belandt.
-      return <SetupScreen onTerug={naarHome} onGestart={naarHome} />
+      // Na de start staat het toernooi bovenaan; de stap wordt vervangen zodat
+      // terug je niet in het formulier van een lopend toernooi terugzet.
+      return <SetupScreen onTerug={terug} onGestart={vergeetStap} />
     case 'chipsets':
-      return <ChipsetScreen onClose={naarHome} />
+      return <ChipsetScreen onClose={terug} />
     case 'instellingen':
-      return <SettingsScreen onClose={naarHome} />
+      return <SettingsScreen onClose={terug} />
     default:
       return (
         <HomeScreen
-          onNieuw={() => setScherm('nieuw')}
-          onChipsets={() => setScherm('chipsets')}
-          onInstellingen={() => setScherm('instellingen')}
+          onNieuw={() => ga('nieuw')}
+          onChipsets={() => ga('chipsets')}
+          onInstellingen={() => ga('instellingen')}
         />
       )
   }

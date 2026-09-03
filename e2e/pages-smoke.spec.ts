@@ -99,6 +99,24 @@ test.describe.serial('de gepubliceerde site', () => {
     }
   })
 
+  test('laat de terug-toets hetzelfde doen als de Terug-knop', async ({ page }) => {
+    // Op een telefoon met de app op het beginscherm is de systeem-terugveeg de
+    // enige terugweg; die moet dus op de geschiedenis werken en niet de app
+    // afsluiten.
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Pokerdozen' }).click()
+    await expect(page.getByRole('heading', { name: 'Pokerdozen' })).toBeVisible()
+
+    await page.goBack()
+    await expect(page.getByRole('button', { name: 'Toernooi', exact: true })).toBeVisible()
+
+    // En de knop zelf doet precies hetzelfde.
+    await page.getByRole('button', { name: 'Instellingen' }).click()
+    await expect(page.getByRole('heading', { name: 'Instellingen' })).toBeVisible()
+    await page.getByRole('button', { name: 'Terug' }).click()
+    await expect(page.getByRole('button', { name: 'Toernooi', exact: true })).toBeVisible()
+  })
+
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 
