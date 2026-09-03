@@ -55,6 +55,10 @@ export function SetupScreen({
       : [...doos.chips].sort((a, b) => b.value - a.value)[0]?.color
   const restKleuren = kleuren.filter((k) => k !== gekozenVijf)
 
+  // Aflopend op aantal: de kleur waar je het meest van hebt staat vooraan, want
+  // dat is de kleur waarmee je een avond lang kunt betalen.
+  const naarAantal = [...doos.chips].sort((a, b) => b.count - a.count)
+
   // Alles onder deze regel rekent met de doos zoals hij vanavond geldt.
   const chipset = metInstellingen(doos, {
     houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
@@ -160,18 +164,20 @@ export function SetupScreen({
               <div className="huisregel__keuze">
                 <span className="huisregel__label">Welke kleur is 5</span>
                 <div className="huisregel__kleuren">
-                  {doos.chips.map((chip) => (
+                  {naarAantal.map((chip) => (
                     <button
                       key={chip.color}
                       type="button"
                       className={`huisregel__kleur${
                         chip.color === gekozenVijf ? ' huisregel__kleur--gekozen' : ''
                       }`}
-                      style={{ background: chip.color }}
-                      aria-label={`kleur ${chip.color} is 5 waard`}
+                      aria-label={`${chip.count} chips van deze kleur zijn 5 waard`}
                       aria-pressed={chip.color === gekozenVijf}
                       onClick={() => setVijfKleur(chip.color)}
-                    />
+                    >
+                      <span className="huisregel__vlak" style={{ background: chip.color }} />
+                      <span className="huisregel__aantal">{chip.count}</span>
+                    </button>
                   ))}
                 </div>
               </div>

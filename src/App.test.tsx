@@ -8,7 +8,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { createTournament, type Settings } from './domain/tournament'
-import { STANDARD_500 } from './domain/chipset'
+import { STANDARD_500, TOERNOOI_DOOS } from './domain/chipset'
 import { prepareSetup } from './domain/setup'
 import { KLEINE_DOOS } from './domain/testdozen'
 
@@ -282,5 +282,41 @@ describe('de huisregel op het setupscherm', () => {
     // Twee waardes betekent geen color-up en blinds die op 1 en 5 te leggen zijn.
     expect(setup.structure.colorUps).toEqual([])
     expect(setup.structure.levels[0].bigBlind).toBe(2)
+  })
+})
+
+describe('de kleurkeuze bij de huisregel', () => {
+  /** Rendert het setupscherm met de huisregel al aan, zodat de keuze zichtbaar is. */
+  function metHuisregelAan() {
+    opslag.set(
+      'pokernight.settings',
+      JSON.stringify({
+        version: OPSLAG_VERSIE,
+        data: {
+          ...settings,
+          chipsetId: TOERNOOI_DOOS.id,
+          houseRuleFiveColor: TOERNOOI_DOOS.chips[0].color,
+        },
+      }),
+    )
+    return renderToStaticMarkup(
+      <AppStateProvider>
+        <SetupScreen onTerug={() => {}} onGestart={() => {}} />
+      </AppStateProvider>,
+    )
+  }
+
+  it('zet de kleur met de meeste chips vooraan', () => {
+    const html = metHuisregelAan()
+    const getoond = [...html.matchAll(/huisregel__aantal">(\d+)</g)].map((m) => Number(m[1]))
+
+    expect(getoond).toEqual([...TOERNOOI_DOOS.chips.map((c) => c.count)].sort((a, b) => b - a))
+  })
+
+  it('toont bij elke kleur hoeveel chips je ervan hebt', () => {
+    const html = metHuisregelAan()
+    for (const chip of TOERNOOI_DOOS.chips) {
+      expect(html, `${chip.color}`).toContain(`huisregel__aantal">${chip.count}<`)
+    }
   })
 })

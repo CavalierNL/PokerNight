@@ -318,18 +318,37 @@ input[type='checkbox'] {
   flex-wrap: wrap;
 }
 
-/* Een kleurknop is de kleur zelf; een rand eromheen wijst de gekozen aan. */
+/* De kleur met eronder hoeveel chips je ervan hebt; een gouden rand om het
+   vlak wijst de gekozen aan. */
 .huisregel__kleur {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  background: none;
+  border: 0;
+  padding: 0.15rem;
+}
+
+.huisregel__vlak {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.25);
-  padding: 0;
 }
 
-.huisregel__kleur--gekozen {
+.huisregel__aantal {
+  font-size: 0.75rem;
+  color: var(--creme-zacht);
+  font-variant-numeric: tabular-nums;
+}
+
+.huisregel__kleur--gekozen .huisregel__vlak {
   border-color: var(--goud);
   box-shadow: 0 0 0 2px rgba(240, 197, 66, 0.35);
+}
+
+.huisregel__kleur--gekozen .huisregel__aantal {
+  color: var(--goud);
 }
 
 .huisregel__uitkomst {
