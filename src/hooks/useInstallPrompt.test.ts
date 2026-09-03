@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { hoeGeopend, staatOpStartscherm } from './useInstallPrompt'
+import { staatOpStartscherm } from './useInstallPrompt'
 
 /** Zet een window neer met de media-queries die matchen, en verder niets. */
 function nepVenster(matchend: string[], iosVlag?: boolean) {
@@ -36,27 +36,5 @@ describe('staatOpStartscherm', () => {
   it('zegt nee als de browser geen van beide kent', () => {
     vi.stubGlobal('window', { navigator: {} })
     expect(staatOpStartscherm()).toBe(false)
-  })
-})
-
-describe('hoeGeopend', () => {
-  it('noemt de modus waarin de app draait', () => {
-    nepVenster(['(display-mode: standalone)'])
-    expect(hoeGeopend()).toBe('standalone')
-
-    nepVenster(['(display-mode: fullscreen)'])
-    expect(hoeGeopend()).toBe('fullscreen')
-  })
-
-  it('noemt een snelkoppeling gewoon een browser', () => {
-    // Een snelkoppeling op je startscherm opent een tabblad; die ziet er
-    // hetzelfde uit maar is geen app.
-    nepVenster([], false)
-    expect(hoeGeopend()).toBe('browser')
-  })
-
-  it('herkent de vlag van Safari', () => {
-    nepVenster([], true)
-    expect(hoeGeopend()).toBe('standalone')
   })
 })

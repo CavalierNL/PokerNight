@@ -48,18 +48,6 @@ export function staatOpStartscherm(): boolean {
   return alsApp || iosAlsApp
 }
 
-/** Hoe de app geopend is, in woorden. Staat in de instellingen, om te kunnen zien
- *  of een icoon op je startscherm de app opent of alleen een tabblad. */
-export function hoeGeopend(): string {
-  if (typeof window === 'undefined') return 'onbekend'
-  const modus = APP_MODI.find((vraag) => window.matchMedia?.(vraag).matches)
-  if (modus) return modus.replace('(display-mode: ', '').replace(')', '')
-  if ((window.navigator as Navigator & { standalone?: boolean }).standalone === true) {
-    return 'standalone'
-  }
-  return 'browser'
-}
-
 export function useInstallPrompt(): Installatie {
   const [gebeurtenis, setGebeurtenis] = useState<InstallGebeurtenis>()
   const [alGeinstalleerd, setAlGeinstalleerd] = useState(false)
