@@ -8,7 +8,7 @@ import { prepareSetup, suggestStartingStack } from '../domain/setup'
 import { kanColorUp, longestValueDigits, metInstellingen } from '../domain/chipset'
 import { MultiChip } from '../components/MultiChip'
 import { GetalVeld } from '../components/GetalVeld'
-import type { StructureKind } from '../domain/blinds'
+import { levelOpties, type StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import './SetupScreen.css'
 
@@ -37,7 +37,10 @@ export function SetupScreen({
   // Leeg betekent "nog niet zelf gekozen"; dan geldt het voorstel hieronder.
   const [startingStack, setStartingStack] = useState<number | undefined>(settings?.startingStack)
   const [levelMinutes, setLevelMinutes] = useState(settings?.levelMinutes ?? 15)
-  const [durationMinutes, setDurationMinutes] = useState(settings?.durationMinutes ?? 90)
+  // Bestaat er geen opgeslagen instelling, dan begint een avond met een eindtijd.
+  const [opTijd, setOpTijd] = useState(settings ? settings.durationMinutes !== undefined : true)
+  const [duur, setDuur] = useState(settings?.durationMinutes ?? 90)
+  const durationMinutes = opTijd ? duur : undefined
   const [structure, setStructure] = useState<StructureKind>(settings?.structure ?? 'ladder')
   const [trigger, setTrigger] = useState<Trigger>(settings?.trigger ?? 'both')
   const [colorUp, setColorUp] = useState(settings?.colorUp ?? true)
@@ -70,6 +73,14 @@ export function SetupScreen({
   // meer te wisselen en heeft de keuze geen betekenis.
   const colorUpMogelijk = kanColorUp(chipset)
 
+  // Alleen lengtes die de duur precies vullen; de keuze is daarmee hoeveel
+  // levels je speelt, en hun lengte volgt daaruit.
+  const tijdOpties = useMemo(() => (opTijd ? levelOpties(duur) : []), [opTijd, duur])
+  const gekozenLengte =
+    opTijd && tijdOpties.length > 0
+      ? (tijdOpties.find((o) => o.levelMinutes === levelMinutes) ?? tijdOpties[0]).levelMinutes
+      : levelMinutes
+
   const spelerNamen = useMemo(
     () =>
       namenTekst
@@ -83,8 +94,12 @@ export function SetupScreen({
   // ingevuld staat het in het veld; typ je iets anders, dan blijft het als knop
   // staan en dringt het zich niet op.
   const voorstel = useMemo(
-    () => suggestStartingStack(chipset, Math.max(spelerNamen.length, 1)),
-    [chipset, spelerNamen.length],
+    () =>
+      suggestStartingStack(chipset, Math.max(spelerNamen.length, 1), {
+        levels: durationMinutes === undefined ? undefined : durationMinutes / gekozenLengte,
+        kind: structure,
+      }),
+    [chipset, spelerNamen.length, durationMinutes, gekozenLengte, structure],
   )
   const gekozenStack = startingStack ?? voorstel ?? 100
 
@@ -92,7 +107,7 @@ export function SetupScreen({
     () => ({
       playerNames: spelerNamen,
       startingStack: gekozenStack,
-      levelMinutes,
+      levelMinutes: gekozenLengte,
       durationMinutes,
       structure,
       trigger,
@@ -103,7 +118,7 @@ export function SetupScreen({
     [
       spelerNamen,
       gekozenStack,
-      levelMinutes,
+      gekozenLengte,
       durationMinutes,
       structure,
       trigger,
@@ -195,23 +210,60 @@ export function SetupScreen({
 
       <div className="setup__raster">
         <Panel title="Tijd">
-          <GetalVeld
-            label="Duur (minuten)"
-            min={15}
-            step={15}
-            value={durationMinutes}
-            onValue={setDurationMinutes}
-          />
           <label className="veld">
-            <span>Levellengte</span>
-            <select value={levelMinutes} onChange={(e) => setLevelMinutes(Number(e.target.value))}>
-              {[10, 15, 20].map((m) => (
-                <option key={m} value={m}>
-                  {m} minuten
-                </option>
-              ))}
+            <span>Wanneer het klaar is</span>
+            <select value={opTijd ? 'tijd' : 'lms'} onChange={(e) => setOpTijd(e.target.value === 'tijd')}>
+              <option value="tijd">Op een afgesproken tijd</option>
+              <option value="lms">Last man standing</option>
             </select>
           </label>
+
+          {opTijd ? (
+            <>
+              <GetalVeld label="Duur (minuten)" min={15} step={15} value={duur} onValue={setDuur} />
+
+              {tijdOpties.length > 0 ? (
+                <label className="veld">
+                  <span>Aantal levels</span>
+                  <select
+                    value={gekozenLengte}
+                    onChange={(e) => setLevelMinutes(Number(e.target.value))}
+                  >
+                    {tijdOpties.map((optie) => (
+                      <option key={optie.levelMinutes} value={optie.levelMinutes}>
+                        {optie.levels} levels van {optie.levelMinutes} minuten
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="uitleg">
+                  {duur} minuten valt niet in gelijke levels te verdelen. Kies een duur die deelbaar
+                  is, bijvoorbeeld 90 of 120.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <label className="veld">
+                <span>Levellengte</span>
+                <select
+                  value={levelMinutes}
+                  onChange={(e) => setLevelMinutes(Number(e.target.value))}
+                >
+                  {[10, 15, 20, 30].map((m) => (
+                    <option key={m} value={m}>
+                      {m} minuten
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="uitleg">
+                Er wordt gespeeld tot er één speler over is. De blindstructuur loopt door tot de
+                blinds de stapels voorbij zijn.
+              </p>
+            </>
+          )}
         </Panel>
 
         <Panel title="Startstack">
@@ -309,7 +361,7 @@ export function SetupScreen({
                 <td>
                   {level.smallBlind} / {level.bigBlind}
                 </td>
-                <td>{level.index * levelMinutes} min</td>
+                <td>{level.index * gekozenLengte} min</td>
               </tr>
             ))}
           </tbody>

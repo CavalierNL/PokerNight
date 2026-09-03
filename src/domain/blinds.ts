@@ -28,7 +28,8 @@ export type StructureInput = {
   kind: StructureKind
   players: number
   startingStack: number
-  durationMinutes: number
+  /** Leeg betekent: doorspelen tot er één over is. */
+  durationMinutes?: number
   levelMinutes: number
   manualBigBlinds?: number[]
   /** Of de kleinste kleur onderweg uit het spel mag. */
@@ -46,10 +47,56 @@ export type Structure = {
   startDenomination: number
 }
 
+/**
+ * Een ruime bovengrens voor een toernooi zonder eindtijd. De reeks stopt daar
+ * niet op: hij stopt zodra het toernooi feitelijk beslist is. Dit is alleen een
+ * vangnet tegen een oneindige lus.
+ */
+export const LEVELS_ZONDER_DUUR = 40
+
 /** Aantal levels dat in de geplande duur past, minimaal twee. */
-export function levelCount(durationMinutes: number, levelMinutes: number): number {
+export function levelCount(durationMinutes: number | undefined, levelMinutes: number): number {
+  if (durationMinutes === undefined) return LEVELS_ZONDER_DUUR
   if (levelMinutes <= 0) return 2
   return Math.max(2, Math.floor(durationMinutes / levelMinutes))
+}
+
+/**
+ * De levellengtes die een duur precies vullen, als "N levels van M minuten".
+ *
+ * Een levellengte die niet in de duur past betekent dat het laatste level halверwege
+ * afgekapt wordt — dan klopt de opgegeven duur niet met wat je speelt. Door alleen
+ * de delers aan te bieden is de keuze in feite hoeveel levels je wilt, en volgt
+ * hun lengte daaruit.
+ *
+ * Eerst in het bereik dat aan tafel prettig speelt. Levert dat niets op — bij een
+ * priemgetal of een heel korte avond — dan wordt het bereik verruimd, want geen
+ * enkele keuze aanbieden is erger dan een ongebruikelijke.
+ */
+export function levelOpties(durationMinutes: number): { levels: number; levelMinutes: number }[] {
+  const zoek = (van: number, tot: number) => {
+    const opties: { levels: number; levelMinutes: number }[] = []
+    for (let lengte = van; lengte <= tot; lengte += 1) {
+      if (durationMinutes % lengte !== 0) continue
+      const levels = durationMinutes / lengte
+      if (levels >= 2) opties.push({ levels, levelMinutes: lengte })
+    }
+    return opties
+  }
+  const prettig = zoek(10, 30)
+  return prettig.length > 0 ? prettig : zoek(2, 60)
+}
+
+/**
+ * Met hoeveel een level groeit ten opzichte van het vorige. De ladder zet elke
+ * drie stappen een factor tien, dus de tiendemachtswortel van tien. `calculated`
+ * past zijn factor juist aan het aantal levels aan en heeft er dus geen vaste;
+ * `manual` volgt wat je zelf opgeeft.
+ */
+export function groeiPerLevel(kind: StructureKind): number | undefined {
+  if (kind === 'ladder') return Math.cbrt(10)
+  if (kind === 'doubling') return 2
+  return undefined
 }
 
 /**
@@ -130,7 +177,11 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
   let vorigeBigBlind = 0
   let startDenomination = kleinste
 
-  const start = Math.max(input.startingStack / 100, kleinste * 2)
+  // De ladder begint op de kleinste chip, niet op honderd big blinds. Anders
+  // schuift de beginblind mee omhoog met de stack, blijft de verhouding tussen
+  // begin en eind gelijk, en levert een diepere stack geen enkel extra level op
+  // — precies wat je wél wilt als je langer wilt spelen.
+  const start = kleinste * 2
   // Met twee waardes hou je na een color-up één soort fiche over; dan valt er
   // niets meer te wisselen en heeft het geen zin.
   const colorUpMogelijk = input.colorUp && denoms.length >= 3
@@ -179,8 +230,10 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // zonder dat er een instelling is die dat rechttrekt — en het zou de
     // waarschuwing over hard oplopende blinds hieronder de mond snoeren, terwijl
     // die precies het goede verhaal vertelt.
+    // Zonder eindtijd is dit het enige natuurlijke einde van de reeks.
+    const stoptBijEinde = input.kind === 'calculated' || input.durationMinutes === undefined
     const genoegLevels = levels.length >= 2
-    if (input.kind === 'calculated' && genoegLevels && bigBlind >= doelEind) break
+    if (stoptBijEinde && genoegLevels && bigBlind >= doelEind) break
   }
 
   return { levels, colorUps, startDenomination }

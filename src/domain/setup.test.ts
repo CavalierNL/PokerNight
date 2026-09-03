@@ -127,30 +127,51 @@ describe('suggestStartingStack', () => {
     expect(stack % denominations(TOERNOOI_DOOS)[0]).toBe(0)
   })
 
-  it('mikt op honderd big blinds bij de kleinste chip', () => {
-    // 200 x de kleinste waarde: daar begint de reeks op die chip zelf, dus is
-    // hij vanaf level 1 in gebruik.
+  it('mikt zonder gepland aantal levels op honderd big blinds', () => {
     const kleinste = denominations(TOERNOOI_DOOS)[0]
     expect(suggestStartingStack(TOERNOOI_DOOS, 8)).toBe(200 * kleinste)
     expect(suggestStartingStack(STANDARD_500, 8)).toBe(200 * denominations(STANDARD_500)[0])
   })
 
-  it('laat de blinds op de kleinste chip beginnen', () => {
-    const stack = suggestStartingStack(TOERNOOI_DOOS, 8)!
-    const structuur = buildStructure(
-      {
-        kind: 'ladder',
-        colorUp: false,
-        players: 8,
-        startingStack: stack,
-        durationMinutes: 90,
-        levelMinutes: 15,
-      },
-      TOERNOOI_DOOS,
+  it('stelt een diepere stack voor naarmate je meer levels wilt spelen', () => {
+    const stacks = [4, 5, 6, 7].map(
+      (levels) => suggestStartingStack(TOERNOOI_DOOS, 8, { levels, kind: 'ladder' })!,
     )
+    for (const [i, stack] of stacks.entries()) {
+      if (i === 0) continue
+      expect(stack, `${i + 4} levels`).toBeGreaterThan(stacks[i - 1])
+    }
+  })
+
+  it('levert een structuur op die het geplande aantal levels ook echt haalt', () => {
+    // Dit is de hele bedoeling: langer willen spelen moet ook langer duren.
+    for (const levels of [4, 6, 8]) {
+      const stack = suggestStartingStack(TOERNOOI_DOOS, 8, { levels, kind: 'ladder' })!
+      const structuur = buildStructure(
+        {
+          kind: 'ladder',
+          colorUp: false,
+          players: 8,
+          startingStack: stack,
+          levelMinutes: 15,
+        },
+        TOERNOOI_DOOS,
+      )
+      // Zonder duur stopt de reeks zodra het toernooi beslist is; dat moment
+      // hoort rond het gevraagde aantal levels te liggen.
+      expect(structuur.levels.length, `${levels} levels gevraagd`).toBeGreaterThanOrEqual(levels)
+    }
+  })
+
+  it('houdt de beginblind op de kleinste chip, hoe diep de stack ook is', () => {
     const kleinste = denominations(TOERNOOI_DOOS)[0]
-    expect(structuur.levels[0].smallBlind).toBe(kleinste)
-    expect(structuur.levels[0].bigBlind).toBe(kleinste * 2)
+    for (const stack of [5000, 12500, 50000]) {
+      const structuur = buildStructure(
+        { kind: 'ladder', colorUp: false, players: 8, startingStack: stack, levelMinutes: 15 },
+        TOERNOOI_DOOS,
+      )
+      expect(structuur.levels[0].bigBlind, `${stack}`).toBe(kleinste * 2)
+    }
   })
 
   it('zakt naar een lager bedrag als de doos het ankerpunt niet haalt', () => {

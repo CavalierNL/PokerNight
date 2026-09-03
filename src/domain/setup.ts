@@ -1,4 +1,10 @@
-import { buildStructure, ladderRung, type Structure } from './blinds'
+import {
+  buildStructure,
+  groeiPerLevel,
+  ladderRung,
+  type Structure,
+  type StructureKind,
+} from './blinds'
 import { denominations, metInstellingen, type Chipset } from './chipset'
 import { distributeChips, type Distribution, type Shortage } from './distribution'
 import { setupWarnings, type Warning } from './warnings'
@@ -57,38 +63,53 @@ export function prepareSetup(settings: Settings, ruweChipset: Chipset): Setup {
 }
 
 /**
- * Een startstack, geredeneerd vanuit de kleinste chip in de doos.
+ * Een startstack, geredeneerd vanuit de kleinste chip in de doos en het aantal
+ * levels dat je wilt spelen.
  *
- * Het ankerpunt is honderd big blinds diep bij blinds van d/2d, oftewel
- * `200 × de kleinste chipwaarde`. Precies daar begint `buildStructure` de reeks
- * op de kleinste chip: die is dan vanaf level 1 in gebruik en er valt aan tafel
- * iets te wisselen. Dieper mag technisch, maar duwt de kleine chips meteen uit
- * het spel — de blinds beginnen dan hoger dan waar ze voor bedoeld zijn.
+ * De blinds beginnen bij de ladder op `2 × de kleinste chipwaarde`, en het
+ * toernooi is beslist zodra de big blind rond `spelers × stack / 30` komt. Met
+ * een vaste groei per level volgt daaruit hoe diep je moet beginnen om een
+ * gewenst aantal levels te halen:
  *
- * Haalt de doos dat bedrag niet voor dit gezelschap, dan zakt het voorstel langs
- * dezelfde 1-2-5 ladder als de blinds naar het eerstvolgende bedrag dat wel
- * uitgedeeld kan worden. Zo blijft het altijd een bedrag dat je met deze chips
- * kunt neerleggen.
+ *     stack = 60 × kleinste × groei^(levels − 1) ÷ spelers
+ *
+ * Langer spelen of kortere levels betekent dus een diepere stack, terwijl de
+ * blinds op dezelfde chip blijven beginnen.
+ *
+ * Alleen zinvol bij een structuur met een vaste groei die ook echt op de
+ * kleinste chip begint — dat is de ladder. Bij `verdubbelen` en `berekend`
+ * begint de reeks op honderd big blinds, dus schuift een diepere stack de
+ * beginblinds mee omhoog en levert hij geen extra levels op; daar valt het
+ * voorstel terug op honderd big blinds diep.
  *
  * Alleen blokkerende tekorten tellen. "Weinig kleine chips" is een waarschuwing
  * en geen beletsel; bij een doos die zwaar op de hoge waardes leunt is die vanaf
- * een paar spelers onvermijdelijk, en daarop afwijzen zou betekenen dat er nooit
- * een voorstel komt.
+ * een paar spelers onvermijdelijk.
  *
  * Geeft `undefined` als zelfs het kleinste bedrag niet lukt — dan is de doos te
  * klein voor dit gezelschap en is een voorstel geen hulp maar een leugen.
  */
-export function suggestStartingStack(chipset: Chipset, players: number): number | undefined {
+export function suggestStartingStack(
+  chipset: Chipset,
+  players: number,
+  opties: { levels?: number; kind?: StructureKind } = {},
+): number | undefined {
   const kleinste = denominations(chipset)[0]
   if (!kleinste || players <= 0) return undefined
 
-  const ideaal = 200 * kleinste
+  const groei = opties.kind === undefined ? Math.cbrt(10) : groeiPerLevel(opties.kind)
+  const levels = opties.levels
+  const ideaal =
+    groei !== undefined && levels !== undefined && levels >= 2 && opties.kind !== 'doubling'
+      ? (60 * kleinste * groei ** (levels - 1)) / players
+      : 200 * kleinste
 
+  // Het kleinste ronde bedrag dat het ideaal haalt; daaronder wordt het korter
+  // dan gepland in plaats van langer.
   const kandidaten: number[] = []
   for (let i = 0; i < 40; i += 1) {
-    const bedrag = kleinste * ladderRung(i)
-    if (bedrag > ideaal) break
-    kandidaten.push(bedrag)
+    kandidaten.push(kleinste * ladderRung(i))
+    if (kandidaten[kandidaten.length - 1] >= ideaal) break
   }
 
   const blokkeert = (soort: Shortage['kind']) =>

@@ -59,7 +59,10 @@ export function setupWarnings(
 
   if (settings.levelMinutes <= 0) {
     warnings.push({ level: 'error', message: 'Een level moet langer dan nul minuten duren.' })
-  } else if (settings.durationMinutes < settings.levelMinutes * 2) {
+  } else if (
+    settings.durationMinutes !== undefined &&
+    settings.durationMinutes < settings.levelMinutes * 2
+  ) {
     warnings.push({
       level: 'error',
       message: 'De opgegeven duur is te kort: er passen niet eens twee levels in.',

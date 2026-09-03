@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { buildStructure, levelCount, targetEndBigBlind } from './blinds'
+import {
+  buildStructure,
+  groeiPerLevel,
+  levelCount,
+  levelOpties,
+  targetEndBigBlind,
+  LEVELS_ZONDER_DUUR,
+} from './blinds'
 import { denominations, kanColorUp, STANDARD_500 } from './chipset'
 import type { StructureInput } from './blinds'
 import { KLEINE_DOOS } from './testdozen'
@@ -304,5 +311,73 @@ describe('color-up is een keuze per toernooi', () => {
 
   it('staat hem toe vanaf drie waardes', () => {
     expect(kanColorUp(STANDARD_500)).toBe(true)
+  })
+})
+
+describe('een toernooi zonder eindtijd', () => {
+  it('loopt door tot het toernooi beslist is en niet verder', () => {
+    const zonderDuur = buildStructure(
+      { ...huisregel, kind: 'ladder', durationMinutes: undefined, startingStack: 200 },
+      STANDARD_500,
+    )
+    const doel = targetEndBigBlind(huisregel.players, 200)
+    const laatste = zonderDuur.levels[zonderDuur.levels.length - 1]
+
+    expect(laatste.bigBlind).toBeGreaterThanOrEqual(doel)
+    expect(zonderDuur.levels.length).toBeLessThan(LEVELS_ZONDER_DUUR)
+  })
+
+  it('stopt ook bij verdubbelen, dat anders eindeloos doortelt', () => {
+    const structuur = buildStructure(
+      { ...huisregel, kind: 'doubling', durationMinutes: undefined },
+      STANDARD_500,
+    )
+    expect(structuur.levels.length).toBeLessThan(LEVELS_ZONDER_DUUR)
+  })
+})
+
+describe('groeiPerLevel', () => {
+  it('geeft de vaste factor van de reeksen die er een hebben', () => {
+    // Drie stappen op de ladder is een factor tien: 1, 2, 5, 10.
+    expect(groeiPerLevel('ladder')! ** 3).toBeCloseTo(10, 6)
+    expect(groeiPerLevel('doubling')).toBe(2)
+  })
+
+  it('zwijgt bij reeksen die hun factor aanpassen of zelf opgegeven worden', () => {
+    expect(groeiPerLevel('calculated')).toBeUndefined()
+    expect(groeiPerLevel('manual')).toBeUndefined()
+  })
+})
+
+describe('levelOpties', () => {
+  it('geeft alleen lengtes die de duur precies vullen', () => {
+    for (const duur of [60, 90, 120, 150, 180]) {
+      for (const optie of levelOpties(duur)) {
+        expect(optie.levels * optie.levelMinutes, `${duur} min`).toBe(duur)
+      }
+    }
+  })
+
+  it('houdt het bij lengtes die aan tafel prettig spelen', () => {
+    expect(levelOpties(90).map((o) => o.levelMinutes)).toEqual([10, 15, 18, 30])
+  })
+
+  it('vraagt altijd minstens twee levels', () => {
+    for (const optie of levelOpties(60)) {
+      expect(optie.levels).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('verruimt het bereik als er in de prettige lengtes niets past', () => {
+    // 91 is 7 x 13: binnen 10 tot 30 valt alleen 13, dus daar blijft het bij.
+    expect(levelOpties(91).map((o) => o.levelMinutes)).toEqual([13])
+    // 64 heeft binnen 10 tot 30 alleen 16 en 32; buiten dat bereik komen er meer.
+    expect(levelOpties(64).length).toBeGreaterThan(0)
+  })
+
+  it('geeft niets terug bij een duur die niet te verdelen is', () => {
+    // Een priemduur kan niet in gelijke levels; het scherm moet dat opvangen in
+    // plaats van dat de rekenkern een onzinnige verdeling verzint.
+    expect(levelOpties(37)).toEqual([])
   })
 })

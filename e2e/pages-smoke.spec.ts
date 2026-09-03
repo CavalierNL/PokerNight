@@ -136,6 +136,26 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('tbody tr')).toHaveCount(8)
   })
 
+  test('laat de duur het aantal levels en de stack bepalen', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+
+    // Zes levels van vijftien minuten, en een stack die dat ook echt haalt.
+    await expect(page.getByLabel('Aantal levels')).toHaveValue('15')
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
+    await expect(page.locator('tbody tr')).toHaveCount(6)
+
+    // Langer spelen vraagt een diepere stack, met dezelfde beginblinds.
+    await page.getByLabel('Duur (minuten)').fill('120')
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('50000')
+    await expect(page.locator('tbody tr').first()).toContainText('25 / 50')
+
+    // Zonder eindtijd loopt de reeks door tot het toernooi beslist is.
+    await page.getByLabel('Wanneer het klaar is').selectOption('lms')
+    await expect(page.getByLabel('Duur (minuten)')).toHaveCount(0)
+    await expect(page.getByText('tot er één speler over is')).toBeVisible()
+  })
+
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 

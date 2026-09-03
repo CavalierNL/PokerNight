@@ -7,7 +7,8 @@ export type Settings = {
   playerNames: string[]
   startingStack: number
   levelMinutes: number
-  durationMinutes: number
+  /** Leeg betekent: doorspelen tot er één over is (last man standing). */
+  durationMinutes?: number
   structure: StructureKind
   trigger: Trigger
   /**
@@ -122,6 +123,9 @@ export function isLastLevel(state: Tournament): boolean {
  * vanzelf op met elke pauze. Alleen zinvol als de tijd de levels opschuift.
  */
 export function expectedEndAt(state: Tournament, now: number): number | undefined {
+  // Zonder eindtijd zegt het laatste level niets over wanneer het klaar is: er
+  // wordt gespeeld tot er één over is.
+  if (state.settings.durationMinutes === undefined) return undefined
   if (state.settings.trigger === 'elimination') return undefined
   const levelsTeGaan = state.levels.length - state.levelIndex - 1
   return now + remainingMs(state, now) + levelsTeGaan * state.settings.levelMinutes * 60_000

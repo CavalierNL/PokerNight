@@ -105,7 +105,23 @@ describe('App', () => {
   it('vult de startstack met het voorstel voor deze doos', () => {
     const html = opgezetScherm()
     expect(html).toContain('Voorstel voor deze doos met 8 spelers')
-    expect(html).toContain('value="5000"')
+    // 90 minuten in levels van 15 is zes levels; die diepte is daarvoor nodig.
+    expect(html).toContain('value="12500"')
+  })
+
+  it('biedt alleen levellengtes aan die de duur precies vullen', () => {
+    const html = opgezetScherm()
+    for (const optie of ['9 levels van 10 minuten', '6 levels van 15 minuten', '3 levels van 30 minuten']) {
+      expect(html, optie).toContain(optie)
+    }
+    // 20 minuten past niet in 90 en hoort er dus niet bij.
+    expect(html).not.toContain('van 20 minuten')
+  })
+
+  it('laat kiezen tussen een eindtijd en last man standing', () => {
+    const html = opgezetScherm()
+    expect(html).toContain('Op een afgesproken tijd')
+    expect(html).toContain('Last man standing')
   })
 
   it('biedt de color-up aan bij een doos met genoeg waardes', () => {
