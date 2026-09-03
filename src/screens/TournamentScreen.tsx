@@ -99,11 +99,11 @@ export function TournamentScreen() {
             <div className="tafel__colorup">
               Color-up: haal
               {colorUp.retiredColors.map((kleur) => (
-                <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} size={26} />
+                <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} />
               ))}
               uit het spel en wissel naar
               {colorUp.nextColors.map((kleur) => (
-                <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} size={26} />
+                <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} />
               ))}
             </div>
           )}
@@ -146,24 +146,33 @@ export function TournamentScreen() {
                 Stoppen
               </Button>
             )}
+            {/* Hervatten gaat via het pauzescherm zelf; deze knop pauzeert alleen. */}
             <Button
               className="tafel__pauzeknop"
+              disabled={gepauzeerd}
               onClick={() => dispatch({ type: 'togglePause', now: Date.now() })}
             >
-              {gepauzeerd ? 'Hervatten' : 'Pauze'}
+              Pauze
             </Button>
           </div>
         </div>
       </div>
       {gepauzeerd && (
-        <div className="pauze-overlay">
-          <div className="pauze-overlay__kaarten">
+        // Het hele scherm is de knop: tijdens een pauze hoef je niet te mikken.
+        <button
+          type="button"
+          className="pauze-overlay"
+          aria-label="Hervatten"
+          onClick={() => dispatch({ type: 'togglePause', now: Date.now() })}
+        >
+          <span className="pauze-overlay__kaarten">
             {/* Met de rug omhoog: tijdens een pauze laat je je kaarten niet zien. */}
             <CardBack className="pauze-kaart pauze-kaart--een" />
             <CardBack className="pauze-kaart pauze-kaart--twee" />
-          </div>
+          </span>
           <span className="pauze-overlay__tekst">GEPAUZEERD</span>
-        </div>
+          <span className="pauze-overlay__hint">tik om verder te gaan</span>
+        </button>
       )}
 
       {wachtOpLevel && (
@@ -185,11 +194,11 @@ export function TournamentScreen() {
               <div className="tafel__colorup">
                 Color-up: haal
                 {colorUp.retiredColors.map((kleur) => (
-                  <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} size={30} />
+                  <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} />
                 ))}
                 uit het spel en wissel naar
                 {colorUp.nextColors.map((kleur) => (
-                  <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} size={30} />
+                  <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} />
                 ))}
               </div>
             )}

@@ -398,7 +398,6 @@ export function SetupScreen({
                 key={kleur}
                 color={kleur}
                 value={moment.retiredValue}
-                size={26}
                 digits={cijfers}
               />
             ))}
@@ -408,7 +407,6 @@ export function SetupScreen({
                 key={kleur}
                 color={kleur}
                 value={moment.nextValue}
-                size={26}
                 digits={cijfers}
               />
             ))}

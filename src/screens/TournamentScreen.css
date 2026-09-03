@@ -80,10 +80,16 @@
   color: var(--creme-zacht);
 }
 
+/* De chips lopen mee in de zin, dus die regel moet ze ook ruimte geven. */
 .tafel__colorup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   color: var(--goud);
   font-weight: 600;
-  max-width: 32rem;
+  max-width: 34rem;
 }
 
 .tafel__voet {
@@ -133,7 +139,10 @@
   inset: 0;
   display: grid;
   place-items: center;
-  pointer-events: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 /* De kaarten liggen achter het woord, als twee kaarten die op tafel wachten. */
@@ -162,6 +171,19 @@
  * zonder deze regel schilderen ze over de tekst heen, ook al staan ze ervoor in
  * de HTML.
  */
+.pauze-overlay__hint {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  margin-bottom: clamp(2rem, 12vh, 8rem);
+  font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--creme-zacht);
+  text-shadow: 0 0 1rem rgba(0, 0, 0, 0.9);
+}
+
 .pauze-overlay__tekst {
   grid-area: 1 / 1;
   position: relative;

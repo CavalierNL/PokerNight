@@ -194,6 +194,20 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
   })
 
+  test('hervat een pauze door op het scherm te tikken', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await page.getByRole('button', { name: 'Pauze' }).click()
+    await expect(page.getByText('GEPAUZEERD')).toBeVisible()
+
+    // Geen knop om te mikken: het hele scherm hervat.
+    await page.getByRole('button', { name: 'Hervatten' }).click()
+    await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Pauze' })).toBeEnabled()
+  })
+
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 
