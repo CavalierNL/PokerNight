@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/png" href="/sprites/fiche.png" />
     <meta name="theme-color" content="#0d2c20" />
+
+    <!--
+      Op het beginscherm gezet opent de app zonder browserbalken; dat is wat
+      "automatisch fullscreen" op mobiel in de praktijk betekent. Een gewone
+      pagina kan zichzelf niet fullscreen maken zonder klik van de gebruiker.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="PokerNight" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>PokerNight</title>
   </head>
   <body>

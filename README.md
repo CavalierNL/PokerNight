@@ -2,7 +2,12 @@
 
 Tooling voor een pokeravond met vrienden: blinds timer, blindstructuur en fiches
 verdelen. Eén scherm midden op tafel, verder niets nodig — geen backend, geen
-account, werkt offline. Er komt geen geld aan te pas: geen inleg, geen pot.
+account, alles blijft in je eigen browser. Er komt geen geld aan te pas: geen
+inleg, geen pot.
+
+Op je telefoon kun je hem op het beginscherm zetten; hij opent dan zonder
+browserbalken. Het laden zelf vraagt nog wel een verbinding: er is geen service
+worker, dus de app is niet offline te openen.
 
 ## Wat het doet
 

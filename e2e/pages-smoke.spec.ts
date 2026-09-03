@@ -81,6 +81,24 @@ test.describe.serial('de gepubliceerde site', () => {
     expect(problemen).toEqual([])
   })
 
+  test('levert een installeerbaar manifest met werkende iconen', async ({ page, baseURL }) => {
+    // Het manifest en zijn iconen staan in public/ en krijgen hun pad van de
+    // base. Precies het soort verwijzing dat stilletjes breekt: de app werkt
+    // gewoon, maar "op je beginscherm zetten" doet het dan niet meer.
+    const manifestUrl = new URL('manifest.webmanifest', baseURL).href
+    const respons = await page.request.get(manifestUrl)
+    expect(respons.status(), 'manifest onder de juiste base').toBe(200)
+
+    const manifest = await respons.json()
+    expect(manifest.display).toBe('fullscreen')
+    expect(manifest.icons.length).toBeGreaterThan(0)
+
+    for (const icoon of manifest.icons) {
+      const icoonRespons = await page.request.get(new URL(icoon.src, manifestUrl).href)
+      expect(icoonRespons.status(), icoon.src).toBe(200)
+    }
+  })
+
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 

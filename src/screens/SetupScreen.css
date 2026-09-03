@@ -1,26 +1,31 @@
+/*
+ * Verticaal midden op het scherm. `safe` is hier het hele punt: zonder dat kapt
+ * een scherm dat hoger is dan het venster — het setupscherm met een lange
+ * blindstructuur — aan de bovenkant af, buiten bereik van de scrollbalk.
+ */
 .setup {
   max-width: 60rem;
   margin: 0 auto;
   padding: 1.5rem;
   display: grid;
   gap: 1rem;
+  min-height: 100dvh;
+  align-content: safe center;
 }
 
 .setup__titel {
   font-family: var(--serif);
   font-size: 2rem;
   margin: 0;
-}
-
-/* De voordeur is bijna leeg; die mag verticaal wat meer lucht krijgen. */
-.setup--home {
-  padding-top: 4rem;
+  text-align: center;
 }
 
 .home__knoppen {
   display: grid;
   gap: 0.75rem;
   max-width: 22rem;
+  /* Op de voordeur staat verder niets; dan hoort het blok ook in het midden. */
+  margin: 0 auto;
 }
 
 .home__knoppen .knop {
@@ -252,6 +257,7 @@ input[type='checkbox'] {
 .setup__kop {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
 }
 

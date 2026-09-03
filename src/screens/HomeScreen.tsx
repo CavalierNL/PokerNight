@@ -1,5 +1,6 @@
 import { Button } from '../components/Button'
 import { Kop } from '../components/Kop'
+import { useInstallPrompt } from '../hooks/useInstallPrompt'
 import './SetupScreen.css'
 
 /**
@@ -16,6 +17,8 @@ export function HomeScreen({
   onChipsets: () => void
   onInstellingen: () => void
 }) {
+  const installeer = useInstallPrompt()
+
   return (
     <div className="setup setup--home">
       <Kop>PokerNight</Kop>
@@ -28,6 +31,11 @@ export function HomeScreen({
         <Button variant="ghost" onClick={onInstellingen}>
           Instellingen
         </Button>
+        {installeer && (
+          <Button variant="ghost" onClick={installeer}>
+            Op je beginscherm zetten
+          </Button>
+        )}
       </div>
     </div>
   )
