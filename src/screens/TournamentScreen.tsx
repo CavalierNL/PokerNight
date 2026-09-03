@@ -296,20 +296,20 @@ export function TournamentScreen() {
                   <ol className="loting__plaatsen">
                     {tournament.players.map((speler, i) => (
                       // De dealer wordt in de lijst aangewezen. Los eronder
-                      // "X deelt" laat je zoeken naar de naam die er al staat.
+                      // "X is dealer" laat je zoeken naar de naam die er al staat.
                       <li
                         key={speler.name + i}
                         className={i === tournament.dealer ? 'loting__dealer-plaats' : undefined}
                       >
                         {speler.name}
-                        {i === tournament.dealer && <span className="loting__knop">deelt</span>}
+                        {i === tournament.dealer && <span className="loting__knop">dealer</span>}
                       </li>
                     ))}
                   </ol>
                 )}
                 {/* Zonder gelote plaatsen is er geen lijst om het in aan te wijzen. */}
                 {dealer !== undefined && shuffleSeats !== true && (
-                  <p className="loting__dealer">{dealer} deelt de eerste hand</p>
+                  <p className="loting__dealer">{dealer} is dealer</p>
                 )}
               </div>
             )}

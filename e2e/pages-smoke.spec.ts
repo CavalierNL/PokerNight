@@ -316,7 +316,7 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.getByLabel('Willekeurige dealer').check()
     await page.getByRole('button', { name: 'Start het toernooi' }).click()
 
-    await expect(page.getByText('deelt de eerste hand')).toBeVisible()
+    await expect(page.getByText('is dealer')).toBeVisible()
     await expect(page.locator('.tafel__klok')).toHaveText('15:00')
     await page.waitForTimeout(1200)
     await expect(page.locator('.tafel__klok')).toHaveText('15:00')
