@@ -178,3 +178,33 @@ describe('de stapel wordt van onderaf opgebouwd', () => {
     expect(verdeling.perPlayer.some((a) => a.value >= 5000)).toBe(true)
   })
 })
+
+describe('hoeveel kleingeld je echt nodig hebt', () => {
+  it('telt de big blind niet als kleingeld wanneer je daar een chip voor hebt', () => {
+    // Blinds van 25/50 met chips van 50 in je stapel: de big blind is één chip,
+    // dus per ronde heb je maar één chip van 25 nodig.
+    const verdeling = distributeChips(TOERNOOI_DOOS, 8, 12_500, 25, 25)
+    expect(verdeling.shortages.filter((t) => t.kind === 'weinigKleineFiches')).toEqual([])
+  })
+
+  it('vraagt wel het volle bedrag als de volgende chip te groot is', () => {
+    // Bij 1 en 5 kost een ronde 3 en is de volgende chip 5: dan moet alles uit
+    // enen komen, dus drie per ronde.
+    const verdeling = distributeChips(STANDARD_500, 8, 200, 1, 1)
+    const tekort = verdeling.shortages.find((t) => t.kind === 'weinigKleineFiches')
+
+    expect(tekort).toBeDefined()
+    expect(tekort && 'gewenst' in tekort && tekort.gewenst).toBe(24)
+  })
+
+  it('schaalt mee met de blinds', () => {
+    // Dezelfde doos, hogere beginblinds: dan gaat er meer kleingeld per ronde in.
+    const laag = distributeChips(STANDARD_500, 4, 2000, 5, 5)
+    const hoog = distributeChips(STANDARD_500, 4, 2000, 25, 5)
+    const gewenst = (v: typeof laag) => {
+      const t = v.shortages.find((s) => s.kind === 'weinigKleineFiches')
+      return t && 'gewenst' in t ? t.gewenst : 0
+    }
+    expect(gewenst(hoog)).toBeGreaterThanOrEqual(gewenst(laag))
+  })
+})

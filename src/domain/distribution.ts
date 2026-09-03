@@ -31,8 +31,30 @@ export type Distribution = {
   maxPlayers: number
 }
 
-/** Zoveel keer de start-kleine-blind wil je aan kleine fiches hebben. */
-const KLEINE_FICHES_IN_BLINDS = 20
+/**
+ * Zoveel rondes moet je de blinds kunnen betalen zonder een grotere chip te
+ * breken. Acht rondes is ruim een heel level bij een tafel van acht.
+ */
+const RONDES_MET_KLEINGELD = 8
+
+/**
+ * Hoeveel chips van de kleinste waarde je per ronde echt nodig hebt.
+ *
+ * Een ronde kost de small blind plus de big blind, samen drie keer de small
+ * blind. Maar dat betaal je niet allemaal met kleingeld: heb je chips van de
+ * eerstvolgende waarde, dan dekken die het grootste deel. Bij blinds van 25/50
+ * met chips van 50 in je stapel leg je de big blind met één chip van 50 en hou
+ * je één chip van 25 nodig — niet drie.
+ *
+ * Past de volgende waarde niet in wat een ronde kost, zoals bij de huisregel
+ * waar de volgende chip 5 is en een ronde 3 kost, dan moet het wél allemaal uit
+ * kleingeld komen.
+ */
+function kleineChipsPerRonde(kleinste: number, volgende: number | undefined, smallBlind: number) {
+  const kostPerRonde = smallBlind * 3
+  const rest = volgende === undefined || volgende > kostPerRonde ? kostPerRonde : kostPerRonde % volgende
+  return Math.ceil(rest / kleinste)
+}
 
 /**
  * Hoeveel chips van elke volgende waarde een speler krijgt voordat er naar een
@@ -112,7 +134,8 @@ function attempt(
   }
 
   const kleinste = denoms[0]
-  const gewenstKlein = Math.ceil((KLEINE_FICHES_IN_BLINDS * startSmallBlind) / kleinste)
+  const gewenstKlein =
+    kleineChipsPerRonde(kleinste, denoms[1], startSmallBlind) * RONDES_MET_KLEINGELD
   geef(kleinste, Math.min(gewenstKlein, beschikbaar(kleinste)))
 
   const uitgedeeld = () =>

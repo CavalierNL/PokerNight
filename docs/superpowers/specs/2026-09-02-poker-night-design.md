@@ -181,9 +181,12 @@ denominatie, wat meteen de afronding van latere blinds beïnvloedt.
 Invoer: chipset met aantallen, aantal spelers, gewenste startstack in waarde.
 
 De verdeling loopt van klein naar groot en probeert elke speler genoeg kleine
-fiches te geven om de eerste levels te spelen — richtlijn: minstens twintig keer
-de start-kleine-blind. De rest van de startstack wordt met hogere denominaties
-opgevuld.
+fiches te geven om de eerste levels te spelen. De richtlijn was aanvankelijk
+twintig keer de start-kleine-blind aan kleingeld, maar dat telde de hele
+blindkosten in kleine fiches. Dat klopt niet: de big blind leg je met één chip
+van de volgende waarde als je die hebt. De richtlijn telt nu alleen wat er per
+ronde écht aan kleingeld in gaat, voor acht rondes. De rest van de startstack
+wordt met hogere denominaties opgevuld.
 
 Twee dingen zijn hier essentieel:
 
