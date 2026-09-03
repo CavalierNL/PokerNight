@@ -16,7 +16,7 @@ export type Warning = {
 function shortageToWarning(shortage: Shortage, distribution: Distribution, players: number): Warning {
   switch (shortage.kind) {
     case 'geenFiches':
-      return { level: 'error', message: 'Deze chipset heeft geen bruikbare fiches.' }
+      return { level: 'error', message: 'Deze pokerdoos heeft geen bruikbare chips.' }
 
     case 'startstackNietGehaald': {
       const uitweg =
@@ -26,7 +26,7 @@ function shortageToWarning(shortage: Shortage, distribution: Distribution, playe
       return {
         level: 'error',
         message:
-          `Deze doos haalt met ${players} spelers maximaal ${shortage.bereikt} fiches per speler, ` +
+          `Deze doos haalt met ${players} spelers maximaal ${shortage.bereikt} chips per speler, ` +
           `niet ${shortage.gewenst}.${uitweg}`,
       }
     }
@@ -35,7 +35,7 @@ function shortageToWarning(shortage: Shortage, distribution: Distribution, playe
       return {
         level: 'warning',
         message:
-          `Weinig fiches van ${shortage.value}: ${shortage.perSpeler} per speler in plaats van de ` +
+          `Weinig chips van ${shortage.value}: ${shortage.perSpeler} per speler in plaats van de ` +
           `aanbevolen ${shortage.gewenst}. Je moet in de eerste levels mogelijk wisselen.`,
       }
   }

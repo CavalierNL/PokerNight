@@ -106,7 +106,7 @@ export function ChipsetScreen({ onClose }: { onClose: () => void }) {
               />
             </label>
             <label className="veld chip-rij__getal">
-              <span>Waarde per fiche</span>
+              <span>Waarde per chip</span>
               <input
                 type="number"
                 min={1}

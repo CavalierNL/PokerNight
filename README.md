@@ -1,6 +1,6 @@
 # PokerNight
 
-Tooling voor een pokeravond met vrienden: blinds timer, blindstructuur en fiches
+Tooling voor een pokeravond met vrienden: blinds timer, blindstructuur en chips
 verdelen. Eén scherm midden op tafel, verder niets nodig — geen backend, geen
 account, alles blijft in je eigen browser. Er komt geen geld aan te pas: geen
 inleg, geen pot.
@@ -12,9 +12,9 @@ worker, dus de app is niet offline te openen.
 ## Wat het doet
 
 - **Blindstructuur** — een 1-2-5 reeks (1/2, 2/4, 5/10, 10/20 …), verdubbelend,
-  of vloeiend berekend. Altijd afgerond op bedragen die je met jouw fiches kunt
+  of vloeiend berekend. Altijd afgerond op bedragen die je met jouw chips kunt
   leggen; de big blind is exact het dubbele van de kleine blind. De 1-2-5 reeks
-  schaalt mee met de kleinste fichewaarde in je doos.
+  schaalt mee met de kleinste chipwaarde in je doos.
 - **Twee manieren om levels op te schuiven** — op de klok, als er iemand uit gaat,
   of allebei. Die laatste is de huisregel.
 - **Pokerdozen** — vrij in te stellen: kleur, waarde, aantal in de doos. Meerdere

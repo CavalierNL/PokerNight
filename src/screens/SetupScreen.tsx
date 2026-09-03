@@ -70,8 +70,8 @@ export function SetupScreen({
 
   const setup = useMemo(() => prepareSetup(huidigeSettings, chipset), [huidigeSettings, chipset])
   const { structure: structuur, distribution: verdeling, warnings, canStart } = setup
-  // Het aantal fiches, tegenover verdeling.stackValue dat de wáárde optelt.
-  const aantalFiches = verdeling.perPlayer.reduce((som, a) => som + a.count, 0)
+  // Het aantal chips, tegenover verdeling.stackValue dat de wáárde optelt.
+  const aantalChips = verdeling.perPlayer.reduce((som, a) => som + a.count, 0)
 
   return (
     <div className="setup">
@@ -141,7 +141,7 @@ export function SetupScreen({
         </Panel>
         <Panel title="Toernooi">
           <label className="veld">
-            <span>Startstack (fiches)</span>
+            <span>Startstack (chips)</span>
             <input
               type="number"
               min={1}
@@ -219,7 +219,7 @@ export function SetupScreen({
       </Panel>
 
       <div className="setup__raster">
-        <Panel title="Fiches per speler">
+        <Panel title="Chips per speler">
           {verdeling.perPlayer.map((allocatie) => (
             <div key={`${allocatie.color}-${allocatie.value}`} className="fiche-regel">
               <span className="fiche-regel__aantal">{allocatie.count}×</span>
@@ -227,7 +227,7 @@ export function SetupScreen({
             </div>
           ))}
           <p className="uitleg">
-            {aantalFiches} fiches, samen {verdeling.stackValue} waard.
+            {aantalChips} chips, samen {verdeling.stackValue} waard.
           </p>
         </Panel>
       </div>

@@ -71,7 +71,7 @@ export const HOUSE_RULES: Chipset = {
 /** Klassieke 500-set met oplopende denominaties. */
 export const STANDARD_500: Chipset = {
   id: 'standaard-500',
-  name: 'Standaardset (500 fiches)',
+  name: 'Standaardset (500 chips)',
   chips: [
     { color: '#f2efe6', value: 1, count: 150 },
     { color: '#c0392b', value: 5, count: 150 },

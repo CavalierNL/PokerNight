@@ -75,7 +75,7 @@ export function ChipIcon({
       height={size}
       viewBox="0 0 40 40"
       role="img"
-      aria-label={value === undefined ? 'fiche' : `fiche van ${value}`}
+      aria-label={value === undefined ? 'chip' : `chip van ${value}`}
     >
       <circle cx="20" cy="20" r="18" fill={color} stroke="rgba(0,0,0,.35)" strokeWidth="2" />
       {/*

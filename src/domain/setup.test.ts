@@ -55,7 +55,7 @@ describe('prepareSetup — realistische startstacks', () => {
   it('legt uit wat er wél kan als de doos de startstack niet haalt', () => {
     const setup = prepareSetup({ ...basis, startingStack: 100_000 }, STANDARD_500)
     expect(setup.canStart).toBe(false)
-    expect(fouten(setup).join(' ')).toMatch(/maximaal \d+ fiches per speler/)
+    expect(fouten(setup).join(' ')).toMatch(/maximaal \d+ chips per speler/)
   })
 })
 

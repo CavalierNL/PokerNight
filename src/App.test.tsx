@@ -74,7 +74,7 @@ describe('App', () => {
   it('toont de blindstructuur en de fiches', () => {
     const html = opgezetScherm()
     expect(html).toContain('Blindstructuur')
-    expect(html).toContain('Fiches per speler')
+    expect(html).toContain('Chips per speler')
   })
 
   it('begint met acht genummerde spelers', () => {
@@ -219,7 +219,7 @@ describe('instellingen', () => {
         <ChipsetScreen onClose={() => {}} />
       </AppStateProvider>,
     )
-    expect(html).toContain('Waarde per fiche')
+    expect(html).toContain('Waarde per chip')
     expect(html).toContain('Aantal in de doos')
   })
 
