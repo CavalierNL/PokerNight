@@ -209,6 +209,24 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.getByRole('button', { name: 'Pauze' })).toBeEnabled()
   })
 
+  test('volgt het stackvoorstel ook na een eerder toernooi', async ({ page }) => {
+    // De app onthoudt je vorige opzet. Was het bedrag toen het voorstel, dan hoort
+    // het veld daarna gewoon weer mee te schuiven met wat je verandert.
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await page.getByRole('button', { name: 'Stoppen' }).click()
+    await page.getByRole('button', { name: 'Ja, stop het toernooi' }).click()
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
+    // Drie levels van dertig minuten vragen met acht spelers 1250.
+    await page.getByLabel('Aantal levels').selectOption('30')
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('1250')
+  })
+
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {
     const problemen = verzamelProblemen(page)
 

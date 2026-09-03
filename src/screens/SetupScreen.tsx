@@ -41,8 +41,29 @@ export function SetupScreen({
    * Het loslaten gebeurt bij een eigen bedrag, en ook zodra je aan de
    * blindstructuur zit — die staat onder de startstack en werkt erop terug, en
    * dan hoort het bedrag niet onder je handen vandaan te veranderen.
+   *
+   * Bij een opgeslagen opzet is niet vastgelegd óf het bedrag een eigen keuze
+   * was. Daarom wordt het voorstel van toen opnieuw uitgerekend: stond dat erin,
+   * dan was er niets gekozen en volgt het veld gewoon weer.
    */
-  const [startingStack, setStartingStack] = useState<number | undefined>(settings?.startingStack)
+  const [startingStack, setStartingStack] = useState<number | undefined>(() => {
+    if (!settings) return undefined
+    const doosVanToen = chipsets.find((c) => c.id === settings.chipsetId)
+    if (!doosVanToen) return settings.startingStack
+
+    const voorstelVanToen = suggestStartingStack(
+      metInstellingen(doosVanToen, settings),
+      Math.max(settings.playerNames.length, 1),
+      {
+        levels:
+          settings.durationMinutes === undefined
+            ? undefined
+            : settings.durationMinutes / settings.levelMinutes,
+        kind: settings.structure,
+      },
+    )
+    return settings.startingStack === voorstelVanToen ? undefined : settings.startingStack
+  })
   const [levelMinutes, setLevelMinutes] = useState(settings?.levelMinutes ?? 15)
   // Bestaat er geen opgeslagen instelling, dan begint een avond met een eindtijd.
   const [opTijd, setOpTijd] = useState(settings ? settings.durationMinutes !== undefined : true)

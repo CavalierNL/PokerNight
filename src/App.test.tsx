@@ -410,3 +410,44 @@ describe('chips per speler bij de huisregel', () => {
     expect(html).not.toContain('in meerdere kleuren')
   })
 })
+
+describe('de startstack bij een opgeslagen opzet', () => {
+  /** Slaat een opzet op en rendert het setupscherm zoals de app dat doet. */
+  function metOpgeslagen(overrides: Partial<Settings>) {
+    opslag.set(
+      'pokernight.settings',
+      JSON.stringify({
+        version: OPSLAG_VERSIE,
+        data: { ...settings, chipsetId: TOERNOOI_DOOS.id, structure: 'ladder', ...overrides },
+      }),
+    )
+    return renderToStaticMarkup(
+      <AppStateProvider>
+        <SetupScreen onTerug={() => {}} onGestart={() => {}} />
+      </AppStateProvider>,
+    )
+  }
+
+  it('neemt het opgeslagen bedrag over als dat het voorstel was', () => {
+    // Zes levels van vijftien minuten vragen 12500; dat stond er dus in omdat de
+    // app het voorstelde, niet omdat iemand het koos.
+    const html = metOpgeslagen({ durationMinutes: 90, levelMinutes: 15, startingStack: 12_500 })
+    // Het veld staat op hetzelfde bedrag als het voorstel eronder.
+    expect(html).toContain('<strong>12500</strong>')
+    expect(html).toContain('value="12500"')
+  })
+
+  it('herkent een afwijkend bedrag als een eigen keuze', () => {
+    // Drie levels van dertig minuten vragen 2500; 12500 is dan geen voorstel maar
+    // een keuze, en die blijft staan.
+    const html = metOpgeslagen({ durationMinutes: 90, levelMinutes: 30, startingStack: 12_500 })
+    // Het voorstel staat op 2500, het veld houdt de eigen 12500 vast.
+    expect(html).toContain('<strong>2500</strong>')
+    expect(html).toContain('value="12500"')
+  })
+
+  it('houdt een bedrag dat iemand zelf heeft ingevuld', () => {
+    const html = metOpgeslagen({ durationMinutes: 90, levelMinutes: 15, startingStack: 7777 })
+    expect(html).toContain('value="7777"')
+  })
+})
