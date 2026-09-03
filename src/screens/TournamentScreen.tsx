@@ -7,6 +7,7 @@ import { useEindeWaarschuwing, waarschuwingsGrensMs } from '../hooks/useEindeWaa
 import { useAppState } from '../state/AppState'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
+import { HandenVenster } from '../components/HandenVenster'
 import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
@@ -59,6 +60,7 @@ export function TournamentScreen() {
   const [stopBevestigen, setStopBevestigen] = useState(false)
   const [schemaOpen, setSchemaOpen] = useState(false)
   const [laatkomerOpen, setLaatkomerOpen] = useState(false)
+  const [handenOpen, setHandenOpen] = useState(false)
   // Het level waarvoor iemand het geluid heeft stilgezet. Bewaard als index en
   // niet als vlag, zodat het volgende level vanzelf weer geluid geeft zonder dat
   // er ergens een reset hoeft te staan die vergeten kan worden.
@@ -147,6 +149,14 @@ export function TournamentScreen() {
             </button>
           </span>
           <span>{playersLeft(tournament)} spelers</span>
+          {/*
+            In de balk en niet bij het schema onder de klok: het zijn twee
+            dingen die je om heel verschillende redenen opzoekt, en naast
+            elkaar tik je de verkeerde.
+          */}
+          <button className="tafel__balklink" onClick={() => setHandenOpen(true)}>
+            Wat wint?
+          </button>
         </div>
 
         <div className="tafel__midden">
@@ -328,6 +338,8 @@ export function TournamentScreen() {
           </div>
         </div>
       )}
+
+      {handenOpen && <HandenVenster onSluiten={() => setHandenOpen(false)} />}
 
       {schemaOpen && (
         <SchemaVenster tournament={tournament} onSluiten={() => setSchemaOpen(false)} />

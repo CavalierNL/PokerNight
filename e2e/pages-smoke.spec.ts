@@ -336,6 +336,22 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
   })
 
+  test('zoekt de rangorde van de handen op', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Wat wint?' }).click()
+    await expect(page.locator('.handen__regel')).toHaveCount(10)
+    await expect(page.locator('.handen__regel').first()).toContainText('Royal flush')
+    await expect(page.locator('.handen__regel').last()).toContainText('Hoge kaart')
+
+    // Opzoeken is geen pauze: de klok loopt door.
+    await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await expect(page.locator('.handen')).toHaveCount(0)
+  })
+
   test('laat een laatkomer instappen', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()

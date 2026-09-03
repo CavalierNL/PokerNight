@@ -186,11 +186,18 @@ teruggaan onmogelijk.
 Dit is iets anders dan ongedaan maken, dat de vorige zet terugdraait wat die ook
 was. Terug is een besluit aan tafel.
 
-### Het schema opzoeken
+### Opzoeken tijdens het spelen
 
-Dezelfde tabel als in de configuratie, als venster over het tafelscherm, met het
-huidige level gemarkeerd en in beeld gescrold. De klok loopt door: opzoeken is
-geen pauze.
+Twee dingen zijn op te zoeken zonder dat de klok stilstaat.
+
+**Het schema** — dezelfde tabel als in de configuratie, met het huidige level
+gemarkeerd en in beeld gescrold. De link staat onder de klok.
+
+**Wat wint** — de tien handen van sterk naar zwak, elk met een voorbeeld van vijf
+kaarten in plaats van een uitleg: aan tafel kijk je hier vijf seconden naar, en
+kaarten zeggen in die tijd meer dan een zin. De link staat in de balk bovenaan,
+aan de andere kant van het scherm dan het schema — het zijn twee dingen die je om
+heel verschillende redenen opzoekt, en naast elkaar tik je de verkeerde.
 
 De geschatte eindtijd die de setup toont is daarmee een schatting bij ononderbroken
 spel; elke pauze schuift die op. Het tafelscherm rekent de verwachte eindtijd

@@ -415,3 +415,65 @@
   font-size: clamp(1.2rem, 5vw, 2rem);
   line-height: 1.2;
 }
+
+/* De link in de balk. Zelfde gewicht als de tekst ernaast: het is een verwijzing
+   en geen knop die iets aan het toernooi verandert. */
+.tafel__balklink {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--goud-donker);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+/* De rangorde van de handen: naam links, het voorbeeld rechts. */
+.handen {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.handen__regel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.handen__naam {
+  text-align: left;
+}
+
+.handen__kaarten {
+  display: flex;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+/*
+ * Een kaart als tekstblokje. Klein genoeg om er vijf naast een naam te krijgen,
+ * en toch herkenbaar als kaart door het papierwit en de serif.
+ */
+.minikaart {
+  background: #f7f4ec;
+  color: #22262b;
+  border-radius: 2px;
+  padding: 0.1rem 0.15rem;
+  min-width: 1.55rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.minikaart--rood {
+  color: #c0392b;
+}
