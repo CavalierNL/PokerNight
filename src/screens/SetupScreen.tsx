@@ -147,6 +147,36 @@ export function SetupScreen({
   // Het aantal chips, tegenover verdeling.stackValue dat de wáárde optelt.
   const aantalChips = verdeling.perPlayer.reduce((som, a) => som + a.count, 0)
 
+  /**
+   * De regels onder "Chips per speler". Met de huisregel zijn de kleuren binnen
+   * één waarde onderling inwisselbaar — welke van de drie je pakt maakt niet uit
+   * — dus daar hoort één regel met een chip in alle betrokken kleuren, en niet
+   * een regel per kleur.
+   */
+  const chipRegels = useMemo(() => {
+    if (!huisregel) {
+      return verdeling.perPlayer.map((a) => ({
+        sleutel: `${a.color}-${a.value}`,
+        kleuren: [a.color],
+        value: a.value,
+        count: a.count,
+      }))
+    }
+    const perWaarde = new Map<number, { kleuren: string[]; count: number }>()
+    for (const a of verdeling.perPlayer) {
+      const regel = perWaarde.get(a.value) ?? { kleuren: [], count: 0 }
+      regel.kleuren.push(a.color)
+      regel.count += a.count
+      perWaarde.set(a.value, regel)
+    }
+    return [...perWaarde].map(([value, regel]) => ({
+      sleutel: `waarde-${value}`,
+      kleuren: regel.kleuren,
+      value,
+      count: regel.count,
+    }))
+  }, [huisregel, verdeling])
+
   return (
     <div className="setup">
       <Kop>PokerNight</Kop>
@@ -312,10 +342,14 @@ export function SetupScreen({
 
       <Panel title="Chips per speler">
         <div className="chips-per-speler">
-          {verdeling.perPlayer.map((allocatie) => (
-            <div key={`${allocatie.color}-${allocatie.value}`} className="fiche-regel">
-              <span className="fiche-regel__aantal">{allocatie.count}×</span>
-              <ChipIcon color={allocatie.color} value={allocatie.value} digits={cijfers} />
+          {chipRegels.map((regel) => (
+            <div key={regel.sleutel} className="fiche-regel">
+              <span className="fiche-regel__aantal">{regel.count}×</span>
+              {regel.kleuren.length === 1 ? (
+                <ChipIcon color={regel.kleuren[0]} value={regel.value} digits={cijfers} />
+              ) : (
+                <MultiChip colors={regel.kleuren} value={regel.value} digits={cijfers} />
+              )}
             </div>
           ))}
         </div>
@@ -335,7 +369,7 @@ export function SetupScreen({
                 setStructure(e.target.value as StructureKind)
               }}
             >
-              <option value="ladder">1-2-5, makkelijk te leggen</option>
+              <option value="ladder">1-2-5, daarna verdubbelen</option>
               <option value="doubling">Verdubbelen per level</option>
               <option value="calculated">Berekend, vloeiend oplopend</option>
             </select>

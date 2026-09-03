@@ -88,13 +88,14 @@ export function levelOpties(durationMinutes: number): { levels: number; levelMin
 }
 
 /**
- * Met hoeveel een level groeit ten opzichte van het vorige. De ladder zet elke
- * drie stappen een factor tien, dus de tiendemachtswortel van tien. `calculated`
- * past zijn factor juist aan het aantal levels aan en heeft er dus geen vaste;
+ * Met hoeveel een level groeit ten opzichte van het vorige. `calculated` past
+ * zijn factor juist aan het aantal levels aan en heeft er dus geen vaste;
  * `manual` volgt wat je zelf opgeeft.
  */
 export function groeiPerLevel(kind: StructureKind): number | undefined {
-  if (kind === 'ladder') return Math.cbrt(10)
+  // De ladder verdubbelt vanaf de derde sport; de eerste twee stappen wijken af,
+  // maar voor het schatten van het aantal levels telt de staart.
+  if (kind === 'ladder') return 2
   if (kind === 'doubling') return 2
   return undefined
 }
@@ -135,10 +136,23 @@ function rawBigBlinds(input: StructureInput, smallestDenomination: number): numb
 }
 
 /**
- * De ladder van bedragen die je aan tafel zonder rekenen kunt leggen: 1, 2, 5,
- * 10, 20, 50, 100 … Elke stap is een veelvoud van tien met een 1, 2 of 5 ervoor.
+ * De blindreeks: 1, 2, 5, en vanaf daar verdubbelen — 10, 20, 40, 80, 160 …
+ *
+ * De sprong van 20 naar 50 die een doorlopende 1-2-5 reeks maakt, is aan tafel
+ * niet nodig: na de 5 volstaat verdubbelen, en dat is bovendien makkelijker te
+ * volgen dan een reeks die per decennium van stapgrootte wisselt.
  */
 export function ladderRung(index: number): number {
+  if (index < 2) return index + 1
+  return 5 * 2 ** (index - 2)
+}
+
+/**
+ * Ronde bedragen: 1, 2, 5, 10, 20, 50, 100 … Voor bedragen die geen reeks zijn
+ * maar gewoon rond moeten uitkomen, zoals een startstack. De blindreeks
+ * hierboven verdubbelt en levert daar getallen als 8000 op waar 5000 bedoeld is.
+ */
+export function rondBedrag(index: number): number {
   const factoren = [1, 2, 5]
   return factoren[index % 3] * 10 ** Math.floor(index / 3)
 }

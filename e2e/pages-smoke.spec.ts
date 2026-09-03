@@ -155,8 +155,9 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('tbody tr')).toHaveCount(6)
 
     // Langer spelen vraagt een diepere stack, met dezelfde beginblinds.
+    // Acht levels die elk verdubbelen: 25.000 diep.
     await page.getByLabel('Speelduur (minuten)').fill('120')
-    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('50000')
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('25000')
     await expect(page.locator('tbody tr').first()).toContainText('25 / 50')
 
     // Het voorstel blijft volgen zolang je zelf niets kiest.

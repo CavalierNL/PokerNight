@@ -378,3 +378,35 @@ describe('het scherm bij een levelovergang', () => {
     expect(html).not.toContain('De klok mag lopen')
   })
 })
+
+describe('chips per speler bij de huisregel', () => {
+  it('toont de 1-waardes als één chip in alle kleuren', () => {
+    opslag.set(
+      'pokernight.settings',
+      JSON.stringify({
+        version: OPSLAG_VERSIE,
+        data: {
+          ...settings,
+          chipsetId: TOERNOOI_DOOS.id,
+          houseRuleFiveColor: TOERNOOI_DOOS.chips[0].color,
+        },
+      }),
+    )
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SetupScreen onTerug={() => {}} onGestart={() => {}} />
+      </AppStateProvider>,
+    )
+    // Eén chip die voor meerdere kleuren staat, in plaats van een regel per kleur.
+    expect(html).toContain('in meerdere kleuren')
+  })
+
+  it('houdt zonder huisregel een regel per kleur', () => {
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SetupScreen onTerug={() => {}} onGestart={() => {}} />
+      </AppStateProvider>,
+    )
+    expect(html).not.toContain('in meerdere kleuren')
+  })
+})

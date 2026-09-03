@@ -1,7 +1,7 @@
 import {
   buildStructure,
   groeiPerLevel,
-  ladderRung,
+  rondBedrag,
   type Structure,
   type StructureKind,
 } from './blinds'
@@ -108,7 +108,7 @@ export function suggestStartingStack(
   // dan gepland in plaats van langer.
   const kandidaten: number[] = []
   for (let i = 0; i < 40; i += 1) {
-    kandidaten.push(kleinste * ladderRung(i))
+    kandidaten.push(kleinste * rondBedrag(i))
     if (kandidaten[kandidaten.length - 1] >= ideaal) break
   }
 

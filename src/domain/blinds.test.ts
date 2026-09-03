@@ -248,7 +248,8 @@ describe('buildStructure — de 1-2-5 ladder', () => {
 
   it('geeft de reeks die je met chips van 1 en 5 kunt leggen', () => {
     const paren = structuur.levels.slice(0, 7).map((l) => `${l.smallBlind}/${l.bigBlind}`)
-    expect(paren).toEqual(['1/2', '2/4', '5/10', '10/20', '20/40', '50/100', '100/200'])
+    // Na de 5 verdubbelt hij; de sprong van 40 naar 50 is aan tafel niet nodig.
+    expect(paren).toEqual(['1/2', '2/4', '5/10', '10/20', '20/40', '40/80', '80/160'])
   })
 
   it('houdt de big blind exact het dubbele van de kleine blind', () => {
@@ -338,8 +339,8 @@ describe('een toernooi zonder eindtijd', () => {
 
 describe('groeiPerLevel', () => {
   it('geeft de vaste factor van de reeksen die er een hebben', () => {
-    // Drie stappen op de ladder is een factor tien: 1, 2, 5, 10.
-    expect(groeiPerLevel('ladder')! ** 3).toBeCloseTo(10, 6)
+    // De ladder verdubbelt vanaf de derde sport, net als "verdubbelen".
+    expect(groeiPerLevel('ladder')).toBe(2)
     expect(groeiPerLevel('doubling')).toBe(2)
   })
 
