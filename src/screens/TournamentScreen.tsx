@@ -98,8 +98,8 @@ export function TournamentScreen() {
                 : 'Laatste level'}
             </span>
             <span>
-              Gemiddelde stack {Math.round(averageStackInBigBlinds(tournament))} big blinds,
-              ongeveer {roundToPayable(averageStack(tournament), 1)} chips
+              Gemiddelde stack {Math.round(averageStackInBigBlinds(tournament))} BB, ±{' '}
+              {roundToPayable(averageStack(tournament), 1)} chips
             </span>
             {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
           </div>

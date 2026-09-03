@@ -12,6 +12,17 @@ import { useEffect, useState } from 'react'
  */
 type InstallGebeurtenis = Event & { prompt: () => Promise<void> }
 
+/**
+ * De manieren waarop een browser laat weten dat de app níét in een gewoon tabblad
+ * draait. `fullscreen` en `standalone` staan in het manifest; `minimal-ui` komt
+ * voor bij browsers die een smalle balk overhouden.
+ */
+const APP_MODI = [
+  '(display-mode: fullscreen)',
+  '(display-mode: standalone)',
+  '(display-mode: minimal-ui)',
+] as const
+
 export type Installatie = {
   /** De app draait al vanaf het startscherm; dan valt er niets te installeren. */
   alGeinstalleerd: boolean
@@ -23,17 +34,30 @@ export type Installatie = {
  * Draait de app al vanaf het startscherm?
  *
  * Twee manieren, want de browsers verschillen. Chrome en de Android-browsers
- * zetten `display-mode` op wat het manifest vraagt — hier fullscreen, met
- * standalone als terugval. Safari kent dat niet en zet in plaats daarvan een
- * eigen vlag op `navigator`.
+ * zetten `display-mode` op wat het manifest vraagt. Safari kent dat niet en zet
+ * in plaats daarvan een eigen vlag op `navigator`.
+ *
+ * Let op wat dit níét ziet: een snelkoppeling die een gewoon tabblad opent. Die
+ * ziet er op je startscherm hetzelfde uit, maar is geen geïnstalleerde app, en
+ * dan is `display-mode` gewoon `browser`.
  */
 export function staatOpStartscherm(): boolean {
   if (typeof window === 'undefined') return false
-  const alsApp = ['(display-mode: standalone)', '(display-mode: fullscreen)'].some(
-    (vraag) => window.matchMedia?.(vraag).matches,
-  )
+  const alsApp = APP_MODI.some((vraag) => window.matchMedia?.(vraag).matches)
   const iosAlsApp = (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   return alsApp || iosAlsApp
+}
+
+/** Hoe de app geopend is, in woorden. Staat in de instellingen, om te kunnen zien
+ *  of een icoon op je startscherm de app opent of alleen een tabblad. */
+export function hoeGeopend(): string {
+  if (typeof window === 'undefined') return 'onbekend'
+  const modus = APP_MODI.find((vraag) => window.matchMedia?.(vraag).matches)
+  if (modus) return modus.replace('(display-mode: ', '').replace(')', '')
+  if ((window.navigator as Navigator & { standalone?: boolean }).standalone === true) {
+    return 'standalone'
+  }
+  return 'browser'
 }
 
 export function useInstallPrompt(): Installatie {
@@ -42,7 +66,8 @@ export function useInstallPrompt(): Installatie {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    setAlGeinstalleerd(staatOpStartscherm())
+    const kijk = () => setAlGeinstalleerd(staatOpStartscherm())
+    kijk()
 
     const onthoud = (e: Event) => {
       // Zonder dit toont de browser zijn eigen balk op zijn eigen moment.
@@ -54,11 +79,19 @@ export function useInstallPrompt(): Installatie {
       setAlGeinstalleerd(true)
     }
 
+    // De modus kan onderweg veranderen, bijvoorbeeld als je de app installeert
+    // terwijl hij openstaat, of hem vanuit het tabblad naar de app opent.
+    const luisteraars = APP_MODI.map((vraag) => window.matchMedia?.(vraag)).filter(Boolean)
+    for (const query of luisteraars) query.addEventListener?.('change', kijk)
+
     window.addEventListener('beforeinstallprompt', onthoud)
     window.addEventListener('appinstalled', geinstalleerd)
+    window.addEventListener('visibilitychange', kijk)
     return () => {
+      for (const query of luisteraars) query.removeEventListener?.('change', kijk)
       window.removeEventListener('beforeinstallprompt', onthoud)
       window.removeEventListener('appinstalled', geinstalleerd)
+      window.removeEventListener('visibilitychange', kijk)
     }
   }, [])
 

@@ -3,6 +3,7 @@ import { Panel } from '../components/Panel'
 import { useAppState } from '../state/AppState'
 import { speelBlindToon } from '../audio/blindToon'
 import { SoundIcon } from '../components/SoundIcon'
+import { hoeGeopend } from '../hooks/useInstallPrompt'
 import './SetupScreen.css'
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
@@ -37,6 +38,13 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           />
           <span>Scherm aan houden tijdens het toernooi</span>
         </label>
+      </Panel>
+
+      <Panel title="Over deze app">
+        {/* Zo is te zien of een icoon op je startscherm de app opent of gewoon
+            een tabblad: een snelkoppeling ziet er hetzelfde uit maar meldt
+            "browser", en dan blijft de installatieknop terecht staan. */}
+        <p className="uitleg">Geopend als: {hoeGeopend()}</p>
       </Panel>
 
       <Button onClick={onClose}>Terug</Button>
