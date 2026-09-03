@@ -51,9 +51,12 @@ const HERHAAL_MS = 2000
 const MAXIMALE_DUUR_MS = 60_000
 
 /**
- * Herhaalt de toon tot iemand het scherm aanraakt of een toets indrukt. Geeft de
- * stopfunctie terug, zodat de aanroeper hem ook zelf kan afbreken; React gebruikt
- * die als opruiming van het effect.
+ * Herhaalt de toon tot de aanroeper hem stopt, of tot het vangnet afloopt. Geeft
+ * de stopfunctie terug; React gebruikt die als opruiming van het effect.
+ *
+ * Luistert niet meer zelf naar aanrakingen: het geluid hoort bij het scherm dat
+ * om bevestiging vraagt, en stopt dus als dát scherm weggaat. Een willekeurige
+ * tik op tafel zette het anders stil terwijl de blinds nog niet gezien waren.
  */
 export function herhaalBlindToon(): () => void {
   speelBlindToon()
@@ -66,18 +69,9 @@ export function herhaalBlindToon(): () => void {
     gestopt = true
     clearInterval(herhaling)
     clearTimeout(vangnet)
-    if (typeof window === 'undefined') return
-    for (const gebeurtenis of REACTIES) window.removeEventListener(gebeurtenis, stop)
   }
 
   const vangnet = setTimeout(stop, MAXIMALE_DUUR_MS)
 
-  if (typeof window !== 'undefined') {
-    for (const gebeurtenis of REACTIES) window.addEventListener(gebeurtenis, stop)
-  }
-
   return stop
 }
-
-/** Wat als "de gebruiker heeft het gehoord" telt. */
-const REACTIES = ['pointerdown', 'keydown'] as const

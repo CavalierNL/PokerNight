@@ -159,10 +159,39 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.getByLabel('Startstack (chips)')).toHaveValue('50000')
     await expect(page.locator('tbody tr').first()).toContainText('25 / 50')
 
+    // Het voorstel blijft volgen zolang je zelf niets kiest.
+    await page.getByLabel('Speelduur (minuten)').fill('90')
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
+
+    // Zodra je aan de blindstructuur komt, blijft het bedrag staan waar het staat.
+    await page.getByLabel('Hoe de blinds groeien').selectOption('doubling')
+    await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
+
     // Zonder eindtijd loopt de reeks door tot het toernooi beslist is.
+    await page.getByLabel('Hoe de blinds groeien').selectOption('ladder')
     await page.getByLabel('Wanneer het klaar is').selectOption('lms')
     await expect(page.getByLabel('Speelduur (minuten)')).toHaveCount(0)
     await expect(page.getByText('tot er één speler over is')).toBeVisible()
+  })
+
+  test('houdt de klok stil tot een levelovergang bevestigd is', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    // De standaard is "op de klok én als iemand eruit gaat": één klik zet dus
+    // een level om, en de klok telt af zodat je kunt zien dat hij stilstaat.
+    await page.getByRole('button', { name: 'Start het toernooi' }).click()
+
+    await page.getByRole('button', { name: 'Speler 1' }).click()
+    await expect(page.getByText('Level 2', { exact: true })).toBeVisible()
+
+    // De klok staat stil op de volle levellengte tot er bevestigd is.
+    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+    await page.waitForTimeout(1200)
+    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+
+    await page.getByRole('button', { name: 'De klok mag lopen' }).click()
+    await expect(page.getByRole('button', { name: 'De klok mag lopen' })).toHaveCount(0)
+    await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
   })
 
   test('start een toernooi en toont de klok met de blinds', async ({ page }) => {

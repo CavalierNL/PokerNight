@@ -5,7 +5,7 @@ import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
 import { useAppState } from '../state/AppState'
 import { ChipIcon } from '../components/ChipIcon'
-import { PlayingCard, SESSIE_HAND } from '../components/PlayingCard'
+import { CardBack } from '../components/PlayingCard'
 import {
   averageStackInBigBlinds,
   colorUpAt,
@@ -32,9 +32,12 @@ export function TournamentScreen() {
   const [stopBevestigen, setStopBevestigen] = useState(false)
   const now = useNow()
 
-  const gepauzeerd = tournament?.clock.state === 'paused'
+  const wachtOpLevel = tournament?.wachtOpLevel === true
+  // Wachten op een bevestiging is geen pauze: het scherm dat erbij hoort is een
+  // ander, en de knoppen eronder horen niet te reageren.
+  const gepauzeerd = tournament?.clock.state === 'paused' && !wachtOpLevel
   useWakeLock(preferences.wakeLock && tournament !== null && !gepauzeerd)
-  useLevelSound(tournament?.levelIndex ?? 0, preferences.sound)
+  useLevelSound(wachtOpLevel, preferences.sound)
 
   // De reducer beslist zelf of er iets moet gebeuren; hier wordt alleen de tijd
   // doorgegeven.
@@ -155,10 +158,46 @@ export function TournamentScreen() {
       {gepauzeerd && (
         <div className="pauze-overlay">
           <div className="pauze-overlay__kaarten">
-            <PlayingCard kaart={SESSIE_HAND[0]} className="pauze-kaart pauze-kaart--een" />
-            <PlayingCard kaart={SESSIE_HAND[1]} className="pauze-kaart pauze-kaart--twee" />
+            {/* Met de rug omhoog: tijdens een pauze laat je je kaarten niet zien. */}
+            <CardBack className="pauze-kaart pauze-kaart--een" />
+            <CardBack className="pauze-kaart pauze-kaart--twee" />
           </div>
           <span className="pauze-overlay__tekst">GEPAUZEERD</span>
+        </div>
+      )}
+
+      {wachtOpLevel && (
+        <div className="levelscherm">
+          <div className="levelscherm__kaart">
+            <span className="levelscherm__kop">Level {tournament.levelIndex + 1}</span>
+            <div className="levelscherm__blinds">
+              <span className="tafel__blind">
+                <span className="tafel__blind-label">Small</span>
+                <span className="tafel__blind-waarde">{level.smallBlind}</span>
+              </span>
+              <span className="tafel__blind">
+                <span className="tafel__blind-label">Big</span>
+                <span className="tafel__blind-waarde">{level.bigBlind}</span>
+              </span>
+            </div>
+
+            {colorUp && (
+              <div className="tafel__colorup">
+                Color-up: haal
+                {colorUp.retiredColors.map((kleur) => (
+                  <ChipIcon key={kleur} color={kleur} value={colorUp.retiredValue} size={30} />
+                ))}
+                uit het spel en wissel naar
+                {colorUp.nextColors.map((kleur) => (
+                  <ChipIcon key={kleur} color={kleur} value={colorUp.nextValue} size={30} />
+                ))}
+              </div>
+            )}
+
+            <Button onClick={() => dispatch({ type: 'bevestigLevel', now: Date.now() })}>
+              De klok mag lopen
+            </Button>
+          </div>
         </div>
       )}
     </>

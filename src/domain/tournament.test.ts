@@ -200,8 +200,11 @@ describe('undo', () => {
   })
 
   it('stapt meerdere acties terug', () => {
+    // Na elke levelovergang staat de klok stil tot die bevestigd is; zonder die
+    // bevestiging telt een tweede eliminatie niet als speeltijd.
     let t = maak({ trigger: 'elimination' })
     t = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    t = reduce(t, { type: 'bevestigLevel', now: T0 })
     t = reduce(t, { type: 'playerOut', index: 1, now: T0 })
     expect(t.levelIndex).toBe(2)
 
@@ -306,5 +309,46 @@ describe('een pauze staat los van de geschiedenis', () => {
     // De pauze telt niet mee als speeltijd.
     expect(hervat.pausedMs).toBe(9900)
     expect(hervat.history).toHaveLength(t.history.length)
+  })
+})
+
+describe('een levelovergang wacht op bevestiging', () => {
+  it('laat de klok stilstaan tot de nieuwe blinds gezien zijn', () => {
+    const t = maak()
+    const na = reduce(t, { type: 'advanceLevel', now: T0 })
+
+    expect(na.levelIndex).toBe(1)
+    expect(na.wachtOpLevel).toBe(true)
+    expect(na.clock.state).toBe('paused')
+    // De volle levellengte staat klaar, er is nog niets van afgelopen.
+    expect(remainingMs(na, T0 + 5 * MINUUT)).toBe(15 * MINUUT)
+  })
+
+  it('start de klok pas bij de bevestiging', () => {
+    const wachtend = reduce(maak(), { type: 'advanceLevel', now: T0 })
+    const bevestigd = reduce(wachtend, { type: 'bevestigLevel', now: T0 + 2 * MINUUT })
+
+    expect(bevestigd.wachtOpLevel).toBe(false)
+    expect(bevestigd.clock.state).toBe('running')
+    expect(remainingMs(bevestigd, T0 + 2 * MINUUT)).toBe(15 * MINUUT)
+  })
+
+  it('rekent de wachttijd niet als speeltijd', () => {
+    const wachtend = reduce(maak(), { type: 'advanceLevel', now: T0 })
+    const bevestigd = reduce(wachtend, { type: 'bevestigLevel', now: T0 + 2 * MINUUT })
+
+    expect(bevestigd.pausedMs).toBe(2 * MINUUT)
+  })
+
+  it('doet niets als er niets te bevestigen is', () => {
+    const t = maak()
+    expect(reduce(t, { type: 'bevestigLevel', now: T0 })).toBe(t)
+  })
+
+  it('laat een tik het level niet nog een keer opschuiven tijdens het wachten', () => {
+    const wachtend = reduce(maak(), { type: 'advanceLevel', now: T0 })
+    const naTik = reduce(wachtend, { type: 'tick', now: T0 + 60 * MINUUT })
+
+    expect(naTik.levelIndex).toBe(1)
   })
 })

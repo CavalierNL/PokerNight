@@ -52,6 +52,15 @@ type TournamentCore = {
   startedAt: number
   /** Totaal gepauzeerde tijd, zodat de optellende klok pauzes niet meetelt. */
   pausedMs: number
+  /**
+   * Er is zojuist een level omgegaan en dat is nog niet aan tafel bevestigd. De
+   * klok staat zolang stil: een levelovergang die niemand ziet, kost anders de
+   * eerste minuut van het nieuwe level.
+   *
+   * Ontbreekt bij een toernooi dat vóór deze versie is opgeslagen; dat leest als
+   * "niets te bevestigen", en dat klopt.
+   */
+  wachtOpLevel?: boolean
 }
 
 /**
@@ -68,6 +77,7 @@ export type Action =
   | { type: 'playerOut'; index: number; now: number }
   | { type: 'advanceLevel'; now: number }
   | { type: 'togglePause'; now: number }
+  | { type: 'bevestigLevel'; now: number }
   | { type: 'undo'; now: number }
 
 const HISTORY_LIMIT = 20
@@ -96,6 +106,7 @@ export function createTournament(settings: Settings, chipset: Chipset, now: numb
     clock: { state: 'running', endsAt: now + settings.levelMinutes * 60_000 },
     startedAt: now,
     pausedMs: 0,
+    wachtOpLevel: false,
     history: [],
   }
 }
@@ -176,7 +187,9 @@ function goToNextLevel(state: TournamentCore, now: number): TournamentCore | nul
   return {
     ...state,
     levelIndex: state.levelIndex + 1,
-    clock: { state: 'running', endsAt: now + state.settings.levelMinutes * 60_000 },
+    // De klok begint pas te lopen als de nieuwe blinds bevestigd zijn.
+    clock: { state: 'paused', remainingMs: state.settings.levelMinutes * 60_000, pausedAt: now },
+    wachtOpLevel: true,
   }
 }
 
@@ -242,6 +255,20 @@ export function reduce(state: Tournament, action: Action): Tournament {
       }
       return {
         ...state,
+        pausedMs: state.pausedMs + (action.now - state.clock.pausedAt),
+        clock: { state: 'running', endsAt: action.now + state.clock.remainingMs },
+      }
+    }
+
+    /**
+     * De nieuwe blinds zijn aan tafel gezien. De klok gaat lopen en de tijd die
+     * daarmee gemoeid was telt als pauze: er is in die minuut niet gespeeld.
+     */
+    case 'bevestigLevel': {
+      if (!state.wachtOpLevel || state.clock.state !== 'paused') return state
+      return {
+        ...state,
+        wachtOpLevel: false,
         pausedMs: state.pausedMs + (action.now - state.clock.pausedAt),
         clock: { state: 'running', endsAt: action.now + state.clock.remainingMs },
       }

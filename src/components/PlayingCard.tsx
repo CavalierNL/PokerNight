@@ -72,3 +72,38 @@ export function PlayingCard({ kaart, className }: { kaart: Kaart; className?: st
  * ze bij elke pauze en leest dat als een storing in plaats van als een grapje.
  */
 export const SESSIE_HAND = kiesHand()
+
+/**
+ * De achterkant van een kaart. Tijdens een pauze laat je je kaarten niet zien;
+ * dan hoort er ook geen hand op tafel te liggen.
+ */
+export function CardBack({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="34"
+      height="48"
+      viewBox="0 0 34 48"
+      role="img"
+      aria-label="kaart met de rug omhoog"
+    >
+      <rect x="0.5" y="0.5" width="33" height="47" rx="4" fill="#f7f4ec" stroke="#cfc7b4" />
+      <rect x="3" y="3" width="28" height="42" rx="2.5" fill="#123a2a" />
+      {/*
+        Ruitjes, zoals het patroon op een kaartrug. Een ruit spant van x-4 tot
+        x+4 en van y tot y+10; de rijen en kolommen zijn zo gekozen dat alles
+        binnen het groene vlak (3 tot 31 breed, 3 tot 45 hoog) blijft.
+      */}
+      <g fill="none" stroke="#2e8b57" strokeWidth="1">
+        {[0, 1, 2].map((rij) =>
+          [0, 1, 2].map((kolom) => (
+            <path
+              key={`${rij}-${kolom}`}
+              d={`M ${8 + kolom * 9} ${10 + rij * 11} l 4 5 l -4 5 l -4 -5 Z`}
+            />
+          )),
+        )}
+      </g>
+    </svg>
+  )
+}

@@ -1,23 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { herhaalBlindToon } from '../audio/blindToon'
 
 /**
- * Herhaalt de blindtoon zodra de blinds omhoog gaan, tot iemand het scherm
- * aanraakt. Eén korte piep gaat aan tafel verloren in het gepraat.
+ * Laat de blindtoon klinken zolang er een levelovergang op bevestiging wacht.
  *
- * Alleen bij een verhoging: na "Ongedaan maken" gaat het level omlaag, en dan zou
- * hetzelfde signaal het tegenovergestelde suggereren van wat er gebeurt.
- *
- * De opruiming van het effect stopt het geluid ook als het level opnieuw
- * verspringt of het scherm verdwijnt.
+ * Eerder hing het geluid aan de levelindex en stopte het bij de eerste de beste
+ * aanraking. Nu hoort het bij dezelfde toestand als het scherm dat erbij hoort:
+ * het zwijgt precies wanneer je die wegklikt, en geen tik eerder.
  */
-export function useLevelSound(levelIndex: number, enabled: boolean): void {
-  const vorigeLevel = useRef(levelIndex)
-
+export function useLevelSound(wachtOpBevestiging: boolean, enabled: boolean): void {
   useEffect(() => {
-    const omhoog = levelIndex > vorigeLevel.current
-    vorigeLevel.current = levelIndex
-    if (!omhoog || !enabled) return
+    if (!wachtOpBevestiging || !enabled) return
     return herhaalBlindToon()
-  }, [levelIndex, enabled])
+  }, [wachtOpBevestiging, enabled])
 }

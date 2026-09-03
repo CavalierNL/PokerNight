@@ -365,3 +365,16 @@ describe('het tafelscherm tijdens een pauze', () => {
     expect(lopend).not.toContain('GEPAUZEERD')
   })
 })
+
+describe('het scherm bij een levelovergang', () => {
+  it('verschijnt zodra een level omgaat en houdt de klok stil', () => {
+    bewaarToernooi()
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+    // Bij de start is er niets te bevestigen.
+    expect(html).not.toContain('De klok mag lopen')
+  })
+})

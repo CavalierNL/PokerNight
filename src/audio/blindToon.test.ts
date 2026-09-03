@@ -35,19 +35,8 @@ function nepAudio() {
   return { Nep, aantal: () => gespeeld }
 }
 
-let luisteraars: Record<string, Array<() => void>>
-
 beforeEach(() => {
   vi.useFakeTimers()
-  luisteraars = {}
-  vi.stubGlobal('window', {
-    addEventListener: (naam: string, fn: () => void) => {
-      luisteraars[naam] = [...(luisteraars[naam] ?? []), fn]
-    },
-    removeEventListener: (naam: string, fn: () => void) => {
-      luisteraars[naam] = (luisteraars[naam] ?? []).filter((f) => f !== fn)
-    },
-  })
 })
 
 afterEach(() => {
@@ -68,30 +57,34 @@ describe('herhaalBlindToon', () => {
     stop()
   })
 
-  it('stopt zodra iemand het scherm aanraakt', () => {
+  it('stopt zodra de aanroeper hem stopt', () => {
+    // Het geluid hoort bij het scherm dat om bevestiging vraagt; dat scherm
+    // bepaalt wanneer het zwijgt, niet een willekeurige tik op tafel.
     const { Nep, aantal } = nepAudio()
     vi.stubGlobal('AudioContext', Nep)
 
-    herhaalBlindToon()
+    const stop = herhaalBlindToon()
     vi.advanceTimersByTime(4000)
     const naEenPaarKeer = aantal()
 
-    for (const luisteraar of luisteraars['pointerdown'] ?? []) luisteraar()
+    stop()
 
     vi.advanceTimersByTime(20_000)
     expect(aantal()).toBe(naEenPaarKeer)
   })
 
-  it('ruimt zijn luisteraars op, zodat er niets blijft hangen', () => {
-    const { Nep } = nepAudio()
+  it('laat een tweede stop met rust', () => {
+    const { Nep, aantal } = nepAudio()
     vi.stubGlobal('AudioContext', Nep)
 
     const stop = herhaalBlindToon()
-    expect(luisteraars['pointerdown']).toHaveLength(1)
     stop()
-    expect(luisteraars['pointerdown']).toHaveLength(0)
-    expect(luisteraars['keydown']).toHaveLength(0)
+    const na = aantal()
+    stop()
+    vi.advanceTimersByTime(20_000)
+    expect(aantal()).toBe(na)
   })
+
 
   it('houdt vanzelf op als er niemand bij het scherm zit', () => {
     const { Nep, aantal } = nepAudio()

@@ -174,3 +174,46 @@
     0 0 1.5rem rgba(0, 0, 0, 0.85),
     0 3px 10px rgba(0, 0, 0, 0.9);
 }
+
+/*
+ * Het scherm bij een levelovergang. Blokkeert bewust de hele tafel: de klok
+ * staat stil tot iemand bevestigt dat de nieuwe blinds gezien zijn, en dan hoort
+ * er ook niets anders te kunnen.
+ */
+.levelscherm {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(5, 20, 14, 0.88);
+}
+
+.levelscherm__kaart {
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  padding: 2rem clamp(1.5rem, 6vw, 4rem);
+  border-radius: var(--radius);
+  border: 1px solid rgba(240, 197, 66, 0.35);
+  /* Dekkend: de tafel eronder mag er niet doorheen schemeren, anders lees je
+     twee sets blinds tegelijk. */
+  background: var(--felt-diep);
+  box-shadow: var(--schaduw);
+}
+
+.levelscherm__kop {
+  font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--goud-donker);
+}
+
+.levelscherm__blinds {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(1.5rem, 6vw, 4rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}

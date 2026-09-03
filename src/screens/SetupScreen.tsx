@@ -34,7 +34,14 @@ export function SetupScreen({
   const [namenTekst, setNamenTekst] = useState(
     settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
   )
-  // Leeg betekent "nog niet zelf gekozen"; dan geldt het voorstel hieronder.
+  /**
+   * Leeg betekent "nog niet zelf gekozen": dan volgt het veld het voorstel, en
+   * schuift het mee zodra je spelers, doos, speelduur of levels aanpast.
+   *
+   * Het loslaten gebeurt bij een eigen bedrag, en ook zodra je aan de
+   * blindstructuur zit — die staat onder de startstack en werkt erop terug, en
+   * dan hoort het bedrag niet onder je handen vandaan te veranderen.
+   */
   const [startingStack, setStartingStack] = useState<number | undefined>(settings?.startingStack)
   const [levelMinutes, setLevelMinutes] = useState(settings?.levelMinutes ?? 15)
   // Bestaat er geen opgeslagen instelling, dan begint een avond met een eindtijd.
@@ -102,6 +109,11 @@ export function SetupScreen({
     [chipset, spelerNamen.length, durationMinutes, gekozenLengte, structure],
   )
   const gekozenStack = startingStack ?? voorstel ?? 100
+
+  /** Legt het huidige bedrag vast voordat een keuze eronder het zou verschuiven. */
+  const bevriesStack = () => {
+    if (startingStack === undefined) setStartingStack(gekozenStack)
+  }
 
   const huidigeSettings: Settings = useMemo(
     () => ({
@@ -318,7 +330,10 @@ export function SetupScreen({
             <span>Hoe de blinds groeien</span>
             <select
               value={structure}
-              onChange={(e) => setStructure(e.target.value as StructureKind)}
+              onChange={(e) => {
+                bevriesStack()
+                setStructure(e.target.value as StructureKind)
+              }}
             >
               <option value="ladder">1-2-5, makkelijk te leggen</option>
               <option value="doubling">Verdubbelen per level</option>
@@ -327,7 +342,13 @@ export function SetupScreen({
           </label>
           <label className="veld">
             <span>Wanneer ze omhoog gaan</span>
-            <select value={trigger} onChange={(e) => setTrigger(e.target.value as Trigger)}>
+            <select
+              value={trigger}
+              onChange={(e) => {
+                bevriesStack()
+                setTrigger(e.target.value as Trigger)
+              }}
+            >
               <option value="both">Op de klok én als iemand eruit gaat</option>
               <option value="time">Alleen op de klok</option>
               <option value="elimination">Alleen als iemand eruit gaat</option>
