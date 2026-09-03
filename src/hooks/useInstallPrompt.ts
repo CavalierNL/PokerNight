@@ -19,8 +19,15 @@ export type Installatie = {
   installeer?: () => void
 }
 
-/** Draait de app al zonder browserbalken, of vanaf het iOS-startscherm? */
-function staatOpStartscherm(): boolean {
+/**
+ * Draait de app al vanaf het startscherm?
+ *
+ * Twee manieren, want de browsers verschillen. Chrome en de Android-browsers
+ * zetten `display-mode` op wat het manifest vraagt — hier fullscreen, met
+ * standalone als terugval. Safari kent dat niet en zet in plaats daarvan een
+ * eigen vlag op `navigator`.
+ */
+export function staatOpStartscherm(): boolean {
   if (typeof window === 'undefined') return false
   const alsApp = ['(display-mode: standalone)', '(display-mode: fullscreen)'].some(
     (vraag) => window.matchMedia?.(vraag).matches,

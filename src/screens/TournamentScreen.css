@@ -31,10 +31,15 @@
   text-align: center;
 }
 
+/*
+ * De maat volgt de kleinste kant van het scherm, niet alleen de breedte. In
+ * landscape is 22vw zo groot dat de klok de spelers en de knoppen van het scherm
+ * duwt; met een grens op de hoogte past alles.
+ */
 .tafel__klok {
   font-family: var(--serif);
   font-weight: 700;
-  font-size: clamp(4rem, 22vw, 14rem);
+  font-size: clamp(2.5rem, min(19vw, 21vh), 14rem);
   line-height: 0.95;
   letter-spacing: -0.02em;
   text-shadow: var(--schaduw);
@@ -60,7 +65,7 @@
 }
 
 .tafel__blind-label {
-  font-size: clamp(0.8rem, 2.2vw, 1.4rem);
+  font-size: clamp(0.75rem, min(2.2vw, 2.6vh), 1.4rem);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--creme-zacht);
@@ -69,14 +74,18 @@
 .tafel__blind-waarde {
   font-family: var(--serif);
   font-weight: 700;
-  font-size: clamp(2.6rem, 12vw, 7rem);
+  font-size: clamp(1.8rem, min(10vw, 11vh), 7rem);
   color: var(--goud);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
+/* Onder elkaar: één regel met scheidingstekens werd op een breed scherm een
+   lange sliert en brak in landscape op een rare plek af. */
 .tafel__onder {
-  font-size: 0.95rem;
+  display: grid;
+  gap: 0.15rem;
+  font-size: clamp(0.8rem, min(1.9vw, 2.4vh), 1.05rem);
   color: var(--creme-zacht);
 }
 

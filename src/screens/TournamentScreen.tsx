@@ -6,7 +6,9 @@ import { useLevelSound } from '../hooks/useLevelSound'
 import { useAppState } from '../state/AppState'
 import { ChipIcon } from '../components/ChipIcon'
 import { CardBack } from '../components/PlayingCard'
+import { roundToPayable } from '../domain/amounts'
 import {
+  averageStack,
   averageStackInBigBlinds,
   colorUpAt,
   currentLevel,
@@ -90,10 +92,16 @@ export function TournamentScreen() {
             </span>
           </div>
           <div className="tafel__onder">
-            {volgende ? `volgende ${volgende.smallBlind} / ${volgende.bigBlind}` : 'laatste level'}
-            {' · gemiddelde stack '}
-            {averageStackInBigBlinds(tournament).toFixed(1)} BB
-            {eindtijd !== undefined && ` · klaar rond ${klokTijd(eindtijd)}`}
+            <span>
+              {volgende
+                ? `Volgende blinds ${volgende.smallBlind} / ${volgende.bigBlind}`
+                : 'Laatste level'}
+            </span>
+            <span>
+              Gemiddelde stack {Math.round(averageStackInBigBlinds(tournament))} big blinds,
+              ongeveer {roundToPayable(averageStack(tournament), 1)} chips
+            </span>
+            {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
           </div>
           {colorUp && (
             <div className="tafel__colorup">

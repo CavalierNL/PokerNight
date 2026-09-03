@@ -167,7 +167,7 @@ describe('tafelscherm', () => {
     expect(html).toContain('>1<')
     expect(html).toContain('>Big<')
     expect(html).toContain('>2<')
-    expect(html).toContain('volgende 2 / 4')
+    expect(html).toContain('Volgende blinds 2 / 4')
     expect(html).toContain('Sam')
     expect(html).toContain('Pauze')
   })
@@ -196,7 +196,7 @@ describe('tafelscherm', () => {
         <TournamentScreen />
       </AppStateProvider>,
     )
-    expect(html).toContain('klaar rond')
+    expect(html).toContain('Klaar rond')
   })
 
   it('laat de eindtijd weg als alleen eliminaties de blinds verhogen', () => {
