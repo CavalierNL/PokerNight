@@ -165,14 +165,31 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
 
     // Zodra je aan de blindstructuur komt, blijft het bedrag staan waar het staat.
-    await page.getByLabel('Hoe de blinds groeien').selectOption('doubling')
+    await page.getByLabel('Hoe de blinds groeien').selectOption('calculated')
     await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
 
     // Zonder eindtijd loopt de reeks door tot het toernooi beslist is.
-    await page.getByLabel('Hoe de blinds groeien').selectOption('ladder')
+    await page.getByLabel('Hoe de blinds groeien').selectOption('doubling')
     await page.getByLabel('Wanneer het klaar is').selectOption('lms')
     await expect(page.getByLabel('Speelduur (minuten)')).toHaveCount(0)
     await expect(page.getByText('tot er één speler over is')).toBeVisible()
+  })
+
+  test('biedt de 1-2-5 reeks alleen aan waar die iets oplevert', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+
+    // De toernooidoos begint met 25 en 50; daar legt 100/200 net zo makkelijk
+    // als 125/250, dus de reeks voegt niets toe.
+    const reeks = page.getByLabel('Hoe de blinds groeien')
+    await expect(reeks.locator('option')).toHaveCount(2)
+    await expect(reeks).toHaveValue('doubling')
+
+    // Met de huisregel wordt de doos 1 en 5, en dan verdient de reeks zijn plek.
+    await page.getByText('Huisregel: één kleur is 5').click()
+    await expect(reeks.locator('option')).toHaveCount(3)
+    await reeks.selectOption('ladder')
+    await expect(page.locator('tbody tr').nth(2)).toContainText('5 / 10')
   })
 
   test('houdt de klok stil tot een levelovergang bevestigd is', async ({ page }) => {

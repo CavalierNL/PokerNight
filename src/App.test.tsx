@@ -94,10 +94,10 @@ describe('App', () => {
   })
 
   it('begint op de kleinste chip van de doos', () => {
-    // De toernooidoos begint bij 25, en het startstack-voorstel is zo gekozen
-    // dat de blinds daar ook echt beginnen.
+    // De toernooidoos begint bij 25. De 1-2-5 reeks voegt daar niets toe, dus
+    // staat verdubbelen voorgeselecteerd: 25, 50, 100, 200.
     const html = opgezetScherm()
-    for (const paar of ['25 / 50', '50 / 100', '125 / 250']) {
+    for (const paar of ['25 / 50', '50 / 100', '100 / 200', '200 / 400']) {
       expect(html, paar).toContain(paar)
     }
   })
@@ -457,5 +457,35 @@ describe('de startstack bij een opgeslagen opzet', () => {
   it('houdt een bedrag dat iemand zelf heeft ingevuld', () => {
     const html = metOpgeslagen({ durationMinutes: 90, levelMinutes: 15, startingStack: 7777 })
     expect(html).toContain('value="7777"')
+  })
+})
+
+describe('de keuze voor de blindreeks', () => {
+  it('laat 1-2-5 weg bij een doos waar die niets toevoegt', () => {
+    // De toernooidoos begint met 25 en 50; daar is 100/200 net zo goed te leggen
+    // als 125/250, dus de reeks voegt niets toe.
+    const html = opgezetScherm()
+    expect(html).not.toContain('1-2-5')
+    expect(html).toContain('Verdubbelen per level')
+  })
+
+  it('biedt 1-2-5 wel aan zodra de huisregel aan staat', () => {
+    opslag.set(
+      'pokernight.settings',
+      JSON.stringify({
+        version: OPSLAG_VERSIE,
+        data: {
+          ...settings,
+          chipsetId: TOERNOOI_DOOS.id,
+          houseRuleFiveColor: TOERNOOI_DOOS.chips[0].color,
+        },
+      }),
+    )
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <SetupScreen onTerug={() => {}} onGestart={() => {}} />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('1-2-5')
   })
 })

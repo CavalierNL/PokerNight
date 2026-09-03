@@ -5,7 +5,12 @@ import { ChipIcon } from '../components/ChipIcon'
 import { Kop } from '../components/Kop'
 import { useAppState } from '../state/AppState'
 import { prepareSetup, suggestStartingStack } from '../domain/setup'
-import { kanColorUp, longestValueDigits, metInstellingen } from '../domain/chipset'
+import {
+  kanColorUp,
+  ladderHeeftZin,
+  longestValueDigits,
+  metInstellingen,
+} from '../domain/chipset'
 import { MultiChip } from '../components/MultiChip'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { GetalVeld } from '../components/GetalVeld'
@@ -102,6 +107,12 @@ export function SetupScreen({
   // meer te wisselen en heeft de keuze geen betekenis.
   const colorUpMogelijk = kanColorUp(chipset)
 
+  // De 1-2-5 reeks alleen aanbieden waar hij iets oplevert. Staat hij nog uit een
+  // eerdere avond ingesteld bij een doos waar dat niet zo is, dan valt hij terug
+  // op verdubbelen — anders wijst het keuzeveld naar een optie die er niet staat.
+  const ladderZinvol = ladderHeeftZin(chipset)
+  const gekozenStructuur = !ladderZinvol && structure === 'ladder' ? 'doubling' : structure
+
   // Alleen lengtes die de duur precies vullen; de keuze is daarmee hoeveel
   // levels je speelt, en hun lengte volgt daaruit.
   const tijdOpties = useMemo(() => (opTijd ? levelOpties(duur) : []), [opTijd, duur])
@@ -126,9 +137,9 @@ export function SetupScreen({
     () =>
       suggestStartingStack(chipset, Math.max(spelerNamen.length, 1), {
         levels: durationMinutes === undefined ? undefined : durationMinutes / gekozenLengte,
-        kind: structure,
+        kind: gekozenStructuur,
       }),
-    [chipset, spelerNamen.length, durationMinutes, gekozenLengte, structure],
+    [chipset, spelerNamen.length, durationMinutes, gekozenLengte, gekozenStructuur],
   )
   const gekozenStack = startingStack ?? voorstel ?? 100
 
@@ -143,7 +154,7 @@ export function SetupScreen({
       startingStack: gekozenStack,
       levelMinutes: gekozenLengte,
       durationMinutes,
-      structure,
+      structure: gekozenStructuur,
       trigger,
       colorUp: colorUp && colorUpMogelijk,
       houseRuleFiveColor: huisregel ? gekozenVijf : undefined,
@@ -154,7 +165,7 @@ export function SetupScreen({
       gekozenStack,
       gekozenLengte,
       durationMinutes,
-      structure,
+      gekozenStructuur,
       trigger,
       colorUp,
       colorUpMogelijk,
@@ -385,13 +396,13 @@ export function SetupScreen({
           <label className="veld">
             <span>Hoe de blinds groeien</span>
             <select
-              value={structure}
+              value={gekozenStructuur}
               onChange={(e) => {
                 bevriesStack()
                 setStructure(e.target.value as StructureKind)
               }}
             >
-              <option value="ladder">1-2-5, daarna verdubbelen</option>
+              {ladderZinvol && <option value="ladder">1-2-5, daarna verdubbelen</option>}
               <option value="doubling">Verdubbelen per level</option>
               <option value="calculated">Berekend, vloeiend oplopend</option>
             </select>

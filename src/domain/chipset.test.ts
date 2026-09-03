@@ -12,6 +12,8 @@ import {
   metPresets,
   nieuwChipsetId,
   totalCountForValue,
+  ladderHeeftZin,
+  TOERNOOI_DOOS,
 } from './chipset'
 import { KLEINE_DOOS } from './testdozen'
 
@@ -132,5 +134,25 @@ describe('metInstellingen', () => {
 
   it('laat de doos met rust als er geen kleur gekozen is', () => {
     expect(metInstellingen(STANDARD_500, {})).toBe(STANDARD_500)
+  })
+})
+
+describe('ladderHeeftZin', () => {
+  it('geldt bij een doos waarvan de tweede waarde vijf keer de eerste is', () => {
+    // De huisregel maakt precies zo'n doos: 1 en 5.
+    expect(ladderHeeftZin(metHuisregel(TOERNOOI_DOOS, TOERNOOI_DOOS.chips[0].color))).toBe(true)
+    expect(ladderHeeftZin(STANDARD_500)).toBe(true)
+  })
+
+  it('geldt niet bij een doos die met 25 en 50 begint', () => {
+    // Daar is elk veelvoud van 25 even goed te leggen; de reeks levert dan alleen
+    // 125/250 op waar 100/200 net zo goed is.
+    expect(ladderHeeftZin(TOERNOOI_DOOS)).toBe(false)
+  })
+
+  it('geldt niet bij een doos met maar één waarde', () => {
+    expect(ladderHeeftZin({ id: 'een', name: 'Eén', chips: [{ color: '#fff', value: 5, count: 100 }] })).toBe(
+      false,
+    )
   })
 })

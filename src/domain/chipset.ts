@@ -128,6 +128,23 @@ export function metPresets(huidig: Chipset[]): Chipset[] {
 }
 
 /**
+ * Heeft de 1-2-5 reeks bij deze doos iets toe te voegen?
+ *
+ * Alleen als de op één na kleinste chip precies vijf keer de kleinste is. Dan
+ * landt de derde stap van de reeks op een hele chip, terwijl verdubbelen daar
+ * een 4 neerzet die je met vijfjes niet netjes legt — precies het geval bij de
+ * huisregel 5 en 1.
+ *
+ * Staat er een 2 of een 4 tussen, zoals bij een doos die met 25 en 50 begint,
+ * dan is elk veelvoud van de kleinste chip even goed te leggen en levert de
+ * reeks alleen een omweg op: 125/250 in plaats van 100/200.
+ */
+export function ladderHeeftZin(chipset: Chipset): boolean {
+  const [kleinste, daarna] = denominations(chipset)
+  return kleinste !== undefined && daarna !== undefined && daarna === kleinste * 5
+}
+
+/**
  * De huisregel: één kleur is 5 waard, alle andere zijn 1. Geen aparte doos maar
  * een bewerking op de doos die je die avond op tafel hebt: welke chips er zijn
  * en hoeveel ligt vast in de doos, wat ze waard zijn niet.
