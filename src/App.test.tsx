@@ -62,6 +62,13 @@ function opgezetScherm() {
 }
 
 describe('App', () => {
+  it('biedt altijd aan om de app op het beginscherm te zetten', () => {
+    // De browser meldt zelden zelf dat hij kan installeren — Firefox en Safari
+    // doen het nooit — dus de knop mag daar niet van afhangen.
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('Op je beginscherm zetten')
+  })
+
   it('opent op het startscherm en toont nog geen formulier', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('PokerNight')

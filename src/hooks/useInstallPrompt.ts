@@ -5,23 +5,47 @@ import { useEffect, useState } from 'react'
  * `beforeinstallprompt`. Die gebeurtenis komt één keer en moet bewaard worden:
  * het venster openen mag alleen vanuit een klik, niet meteen bij binnenkomst.
  *
- * Alleen Chrome en de browsers op Android doen dit. Safari kent het niet — daar
- * gaat het via Deel → "Zet op beginscherm", en tonen we dus geen knop.
+ * Alleen Chrome en de browsers op Android doen dit. Firefox en Safari kennen het
+ * niet; daar gaat het via een menu van de browser zelf. Vandaar dat de knop
+ * altijd getoond wordt en pas bij het indrukken blijkt of hij het venster opent
+ * of uitlegt hoe het met de hand moet.
  */
 type InstallGebeurtenis = Event & { prompt: () => Promise<void> }
 
-export function useInstallPrompt(): (() => void) | undefined {
+export type Installatie = {
+  /** De app draait al vanaf het beginscherm; dan valt er niets te installeren. */
+  alGeinstalleerd: boolean
+  /** Aanwezig als de browser het venster zelf kan openen. */
+  installeer?: () => void
+}
+
+/** Draait de app al zonder browserbalken, of vanaf het iOS-beginscherm? */
+function staatOpBeginscherm(): boolean {
+  if (typeof window === 'undefined') return false
+  const alsApp = ['(display-mode: standalone)', '(display-mode: fullscreen)'].some(
+    (vraag) => window.matchMedia?.(vraag).matches,
+  )
+  const iosAlsApp = (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  return alsApp || iosAlsApp
+}
+
+export function useInstallPrompt(): Installatie {
   const [gebeurtenis, setGebeurtenis] = useState<InstallGebeurtenis>()
+  const [alGeinstalleerd, setAlGeinstalleerd] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    setAlGeinstalleerd(staatOpBeginscherm())
 
     const onthoud = (e: Event) => {
       // Zonder dit toont de browser zijn eigen balk op zijn eigen moment.
       e.preventDefault()
       setGebeurtenis(e as InstallGebeurtenis)
     }
-    const geinstalleerd = () => setGebeurtenis(undefined)
+    const geinstalleerd = () => {
+      setGebeurtenis(undefined)
+      setAlGeinstalleerd(true)
+    }
 
     window.addEventListener('beforeinstallprompt', onthoud)
     window.addEventListener('appinstalled', geinstalleerd)
@@ -31,11 +55,15 @@ export function useInstallPrompt(): (() => void) | undefined {
     }
   }, [])
 
-  if (!gebeurtenis) return undefined
-  return () => {
-    void gebeurtenis.prompt()
-    // Het venster kan maar één keer per gebeurtenis open; de knop hoort daarna
-    // weg, of de gebruiker nu ja of nee zei.
-    setGebeurtenis(undefined)
+  if (!gebeurtenis) return { alGeinstalleerd }
+
+  return {
+    alGeinstalleerd,
+    installeer: () => {
+      void gebeurtenis.prompt()
+      // Het venster kan maar één keer per gebeurtenis open; de knop hoort daarna
+      // weg, of de gebruiker nu ja of nee zei.
+      setGebeurtenis(undefined)
+    },
   }
 }
