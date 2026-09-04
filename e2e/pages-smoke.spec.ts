@@ -344,7 +344,9 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.getByRole('button', { name: 'Wat wint?' }).click()
     await expect(page.locator('.handen__regel')).toHaveCount(10)
     await expect(page.locator('.handen__regel').first()).toContainText('Royal flush')
-    await expect(page.locator('.handen__regel').last()).toContainText('Hoge kaart')
+    await expect(page.locator('.handen__regel').last()).toContainText('High card')
+    // Bij elke hand de twee kansen uit de rekenkern, niet alleen de opmaak.
+    await expect(page.locator('.handen__regel').last()).toContainText('50%→17%')
 
     // Opzoeken is geen pauze: de klok loopt door.
     await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)

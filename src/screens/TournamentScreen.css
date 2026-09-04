@@ -441,9 +441,9 @@
 }
 
 /*
- * De rangorde van de handen: de namen in de ene kolom, de voorbeelden in de
- * andere. Eén raster voor de hele lijst, zodat de namen onder elkaar staan en
- * de voorbeelden tegen dezelfde rechterrand eindigen.
+ * De rangorde van de handen: naam en kansen in de ene kolom, de voorbeelden in
+ * de andere. Eén raster voor de hele lijst, zodat de namen onder elkaar staan
+ * en de voorbeelden tegen dezelfde rechterrand eindigen.
  */
 .handen {
   width: 100%;
@@ -463,14 +463,71 @@
   display: contents;
 }
 
+.handen__tekst {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .handen__naam {
   text-align: left;
+}
+
+/*
+ * De twee kansen als "op de flop → na de river". Kleiner dan de naam: het is de
+ * voetnoot bij de hand, niet de hand zelf.
+ */
+.handen__kansen {
+  display: flex;
+  align-items: baseline;
+  /* Op een scherm waar zelfs dit niet naast elkaar past breekt de regel liever
+     af dan dat hij de kaartjes ernaast wegduwt. */
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--creme-zacht);
+}
+
+/*
+ * Een vaste breedte per getal, zodat de pijlen van alle tien de regels op
+ * dezelfde plek staan. Zonder dat schuift elke regel een beetje, en juist het
+ * verschil tussen de kolommen is wat je hier afleest.
+ */
+.handen__kans {
+  min-width: 2.9rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.handen__pijl {
+  color: var(--goud-donker);
 }
 
 .handen__kaarten {
   display: flex;
   justify-self: end;
   gap: 0.15rem;
+}
+
+/*
+ * Op de smalste telefoons is de rij kaartjes niet meer in te korten zonder er
+ * een af te snijden, en juist het aantal kaartjes is de hele boodschap. Dan
+ * maar de tekst ernaast krap zetten: de kansen op hun eigen breedte in plaats
+ * van in een kolom, en de kaartjes een maatje kleiner.
+ */
+@media (max-width: 340px) {
+  .handen {
+    column-gap: 0.5rem;
+  }
+
+  .handen__kans {
+    min-width: 0;
+  }
+
+  .minikaart {
+    min-width: 1.45rem;
+    font-size: 0.7rem;
+  }
 }
 
 /*
