@@ -509,20 +509,22 @@ function SchemaVenster({
       <button type="button" className="schema__achtergrond" aria-label="Sluiten" onClick={onSluiten} />
       <div className="levelscherm__kaart schema">
         <span className="levelscherm__kop">Blindstructuur</span>
+        {/* De color-ups scrollen mee met de tabel. Eronder als vast blok drukten
+            ze in liggend scherm de tabel weg tot anderhalve regel. */}
         <div className="schema__lijst" ref={lijst}>
           <StructuurTabel
             levels={tournament.levels}
             levelMinutes={tournament.settings.levelMinutes}
             huidigLevel={tournament.levelIndex}
           />
+          {tournament.colorUps.map((moment) => (
+            <ColorUpRegel
+              key={moment.levelIndex}
+              label={`Level ${moment.levelIndex + 1}:`}
+              colorUp={moment}
+            />
+          ))}
         </div>
-        {tournament.colorUps.map((moment) => (
-          <ColorUpRegel
-            key={moment.levelIndex}
-            label={`Level ${moment.levelIndex + 1}:`}
-            colorUp={moment}
-          />
-        ))}
         <Button onClick={onSluiten}>Sluiten</Button>
       </div>
     </div>

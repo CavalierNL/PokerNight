@@ -293,10 +293,20 @@
   cursor: pointer;
 }
 
+/*
+ * Een kolom die niet buiten het scherm groeit: de kop, de uitleg en de knop
+ * houden hun hoogte, en de lijst ertussen krimpt tot de rest past. Met een
+ * vaste maximumhoogte op de lijst zelf viel de knop er liggend onderuit, want
+ * die maat weet niets van wat eromheen staat.
+ */
 .schema {
   grid-area: 1 / 1;
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
   width: min(22rem, 88vw);
   max-height: 86dvh;
   padding: 1.25rem 1rem;
@@ -306,8 +316,8 @@
 .schema__lijst {
   width: 100%;
   overflow-y: auto;
-  /* Wat er overblijft naast kop, color-ups en knop; de tabel scrollt zelf. */
-  max-height: 55vh;
+  /* Zonder dit krimpt een flex-item niet onder zijn inhoud. */
+  min-height: 0;
 }
 
 .eindscherm__winnaar {
@@ -430,22 +440,29 @@
   text-underline-offset: 0.25em;
 }
 
-/* De rangorde van de handen: naam links, het voorbeeld rechts. */
+/*
+ * De rangorde van de handen: de namen in de ene kolom, de voorbeelden in de
+ * andere. Eén raster voor de hele lijst, zodat elke hand op dezelfde x begint —
+ * rechts uitlijnen zette de kaarten op een rafelrand omdat de ene hand er vijf
+ * heeft en de andere één. Links uitgelijnd is de lengte van de rij juist het
+ * verschil tussen de handen.
+ */
 .handen {
-  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.35rem;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: center;
+  gap: 0.3rem 0.9rem;
+  font-size: 0.9rem;
 }
 
+/* De regel levert twee cellen aan het raster hierboven in plaats van zelf een
+   vakje te zijn; anders lijnt elke regel alleen met zichzelf uit. */
 .handen__regel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  display: contents;
 }
 
 .handen__naam {
@@ -455,7 +472,6 @@
 .handen__kaarten {
   display: flex;
   gap: 0.15rem;
-  flex-shrink: 0;
 }
 
 /*
@@ -463,15 +479,33 @@
  * en toch herkenbaar als kaart door het papierwit en de serif.
  */
 .minikaart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
   background: #f7f4ec;
   color: #22262b;
   border-radius: 2px;
-  padding: 0.1rem 0.15rem;
-  min-width: 1.55rem;
-  text-align: center;
+  padding: 0.1rem 0.2rem;
+  min-width: 1.7rem;
   font-family: var(--serif);
   font-size: 0.75rem;
   line-height: 1.3;
+}
+
+/*
+ * Staand is er hoogte over. De waarde boven de kleur zetten maakt het kaartje
+ * hoger dan breed — de verhouding van een echte kaart, en precies hoe de hoek
+ * van een kaart eruitziet. Liggend blijft het naast elkaar, want daar is de
+ * hoogte juist het schaarse.
+ */
+@media (orientation: portrait) {
+  .minikaart {
+    flex-direction: column;
+    gap: 0;
+    padding: 0.3rem 0.2rem;
+    line-height: 1.15;
+  }
 }
 
 .minikaart--rood {
