@@ -442,18 +442,16 @@
 
 /*
  * De rangorde van de handen: de namen in de ene kolom, de voorbeelden in de
- * andere. Eén raster voor de hele lijst, zodat elke hand op dezelfde x begint —
- * rechts uitlijnen zette de kaarten op een rafelrand omdat de ene hand er vijf
- * heeft en de andere één. Links uitgelijnd is de lengte van de rij juist het
- * verschil tussen de handen.
+ * andere. Eén raster voor de hele lijst, zodat de namen onder elkaar staan en
+ * de voorbeelden tegen dezelfde rechterrand eindigen.
  */
 .handen {
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: auto auto;
-  justify-content: start;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 0.3rem 0.9rem;
   font-size: 0.9rem;
@@ -471,6 +469,7 @@
 
 .handen__kaarten {
   display: flex;
+  justify-self: end;
   gap: 0.15rem;
 }
 
