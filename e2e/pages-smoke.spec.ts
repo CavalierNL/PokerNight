@@ -53,16 +53,25 @@ test.describe.serial('de gepubliceerde site', () => {
     const sha = process.env.GITHUB_SHA
     test.skip(!sha, 'Alleen zinvol in CI, waar GITHUB_SHA de gedeployde commit is.')
 
+    // Ruimer dan de 60 seconden uit de config, anders kapt de test zelf de poll
+    // hieronder af en leest een trage publicatie als een mislukte.
+    test.setTimeout(360_000)
+
     // Pages heeft na een deploy soms even nodig voordat de nieuwe versie overal
     // via de CDN te zien is. Hier wachten we daar echt op, in plaats van te
     // hopen dat een retry zonder wachttijd het oplost.
+    //
+    // Ruim genomen omdat we naar een branch publiceren: onze workflow is klaar
+    // zodra de push door is, maar daarna draait GitHub nog zijn eigen build over
+    // gh-pages. Die stap zit niet in onze wachtketen, dus hij valt volledig
+    // binnen deze poll.
     await expect
       .poll(
         async () => {
           await page.goto('./', { waitUntil: 'domcontentloaded' })
           return page.locator('meta[name="build-sha"]').getAttribute('content')
         },
-        { timeout: 120_000, intervals: [2_000] },
+        { timeout: 300_000, intervals: [5_000] },
       )
       .toBe(sha)
   })

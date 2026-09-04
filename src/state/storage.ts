@@ -1,11 +1,30 @@
 import { PRESETS, type Chipset } from '../domain/chipset'
 import type { Settings, Tournament } from '../domain/tournament'
 
+/**
+ * Onder welke naam deze build zijn spullen opslaat. `localStorage` hoort bij een
+ * origin en niet bij een pad, dus een PR-preview op
+ * /PokerNight/pr-preview/pr-12/ deelt de opslag met de echte site op
+ * /PokerNight/. Zonder eigen naam schrijft een preview met een andere
+ * OPSLAG_VERSIE over een lopend toernooi heen — precies de crash die die versie
+ * moest voorkomen, dan veroorzaakt door het uitproberen ervan.
+ *
+ * Het pad komt als parameter binnen zodat dit te testen is zonder een build met
+ * een andere base. De gewone site houdt `pokernight`, zodat bestaande opslag
+ * gewoon blijft staan.
+ */
+export function naamruimte(basisPad: string): string {
+  const pr = /\/pr-preview\/(pr-\d+)\//.exec(basisPad)?.[1]
+  return pr ? `pokernight.${pr}` : 'pokernight'
+}
+
+const NAAM = naamruimte(import.meta.env.BASE_URL)
+
 const SLEUTELS = {
-  tournament: 'pokernight.tournament',
-  chipsets: 'pokernight.chipsets',
-  settings: 'pokernight.settings',
-  preferences: 'pokernight.preferences',
+  tournament: `${NAAM}.tournament`,
+  chipsets: `${NAAM}.chipsets`,
+  settings: `${NAAM}.settings`,
+  preferences: `${NAAM}.preferences`,
 } as const
 
 /**

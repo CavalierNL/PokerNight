@@ -4,6 +4,7 @@ import {
   OPSLAG_VERSIE,
   loadPreferences,
   loadTournament,
+  naamruimte,
   saveChipsets,
   savePreferences,
   saveTournament,
@@ -135,6 +136,30 @@ describe('toernooi', () => {
     const t = createTournament(settings, KLEINE_DOOS, 1_000_000)
     opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE - 1, data: t }))
     expect(loadTournament()).toBeNull()
+  })
+})
+
+describe('naamruimte', () => {
+  it('houdt de gewone site op pokernight', () => {
+    // Deze namen staan al in de browsers van iedereen die de app gebruikt; een
+    // wijziging hier maakt hun lopende toernooi onvindbaar.
+    expect(naamruimte('/')).toBe('pokernight')
+    expect(naamruimte('/PokerNight/')).toBe('pokernight')
+  })
+
+  it('geeft elke PR-preview een eigen hoek', () => {
+    expect(naamruimte('/PokerNight/pr-preview/pr-12/')).toBe('pokernight.pr-12')
+    // Twee previews mogen elkaar niet in de weg zitten.
+    expect(naamruimte('/PokerNight/pr-preview/pr-3/')).not.toBe(
+      naamruimte('/PokerNight/pr-preview/pr-4/'),
+    )
+  })
+
+  it('trapt niet in een map die er alleen op lijkt', () => {
+    // Een echte pagina van de site die toevallig zo heet hoort de gewone opslag
+    // te houden; alleen het patroon dat de workflow maakt telt.
+    expect(naamruimte('/PokerNight/pr-preview/')).toBe('pokernight')
+    expect(naamruimte('/PokerNight/pr-previews/pr-12/')).toBe('pokernight')
   })
 })
 

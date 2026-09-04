@@ -10,6 +10,11 @@ import react from '@vitejs/plugin-react'
 // Lokaal (dev en preview) is de variabele leeg en draait de site op /.
 const repoNaam = process.env.GITHUB_REPOSITORY?.split('/')[1]
 
+// Een PR-preview staat dieper: /<reponaam>/pr-preview/pr-<n>/. Die base zit in
+// de bundel gebakken, dus dezelfde build is niet op twee plekken te gebruiken en
+// de previewworkflow zet hem hier. Leeg betekent: de gewone site.
+const base = process.env.PAGES_BASE || (repoNaam ? `/${repoNaam}/` : '/')
+
 // De commit die gebouwd is, als meta-tag in de HTML. Daarmee kan de rooktest
 // zien of hij de zojuist gepubliceerde versie te pakken heeft of nog een oude
 // uit de CDN-cache. Staat in de HTML zelf, dus leesbaar zonder dat de bundel al
@@ -31,7 +36,7 @@ function stempelBuildSha() {
 
 export default defineConfig({
   plugins: [react(), stempelBuildSha()],
-  base: repoNaam ? `/${repoNaam}/` : '/',
+  base,
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
   },

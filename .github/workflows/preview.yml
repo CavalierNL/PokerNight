@@ -1,0 +1,172 @@
+name: PR-preview
+
+# Zet elke PR als eigen site op gh-pages, onder pr-preview/pr-<n>/, en ruimt hem
+# op als de PR dichtgaat. De echte site staat in de root van diezelfde branch;
+# deploy.yml houdt deze map bij het publiceren met opzet heel.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # Opruimen luistert bewust naar pull_request_target: dat draait altijd de
+  # versie van dit bestand op de default branch (een branch kan zijn eigen
+  # teardown dus niet uitzetten) én het draait óók als de PR een merge-conflict
+  # heeft — precies de verlaten PR die je opgeruimd wilt hebben. De gebruikelijke
+  # waarschuwing bij pull_request_target geldt hier niet: bij dit event wordt er
+  # niets van de PR gebouwd of uitgevoerd, alleen het nummer gebruikt.
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+# Zelfde groepsnaam als in deploy.yml, per PR. Twee pushes op dezelfde PR wachten
+# dus niet op elkaar maar vervangen elkaar; botsingen tussen verschillende PR's
+# vangt de rebase-lus onderaan op.
+concurrency:
+  group: gh-pages-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Een PR vanaf een fork krijgt geen preview: github.token is daar read-only,
+    # wat je ook in permissions zet, dus de push zou toch falen. Overslaan is
+    # eerlijker dan een rode check op een PR waar de indiener niets aan kan doen.
+    # Bij het sluiten draait de job wel: die heeft de fork-kant niet nodig.
+    if: >-
+      github.event_name == 'pull_request_target'
+      || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: github.event_name == 'pull_request'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: github.event_name == 'pull_request'
+
+      - name: Bouw met de preview-base
+        if: github.event_name == 'pull_request'
+        env:
+          # De base zit in de bundel gebakken, dus een preview is een eigen build
+          # en niet dezelfde bestanden op een ander pad.
+          PAGES_BASE: /${{ github.event.repository.name }}/pr-preview/pr-${{ github.event.pull_request.number }}/
+        run: npm run build
+
+      - name: Controleer dat er echt een site uit kwam
+        if: github.event_name == 'pull_request'
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html ontbreekt"; exit 1; }
+
+      - name: Haal gh-pages op of maak hem aan
+        id: gh-pages
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            echo "bestaat=true" >> "$GITHUB_OUTPUT"
+          else
+            ls_exit=$?
+            if [ $ls_exit -eq 2 ]; then
+              echo "bestaat=false" >> "$GITHUB_OUTPUT"
+              mkdir -p gh-pages && cd gh-pages
+              git init -b gh-pages
+              git remote add origin "${REPO_URL}"
+            else
+              echo "::error::git ls-remote mislukte met exitcode ${ls_exit}"
+              exit 1
+            fi
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gh-pages.outputs.bestaat == 'true'
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Zet de preview neer
+        if: github.event_name == 'pull_request'
+        run: |
+          rm -rf "gh-pages/pr-preview/pr-${PR}"
+          mkdir -p "gh-pages/pr-preview/pr-${PR}"
+          cp -r dist/. "gh-pages/pr-preview/pr-${PR}/"
+
+      - name: Ruim de preview op
+        if: github.event_name == 'pull_request_target'
+        run: |
+          if [ -d "gh-pages/pr-preview/pr-${PR}" ]; then
+            rm -rf "gh-pages/pr-preview/pr-${PR}"
+          else
+            echo "Geen preview voor PR #${PR}, niets op te ruimen"
+          fi
+
+      - name: Push naar gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "Niets veranderd aan de preview"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            git commit -m "Ruim preview van PR #${PR} op"
+          else
+            git commit -m "Preview van PR #${PR}"
+          fi
+          gelukt=false
+          for poging in 1 2 3; do
+            if git push origin gh-pages; then
+              gelukt=true
+              break
+            fi
+            echo "::warning::Push mislukt (poging ${poging}/3), rebasen en opnieuw"
+            if ! git pull --rebase origin gh-pages; then
+              echo "::error::git pull --rebase mislukte op poging ${poging}/3"
+              git rebase --abort 2>/dev/null || true
+              exit 1
+            fi
+          done
+          if [ "$gelukt" != "true" ]; then
+            echo "::error::Push naar gh-pages mislukt na 3 pogingen"
+            exit 1
+          fi
+
+      - name: Zet de link in de PR
+        if: github.event_name == 'pull_request'
+        # Niet kritiek: de preview staat er al. Een mislukte comment (rate limit,
+        # rechten) mag een geslaagde publicatie niet rood maken.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          eigenaar=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          url="https://${eigenaar}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${PR}/"
+          # printf met enkele aanhalingstekens: de tekst mag niet inspringen (dat
+          # maakt er in Markdown een codeblok van) en de backticks eromheen mogen
+          # niet als commando-substitutie gelezen worden.
+          tekst=$(printf '🃏 **Preview:** %s\n\nEigen `localStorage`, dus een toernooi hier raakt de echte site niet.' "$url")
+          # Bijwerken in plaats van een nieuwe comment, anders groeit de PR bij
+          # elke push met een regel die hetzelfde zegt. De `|| true` is er omdat
+          # `head` de pijp sluit voordat `gh` klaar is met schrijven, en pipefail
+          # die SIGPIPE anders als een mislukte stap leest.
+          bestaand=$(gh api "repos/${REPO}/issues/${PR}/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("**Preview:**"))) | .id' \
+            | head -1 || true)
+          if [ -n "$bestaand" ]; then
+            gh api "repos/${REPO}/issues/comments/${bestaand}" -X PATCH -f body="${tekst}"
+          else
+            gh pr comment "${PR}" --body "${tekst}"
+          fi
