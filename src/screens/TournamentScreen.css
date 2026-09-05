@@ -318,6 +318,14 @@
   overflow-y: auto;
   /* Zonder dit krimpt een flex-item niet onder zijn inhoud. */
   min-height: 0;
+  /*
+   * Ruimte voor de focusrand van een veld in de eerste of laatste regel. Die
+   * rand ligt 3px buiten het veld (2px outline plus 1px offset) en `overflow`
+   * knipt hem af — ook als de lijst niet scrollt, want de clipping hangt aan de
+   * eigenschap en niet aan de inhoud. Op een telefoon viel de bovenrand van het
+   * bovenste invoerveld daardoor weg.
+   */
+  padding-block: 4px;
 }
 
 .eindscherm__winnaar {
