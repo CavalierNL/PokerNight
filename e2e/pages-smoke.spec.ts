@@ -385,6 +385,109 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.handen')).toHaveCount(0)
   })
 
+  test('rekent side pots uit voor de spelers aan tafel', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Ann\nBob\nCem\n')
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Side pots' }).click()
+    // De namen komen uit het toernooi, dus je tikt alleen bedragen in.
+    await expect(page.locator('.potinvoer__regel')).toHaveCount(3)
+
+    await page.getByLabel('Inzet van Ann').fill('200')
+    await page.getByLabel('Inzet van Bob').fill('200')
+    await page.getByLabel('Inzet van Cem').fill('50')
+
+    // Cem kon maar 50 mee: een hoofdpot van 150 waar hij om meespeelt, en een
+    // side pot van 300 waar alleen Ann en Bob om spelen. De totaalregel deelt de
+    // klasse met de potten, dus die hoort er hier niet bij.
+    const potten = page.locator('.potten__regel:not(.potten__regel--totaal)')
+    await expect(potten).toHaveCount(2)
+
+    // Wie er om speelt, niet in welke volgorde: de tafel wordt geloot, dus de
+    // zitvolgorde — en daarmee de volgorde in deze regel — verschilt per run.
+    const kanshebbers = async (index: number) =>
+      (await potten.nth(index).locator('.potten__spelers').innerText())
+        .split(',')
+        .map((naam) => naam.trim())
+        .sort()
+
+    await expect(potten.first()).toContainText('150')
+    expect(await kanshebbers(0)).toEqual(['Ann', 'Bob', 'Cem'])
+    await expect(potten.last()).toContainText('300')
+    expect(await kanshebbers(1)).toEqual(['Ann', 'Bob'])
+
+    // De labels: welke pot de hoofdpot is bepaalt aan tafel waar het geld heen
+    // gaat, dus dat mag niet stilletjes omdraaien.
+    await expect(potten.nth(0).locator('.potten__naam')).toHaveText('Hoofdpot')
+    await expect(potten.nth(1).locator('.potten__naam')).toHaveText('Side pot 1')
+
+    // Het totaal is de controle die aan tafel telt: klopt dit met wat er ligt?
+    await expect(page.locator('.potten__regel--totaal .potten__bedrag')).toHaveText('450')
+
+    // Wie folt betaalt mee maar dingt niet mee. Cem legde 50 in en Ann en Bob
+    // allebei 200, dus zonder Cem als kanshebber spelen boven én onder zijn
+    // niveau dezelfde twee mensen: één pot van 450 in plaats van twee.
+    await page.getByRole('button', { name: 'Fold voor Cem' }).click()
+    await expect(potten).toHaveCount(1)
+    await expect(potten.first().locator('.potten__bedrag')).toHaveText('450')
+    expect(await kanshebbers(0)).toEqual(['Ann', 'Bob'])
+
+    // Opzoeken is geen pauze: de klok loopt door.
+    await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await expect(page.locator('.potinvoer')).toHaveCount(0)
+  })
+
+  test('houdt twee spelers met dezelfde naam uit elkaar', async ({ page }) => {
+    // Namen zijn niet uniek — het setupscherm trimt ze alleen. Op naam
+    // gesleutelde invoer liet beide Jannen aan één veld hangen, met een pot die
+    // twee keer zo groot was als hij hoorde.
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Jan\nJan\nBob\n')
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Side pots' }).click()
+    const velden = page.locator('.potinvoer__bedrag')
+    await velden.nth(0).fill('50')
+    await velden.nth(1).fill('200')
+    await velden.nth(2).fill('200')
+
+    // Het eerste veld mag niet zijn meegesprongen met het tweede.
+    await expect(velden.nth(0)).toHaveValue('50')
+
+    // Hoofdpot 150 waar alle drie om spelen, side pot 300 voor de andere twee.
+    const potten = page.locator('.potten__regel:not(.potten__regel--totaal)')
+    await expect(potten).toHaveCount(2)
+    await expect(potten.nth(0).locator('.potten__bedrag')).toHaveText('150')
+    await expect(potten.nth(1).locator('.potten__bedrag')).toHaveText('300')
+    await expect(page.locator('.potten__regel--totaal .potten__bedrag')).toHaveText('450')
+
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+  })
+
+  test('toont wisselgeld apart van de potten', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Ann\nBob\n')
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Side pots' }).click()
+    await page.getByLabel('Inzet van Ann').fill('500')
+    await page.getByLabel('Inzet van Bob').fill('200')
+
+    // Ann ging hoger dan Bob kon volgen: 400 in de pot, 300 terug naar Ann. Dat
+    // is geen pot om te winnen maar wisselgeld, en hoort dus apart te staan.
+    const terug = page.locator('.potten__regel--terug')
+    await expect(terug.locator('.potten__bedrag')).toHaveText('300')
+    await expect(terug.locator('.potten__spelers')).toHaveText('Ann')
+    await expect(page.locator('.potten__regel--totaal .potten__bedrag')).toHaveText('700')
+
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+  })
+
   test('laat een laatkomer instappen', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
