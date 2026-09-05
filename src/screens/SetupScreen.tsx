@@ -36,11 +36,16 @@ export function SetupScreen({
   onTerug: () => void
   onGestart: () => void
 }) {
-  const { chipsets, settings, start, storageOk } = useAppState()
+  const { chipsets, settings, spelers, start, storageOk } = useAppState()
 
-  const [namenTekst, setNamenTekst] = useState(
-    settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
-  )
+  // De genummerde placeholders alleen als er niets beters is. Met een vaste
+  // spelerslijst is aantikken de gewone weg, en dan zou "Speler 1" tot en met
+  // "Speler 8" er als acht extra deelnemers onder blijven staan — die belanden
+  // vervolgens in het klassement, waar ze niet meer weg te krijgen zijn.
+  const [namenTekst, setNamenTekst] = useState(() => {
+    if (settings) return settings.playerNames.join('\n')
+    return spelers.length > 0 ? '' : STANDAARD_NAMEN
+  })
   /**
    * Leeg betekent "nog niet zelf gekozen": dan volgt het veld het voorstel, en
    * schuift het mee zodra je spelers, doos, speelduur of levels aanpast.
@@ -233,6 +238,48 @@ export function SetupScreen({
 
       <div className="setup__raster">
         <Panel title="Spelers">
+          {/*
+            De vaste spelers als aantikbare namen boven het veld. Getypt mag ook
+            — voor een gast, en omdat een lijst afdwingen betekent dat je hem
+            eerst moet vullen voordat je kunt spelen. Maar aantikken is de
+            gewone weg, en dat is wat het klassement nodig heeft: 'bram' en
+            'Bram' zijn daar twee mensen.
+          */}
+          {spelers.length > 0 && (
+            <div className="vastekeuze">
+              {spelers.map((naam) => {
+                const meedoen = spelerNamen.includes(naam)
+                return (
+                  <button
+                    key={naam}
+                    type="button"
+                    className={`vastekeuze__naam${meedoen ? ' vastekeuze__naam--aan' : ''}`}
+                    aria-pressed={meedoen}
+                    // Op de regels van het veld werken en niet op `spelerNamen`:
+                    // dat laatste is getrimd en ontdaan van lege regels, dus
+                    // herbouwen zou een half getypte naam tot volwaardige speler
+                    // promoveren en de afsluitende lege regel wegpoetsen waar de
+                    // cursor klaarstaat.
+                    onClick={() =>
+                      setNamenTekst((tekst) => {
+                        if (meedoen) {
+                          return tekst
+                            .split('\n')
+                            .filter((regel) => regel.trim() !== naam)
+                            .join('\n')
+                        }
+                        const scheiding = tekst === '' || tekst.endsWith('\n') ? '' : '\n'
+                        return `${tekst}${scheiding}${naam}\n`
+                      })
+                    }
+                  >
+                    {naam}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <label className="veld">
             <span>Namen, één per regel</span>
             <textarea rows={8} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
-export type Scherm = 'home' | 'nieuw' | 'chipsets' | 'instellingen'
+export type Scherm = 'home' | 'nieuw' | 'chipsets' | 'instellingen' | 'klassement'
 
-const SCHERMEN: Scherm[] = ['home', 'nieuw', 'chipsets', 'instellingen']
+const SCHERMEN: Scherm[] = ['home', 'nieuw', 'chipsets', 'instellingen', 'klassement']
 
 /**
  * Leest het scherm uit een history-state. Die state komt uit de browser en kan

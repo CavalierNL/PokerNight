@@ -81,7 +81,14 @@
  * Niet op `.veld input` maar op de velden zelf: de chipset-editor zet zijn
  * invoervelden niet in een `.veld`, en kreeg daardoor de witte blokjes van de
  * browser midden op het vilt.
+ *
+ * `:not([type])` hoort erbij omdat `type` weglaten geldig is — het is dan een
+ * tekstveld — maar `input[type='text']` daar niet op matcht. Zo'n veld kreeg
+ * geen enkele stijl: geen padding, geen `min-height`, en dus een veld van de
+ * halve hoogte naast de knop ernaast. Dat gebeurde stil, want het veld werkt
+ * verder gewoon.
  */
+input:not([type]),
 input[type='text'],
 input[type='number'],
 select,
@@ -96,6 +103,7 @@ textarea {
   width: 100%;
 }
 
+input:not([type]):focus-visible,
 input[type='text']:focus-visible,
 input[type='number']:focus-visible,
 select:focus-visible,
@@ -370,4 +378,34 @@ input[type='checkbox'] {
 .setup__kaart--twee {
   transform: rotate(7deg) translateX(-14px);
   margin-right: 0.25rem;
+}
+
+/*
+ * De vaste spelers als aantikbare namen boven het namenveld. Wikkelend, want met
+ * tien vaste spelers past één rij niet op een telefoon.
+ */
+.vastekeuze {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.vastekeuze__naam {
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--creme-zacht);
+  background: transparent;
+  border: 1px solid var(--creme-zacht);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Aangetikt is een vulling en geen randkleur: in het donker aan tafel is een
+   kleurverschil op een lijn van één pixel niet te zien. */
+.vastekeuze__naam--aan {
+  color: var(--felt-diep);
+  background: var(--creme-zacht);
+  border-color: var(--creme-zacht);
 }

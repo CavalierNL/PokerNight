@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App from './App'
 import { AppStateProvider } from './state/AppState'
-import { OPSLAG_VERSIE } from './state/storage'
+import { KLASSEMENT_VERSIE, OPSLAG_VERSIE } from './state/storage'
 import { TournamentScreen } from './screens/TournamentScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
 import { SetupScreen } from './screens/SetupScreen'
+import { KlassementScreen } from './screens/KlassementScreen'
 import { createTournament, type Settings } from './domain/tournament'
 import { STANDARD_500, TOERNOOI_DOOS } from './domain/chipset'
 import { prepareSetup } from './domain/setup'
@@ -487,5 +488,103 @@ describe('de keuze voor de blindreeks', () => {
       </AppStateProvider>,
     )
     expect(html).toContain('1-2-5')
+  })
+})
+
+describe('klassementscherm', () => {
+  function bewaarKlassement(avonden: unknown[], spelers: string[] = []) {
+    opslag.set(
+      'pokernight.avonden',
+      JSON.stringify({ version: KLASSEMENT_VERSIE, data: avonden }),
+    )
+    opslag.set(
+      'pokernight.spelers',
+      JSON.stringify({ version: KLASSEMENT_VERSIE, data: spelers }),
+    )
+  }
+
+  function render() {
+    return renderToStaticMarkup(
+      <AppStateProvider>
+        <KlassementScreen onClose={() => {}} />
+      </AppStateProvider>,
+    )
+  }
+
+  it('legt uit wat er te verwachten valt als er nog niets gespeeld is', () => {
+    bewaarKlassement([])
+    const html = render()
+    expect(html).toContain('Nog geen avond gespeeld')
+    expect(html).not.toContain('stand__regel')
+  })
+
+  it('toont de stand met punten, avonden en overwinningen', () => {
+    bewaarKlassement([
+      { id: 1, datum: Date.UTC(2026, 2, 3), uitslag: ['Ann', 'Bob'] },
+      { id: 2, datum: Date.UTC(2026, 2, 10), uitslag: ['Ann', 'Bob'] },
+    ])
+    const html = render()
+    // Ann tweemaal gewonnen: 2 + 2 punten.
+    expect(html).toContain('Ann')
+    expect(html).toContain('2× gewonnen')
+    // Enkelvoud en meervoud allebei, want beide takken staan in dezelfde regel.
+    expect(html).toContain('2 avonden')
+  })
+
+  it('toont een avond met één deelname in het enkelvoud', () => {
+    bewaarKlassement([{ id: 1, datum: Date.UTC(2026, 2, 3), uitslag: ['Ann', 'Bob'] }])
+    const html = render()
+    expect(html).toContain('1 avond<')
+    // Bob won niet, dus bij hem hoort de gewonnen-tekst weg te blijven.
+    expect(html).not.toContain('0× gewonnen')
+  })
+
+  it('zet elke overwinning met datum in de hall of fame', () => {
+    bewaarKlassement([{ id: 1, datum: Date.UTC(2026, 2, 3), uitslag: ['Ann', 'Bob'] }])
+    expect(render()).toContain('maart 2026')
+  })
+
+  /**
+   * De reden dat de stand en de vaste spelers op één scherm staan: dit is de
+   * enige plek waar zichtbaar wordt dat één persoon als twee spelers meetelt.
+   */
+  it('wijst namen aan die gespeeld hebben maar niet in de vaste lijst staan', () => {
+    bewaarKlassement([{ id: 1, datum: Date.UTC(2026, 2, 3), uitslag: ['Bram', 'gast'] }], ['Bram'])
+    const html = render()
+    const onbekend = html.slice(html.indexOf('vastelijst--onbekend'))
+    expect(onbekend).toContain('gast')
+    // Bram staat wél in de lijst, dus hij hoort niet in dit blok te staan.
+    expect(onbekend).not.toContain('Bram')
+  })
+
+  it('rekent een andere schrijfwijze niet als nieuwe naam', () => {
+    // 'bram' hoort hier niet als onbekende te verschijnen: de vaste lijst is er
+    // juist om die twee als één persoon te zien.
+    bewaarKlassement([{ id: 1, datum: Date.UTC(2026, 2, 3), uitslag: ['bram', 'Ann'] }], ['Bram'])
+    const html = render()
+    const onbekend = html.slice(html.indexOf('vastelijst--onbekend'))
+    expect(onbekend).not.toContain('bram<')
+  })
+})
+
+describe('eindscherm zonder winnaar', () => {
+  it('meldt dat deze avond niet meetelt voor het klassement', () => {
+    // Loopt een toernooi af op de klok met meerdere spelers over, dan is de
+    // bovenkant van de uitslag de zitvolgorde en niet een rangorde. Dat het
+    // daarom niet meetelt hoort hier te staan: op het klassementscherm staat die
+    // uitleg alleen in de lege staat, en die verdwijnt zodra er één avond in
+    // staat — precies wanneer er iets te missen valt.
+    const t = createTournament(settings, KLEINE_DOOS, 1_000_000)
+    opslag.set(
+      'pokernight.tournament',
+      JSON.stringify({ version: OPSLAG_VERSIE, data: { ...t, finishedAt: 2_000_000 } }),
+    )
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('De speelduur is om')
+    expect(html).toContain('telt niet mee voor het klassement')
   })
 })

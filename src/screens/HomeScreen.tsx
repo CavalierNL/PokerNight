@@ -12,10 +12,12 @@ import './SetupScreen.css'
 export function HomeScreen({
   onNieuw,
   onChipsets,
+  onKlassement,
   onInstellingen,
 }: {
   onNieuw: () => void
   onChipsets: () => void
+  onKlassement: () => void
   onInstellingen: () => void
 }) {
   const { installeer, alGeinstalleerd } = useInstallPrompt()
@@ -29,6 +31,9 @@ export function HomeScreen({
         <Button onClick={onNieuw}>Toernooi</Button>
         <Button variant="ghost" onClick={onChipsets}>
           Pokerdozen
+        </Button>
+        <Button variant="ghost" onClick={onKlassement}>
+          Klassement
         </Button>
         <Button variant="ghost" onClick={onInstellingen}>
           Instellingen

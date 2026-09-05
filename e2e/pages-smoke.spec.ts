@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 
 /**
@@ -383,6 +384,121 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)
     await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
     await expect(page.locator('.handen')).toHaveCount(0)
+  })
+
+  test('telt afgeronde avonden op in het klassement', async ({ page }) => {
+    async function speelAvond(winnaar: string, verliezer: string) {
+      await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+      await page.getByLabel('Namen, één per regel').fill(`${winnaar}\n${verliezer}\n`)
+      await startEnGaZitten(page)
+      await page.getByRole('button', { name: verliezer }).click()
+      await expect(page.locator('.eindscherm__winnaar')).toHaveText(winnaar)
+      await page.getByRole('button', { name: 'Klaar' }).click()
+    }
+
+    await page.goto('./')
+    await speelAvond('Yara', 'Xander')
+
+    await page.getByRole('button', { name: 'Klassement' }).click()
+    const yara = page.locator('.stand__regel', { hasText: 'Yara' })
+    const xander = page.locator('.stand__regel', { hasText: 'Xander' })
+    // Twee spelers, dus de winnaar krijgt er twee en de verliezer één.
+    await expect(yara.locator('.stand__punten')).toHaveText('2')
+    await expect(xander.locator('.stand__punten')).toHaveText('1')
+    await expect(yara).toContainText('1 avond')
+    await expect(yara).toContainText('1× gewonnen')
+
+    // De overwinning staat met datum in de hall of fame.
+    const vandaag = new Date().toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+    await expect(page.locator('.fame__regel')).toHaveCount(1)
+    await expect(page.locator('.fame__regel').first()).toContainText('Yara')
+    await expect(page.locator('.fame__regel').first()).toContainText(vandaag)
+
+    // Een tweede avond, nu andersom. Optellen over avonden is het enige wat
+    // dit scherm doet en zonder een tweede avond blijft dat ongedekt.
+    await page.getByRole('button', { name: 'Terug' }).click()
+    await speelAvond('Xander', 'Yara')
+    await page.getByRole('button', { name: 'Klassement' }).click()
+
+    // Allebei 3 punten en één overwinning, dus de naam beslist: Xander boven Yara.
+    await expect(yara.locator('.stand__punten')).toHaveText('3')
+    await expect(xander.locator('.stand__punten')).toHaveText('3')
+    await expect(page.locator('.stand__regel').first()).toContainText('Xander')
+    await expect(yara).toContainText('2 avonden')
+    await expect(page.locator('.fame__regel')).toHaveCount(2)
+  })
+
+  test('bewaart het klassement in een bestand en leest het terug', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Pim\nQuinn\n')
+    await startEnGaZitten(page)
+    await page.getByRole('button', { name: 'Quinn' }).click()
+
+    // Opslaan kan meteen op het eindscherm: dat is het moment waarop er iets
+    // nieuws te bewaren is en iedereen nog om de tafel zit.
+    const wachtOpDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Klassement opslaan' }).click()
+    const download = await wachtOpDownload
+
+    expect(download.suggestedFilename()).toMatch(/^pokernight-klassement-\d{4}-\d{2}-\d{2}\.json$/)
+    const pad = await download.path()
+    const inhoud = JSON.parse(await readFile(pad, 'utf8'))
+    expect(inhoud.app).toBe('pokernight')
+    expect(inhoud.avonden).toHaveLength(1)
+    expect(inhoud.avonden[0].uitslag).toEqual(['Pim', 'Quinn'])
+
+    await page.getByRole('button', { name: 'Klaar' }).click()
+
+    // Nu het klassement leegmaken alsof de browser het gewist heeft, en het
+    // bestand terugzetten.
+    await page.evaluate(() => localStorage.removeItem('pokernight.avonden'))
+    await page.reload()
+    await page.getByRole('button', { name: 'Klassement' }).click()
+    await expect(page.getByText('Nog geen avond gespeeld')).toBeVisible()
+
+    await page.locator('.bewaren__inlezen input').setInputFiles(pad)
+    await expect(page.getByText('1 avond ingelezen en samengevoegd.')).toBeVisible()
+    await expect(page.locator('.stand__regel', { hasText: 'Pim' })).toContainText('2')
+
+    // Nog een keer hetzelfde bestand mag niets verdubbelen.
+    await page.locator('.bewaren__inlezen input').setInputFiles(pad)
+    await expect(page.locator('.fame__regel')).toHaveCount(1)
+  })
+
+  test('houdt een vaste spelerslijst bij die het setupscherm aanbiedt', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Klassement' }).click()
+
+    await page.getByLabel('Naam erbij').fill('Nour')
+    await page.getByRole('button', { name: 'Toevoegen' }).click()
+    await expect(page.locator('.vastelijst__regel', { hasText: 'Nour' })).toBeVisible()
+
+    // Terug naar het setupscherm: de naam is daar aan te tikken, en komt dan in
+    // het namenveld te staan. Dat is de hele reden dat de lijst bestaat — zo
+    // wordt de schrijfwijze elke avond dezelfde.
+    await page.getByRole('button', { name: 'Terug' }).click()
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    const namen = page.getByLabel('Namen, één per regel')
+    await namen.fill('Ann\n')
+    await page.getByRole('button', { name: 'Nour' }).click()
+    // Met de afsluitende lege regel erachter: daar staat de cursor klaar voor de
+    // volgende naam, en die hoort een aangetikte naam niet weg te poetsen.
+    await expect(namen).toHaveValue('Ann\nNour\n')
+
+    // Nog een keer tikken haalt hem er weer uit.
+    await page.getByRole('button', { name: 'Nour' }).click()
+    await expect(namen).toHaveValue('Ann\n')
+
+    // En de lijst overleeft een herlaadbeurt. Zonder deze controle zou
+    // saveSpelers volledig kunnen wegvallen zonder dat één test het merkt.
+    await page.reload()
+    await page.getByRole('button', { name: 'Klassement' }).click()
+    await expect(page.locator('.vastelijst__regel', { hasText: 'Nour' })).toBeVisible()
   })
 
   test('rekent side pots uit voor de spelers aan tafel', async ({ page }) => {

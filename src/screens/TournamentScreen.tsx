@@ -5,6 +5,7 @@ import { useWakeLock } from '../hooks/useWakeLock'
 import { useLevelSound } from '../hooks/useLevelSound'
 import { useEindeWaarschuwing, waarschuwingsGrensMs } from '../hooks/useEindeWaarschuwing'
 import { useAppState } from '../state/AppState'
+import { bewaarAlsBestand } from '../state/bestand'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
 import { HandenVenster } from '../components/HandenVenster'
@@ -57,7 +58,8 @@ function formatteerDuur(ms: number): string {
 }
 
 export function TournamentScreen() {
-  const { tournament, dispatch, discard, preferences, chipsets, storageOk } = useAppState()
+  const { tournament, dispatch, discard, preferences, chipsets, avonden, spelers, storageOk } =
+    useAppState()
   const [stopBevestigen, setStopBevestigen] = useState(false)
   const [schemaOpen, setSchemaOpen] = useState(false)
   const [laatkomerOpen, setLaatkomerOpen] = useState(false)
@@ -419,6 +421,13 @@ export function TournamentScreen() {
                     <li key={speler.name + i}>{speler.name}</li>
                   ))}
                 </ol>
+                {/* Hier en niet alleen op het klassementscherm: daar staat de
+                    uitleg in de lege staat, en die is weg zodra er één avond in
+                    staat — precies wanneer je hem nodig hebt. */}
+                <p className="uitleg">
+                  Deze avond telt niet mee voor het klassement: zonder één winnaar is er geen
+                  volgorde om punten aan te hangen.
+                </p>
               </>
             )}
             <div className="levelscherm__knoppen">
@@ -426,6 +435,21 @@ export function TournamentScreen() {
               <Button variant="ghost" onClick={() => dispatch({ type: 'undo', now: Date.now() })}>
                 Ongedaan maken
               </Button>
+              {/*
+                Alleen als er een winnaar is, want alleen dan is deze avond
+                zojuist aan het klassement toegevoegd. Hier en niet alleen op het
+                klassementscherm: dit is het moment waarop er iets nieuws te
+                bewaren valt, en het enige moment waarop iedereen nog om de tafel
+                zit. Daarna klik je op Klaar en denk je er niet meer aan.
+              */}
+              {gewonnenDoor && (
+                <Button
+                  variant="ghost"
+                  onClick={() => bewaarAlsBestand(avonden, spelers, Date.now())}
+                >
+                  Klassement opslaan
+                </Button>
+              )}
               <Button onClick={discard}>Klaar</Button>
             </div>
           </div>

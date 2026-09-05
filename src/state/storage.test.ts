@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  KLASSEMENT_VERSIE,
+  loadAvonden,
   loadChipsets,
   OPSLAG_VERSIE,
   loadPreferences,
   loadTournament,
+  loadSpelers,
   naamruimte,
+  saveAvonden,
   saveChipsets,
   savePreferences,
+  saveSpelers,
   saveTournament,
 } from './storage'
 import { PRESETS } from '../domain/chipset'
@@ -197,12 +202,17 @@ describe('opslag van een preview', () => {
     opslagModule.saveChipsets(PRESETS)
     opslagModule.saveSettings(settings)
     opslagModule.savePreferences({ sound: false, wakeLock: true })
+    opslagModule.saveSpelers(['Ann'])
+    opslagModule.saveAvonden([{ id: 1, datum: 2, uitslag: ['Ann'] }])
 
-    // Alle vier, want één vergeten sleutel is precies de fout die niemand ziet.
+    // Allemaal, want één vergeten sleutel is precies de fout die niemand ziet.
+    // Komt er een sleutel bij, dan hoort hij hier ook bij te staan.
     expect([...opslag.keys()].sort()).toEqual([
+      'pokernight.pr-12.avonden',
       'pokernight.pr-12.chipsets',
       'pokernight.pr-12.preferences',
       'pokernight.pr-12.settings',
+      'pokernight.pr-12.spelers',
       'pokernight.pr-12.tournament',
     ])
   })
@@ -224,6 +234,96 @@ describe('opslag van een preview', () => {
   })
 })
 
+describe('vaste spelers', () => {
+  it('begint leeg', () => {
+    expect(loadSpelers()).toEqual([])
+  })
+
+  it('bewaart en leest de lijst terug', () => {
+    saveSpelers(['Ann', 'Bob'])
+    expect(loadSpelers()).toEqual(['Ann', 'Bob'])
+  })
+
+  it('gooit onbruikbare namen eruit in plaats van de hele lijst', () => {
+    // Eén kapot element hoort niet de vaste spelers van een heel seizoen te
+    // kosten.
+    opslag.set(
+      'pokernight.spelers',
+      JSON.stringify({ version: KLASSEMENT_VERSIE, data: ['Ann', 42, '', '  ', 'Bob'] }),
+    )
+    expect(loadSpelers()).toEqual(['Ann', 'Bob'])
+  })
+})
+
+describe('avonden', () => {
+  const avond = { id: 1, datum: 2, uitslag: ['Ann', 'Bob'] }
+
+  it('begint leeg', () => {
+    expect(loadAvonden()).toEqual([])
+  })
+
+  it('bewaart en leest avonden terug', () => {
+    saveAvonden([avond])
+    expect(loadAvonden()).toEqual([avond])
+  })
+
+  it('weigert een record op elke ontbrekende voorwaarde apart', () => {
+    // Per voorwaarde één record, elk met precies één mankement. Records die op
+    // meerdere gronden tegelijk afvallen bewijzen niet dat elke controle nog
+    // werkt: dan is er altijd een tweede die hem opvangt.
+    const kapot = [
+      { datum: 2, uitslag: ['Ann'] }, // geen id
+      { id: 1, uitslag: ['Ann'] }, // geen datum
+      { id: 1, datum: 2 }, // geen uitslag
+      { id: Number.NaN, datum: 2, uitslag: ['Ann'] }, // NaN komt door typeof heen
+      { id: 1, datum: Number.NaN, uitslag: ['Ann'] },
+      { id: 1, datum: 2, uitslag: ['Ann', 7] }, // niet elk element een naam
+      { id: 1, datum: 2, uitslag: [] }, // een avond zonder uitslag is geen avond
+      null,
+    ]
+    for (const record of kapot) {
+      opslag.set(
+        'pokernight.avonden',
+        JSON.stringify({ version: KLASSEMENT_VERSIE, data: [avond, record] }),
+      )
+      expect(loadAvonden(), JSON.stringify(record)).toEqual([avond])
+    }
+  })
+
+  it('geeft de avonden op datum terug, ook als de opslag ze door elkaar heeft', () => {
+    // De opslag garandeert geen volgorde; alleen wat via metAvond binnenkwam
+    // staat gesorteerd.
+    const later = { id: 9, datum: 99, uitslag: ['Bob'] }
+    opslag.set(
+      'pokernight.avonden',
+      JSON.stringify({ version: KLASSEMENT_VERSIE, data: [later, avond] }),
+    )
+    expect(loadAvonden().map((a) => a.id)).toEqual([1, 9])
+  })
+
+  it('negeert avonden uit een oudere klassementversie', () => {
+    opslag.set(
+      'pokernight.avonden',
+      JSON.stringify({ version: KLASSEMENT_VERSIE - 1, data: [avond] }),
+    )
+    expect(loadAvonden()).toEqual([])
+  })
+
+  it('overleeft een bump van OPSLAG_VERSIE', () => {
+    // Dit is de hele reden dat het klassement een eigen versie heeft. Een bump
+    // van OPSLAG_VERSIE hoort bij de vorm van een toernooi, en die gooit met
+    // opzet weg — maar het klassement gaat jaren mee en mag daar niet in
+    // meegesleept worden.
+    saveAvonden([avond])
+    saveSpelers(['Ann'])
+    const opgeslagen = JSON.parse(opslag.get('pokernight.avonden') as string)
+    expect(opgeslagen.version).toBe(KLASSEMENT_VERSIE)
+    expect(opgeslagen.version).not.toBe(OPSLAG_VERSIE)
+    expect(loadAvonden()).toEqual([avond])
+    expect(loadSpelers()).toEqual(['Ann'])
+  })
+})
+
 describe('mislukte opslag', () => {
   it('meldt het in plaats van stil door te gaan', () => {
     vi.stubGlobal('localStorage', {
@@ -238,5 +338,9 @@ describe('mislukte opslag', () => {
     })
     expect(saveChipsets(PRESETS)).toBe('mislukt')
     expect(saveTournament(createTournament(settings, KLEINE_DOOS, 1))).toBe('mislukt')
+    // Ook het klassement: dat is de enige onherstelbare data in de app, dus als
+    // er íets moet melden dat de opslag vol zit is het dit.
+    expect(saveAvonden([{ id: 1, datum: 2, uitslag: ['Ann'] }])).toBe('mislukt')
+    expect(saveSpelers(['Ann'])).toBe('mislukt')
   })
 })

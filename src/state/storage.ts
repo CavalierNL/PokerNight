@@ -1,4 +1,5 @@
 import { PRESETS, type Chipset } from '../domain/chipset'
+import { isAvond, type Avond } from '../domain/klassement'
 import type { Settings, Tournament } from '../domain/tournament'
 
 /**
@@ -37,6 +38,8 @@ const SLEUTELS = {
   chipsets: `${NAAM}.chipsets`,
   settings: `${NAAM}.settings`,
   preferences: `${NAAM}.preferences`,
+  spelers: `${NAAM}.spelers`,
+  avonden: `${NAAM}.avonden`,
 } as const
 
 /**
@@ -45,6 +48,22 @@ const SLEUTELS = {
  * krijgt iedereen met een lopend toernooi na een deploy een gecrashte app.
  */
 export const OPSLAG_VERSIE = 6
+
+/**
+ * Een eigen versie voor het klassement, los van OPSLAG_VERSIE.
+ *
+ * Die laatste heeft wegwerp-semantiek: bij een bump verdwijnt alles met een
+ * ander nummer, en dat is verdedigbaar voor een lopend toernooi — dat is één
+ * avond. De avonden en de vaste spelers zijn het enige in deze app dat jaren
+ * meegaat. Zonder deze scheiding zou een bump voor een veldje in Settings het
+ * hele klassement wissen, waarna het bewaar-effect de lege lijst er ook nog
+ * overheen schrijft. Onherstelbaar, en niet te onderscheiden van een verse
+ * installatie.
+ *
+ * Verhoog dit dus alleen als de vorm van een `Avond` of van de spelerslijst
+ * zelf verandert, en bedenk dan dat er echt iets weggegooid wordt.
+ */
+export const KLASSEMENT_VERSIE = 1
 
 export type Preferences = { sound: boolean; wakeLock: boolean }
 
@@ -57,21 +76,21 @@ export type OpslagStatus = 'ok' | 'mislukt'
  * JSON stuk is, of de versie niet klopt. De vorm van het resultaat wordt hier
  * níet gecontroleerd — dat doet de aanroeper, want alleen die weet wat geldig is.
  */
-function lees(sleutel: string): unknown {
+function lees(sleutel: string, versie = OPSLAG_VERSIE): unknown {
   try {
     const ruw = localStorage.getItem(sleutel)
     if (ruw === null) return undefined
     const envelop = JSON.parse(ruw) as { version?: number; data?: unknown }
-    if (envelop?.version !== OPSLAG_VERSIE) return undefined
+    if (envelop?.version !== versie) return undefined
     return envelop.data
   } catch {
     return undefined
   }
 }
 
-function schrijf(sleutel: string, waarde: unknown): OpslagStatus {
+function schrijf(sleutel: string, waarde: unknown, versie = OPSLAG_VERSIE): OpslagStatus {
   try {
-    localStorage.setItem(sleutel, JSON.stringify({ version: OPSLAG_VERSIE, data: waarde }))
+    localStorage.setItem(sleutel, JSON.stringify({ version: versie, data: waarde }))
     return 'ok'
   } catch {
     // Opslag vol of geblokkeerd. De aanroeper geeft dit door aan het scherm; stil
@@ -162,4 +181,41 @@ export function loadPreferences(): Preferences {
 
 export function savePreferences(preferences: Preferences): OpslagStatus {
   return schrijf(SLEUTELS.preferences, preferences)
+}
+
+/**
+ * De vaste spelers van de groep. Bestaat zodat het klassement dezelfde persoon
+ * over meerdere avonden herkent: namen worden aangetikt in plaats van getypt, en
+ * dan levert 'bram' geen tweede Bram op naast 'Bram'.
+ */
+export function loadSpelers(): string[] {
+  const waarde = lees(SLEUTELS.spelers, KLASSEMENT_VERSIE)
+  if (!Array.isArray(waarde)) return []
+  return waarde.filter((naam): naam is string => typeof naam === 'string' && naam.trim() !== '')
+}
+
+export function saveSpelers(spelers: string[]): OpslagStatus {
+  return schrijf(SLEUTELS.spelers, spelers, KLASSEMENT_VERSIE)
+}
+
+/**
+ * Controleert of een ingelezen avond bruikbaar is. Net als bij een toernooi:
+ * zonder deze controle crasht het klassementscherm op de eerste render en blijft
+ * het kapotte record staan, waardoor het scherm onbereikbaar wordt.
+ */
+export function loadAvonden(): Avond[] {
+  const waarde = lees(SLEUTELS.avonden, KLASSEMENT_VERSIE)
+  if (!Array.isArray(waarde)) return []
+  // Per avond filteren en niet alles weigeren bij één kapot record: dat kost
+  // hoogstens één avond in plaats van het hele klassement. Let op dat de
+  // aanroeper de gefilterde lijst niet ongevraagd terugschrijft — dan is dat
+  // ene record definitief weg in plaats van overgeslagen.
+  //
+  // Sorteren hoort hier omdat de opslag geen volgorde garandeert: alleen wat via
+  // metAvond binnenkwam staat op datum, en een handmatig aangepaste opslag niet.
+  return waarde.filter(isAvond).sort((a, b) => a.datum - b.datum)
+}
+
+export function saveAvonden(avonden: Avond[]): OpslagStatus {
+  return schrijf(SLEUTELS.avonden, avonden, KLASSEMENT_VERSIE)
 }

@@ -5,6 +5,7 @@ import { HomeScreen } from './screens/HomeScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
+import { KlassementScreen } from './screens/KlassementScreen'
 import { ResumePrompt } from './screens/ResumePrompt'
 import { useScherm } from './hooks/useScherm'
 
@@ -38,11 +39,14 @@ function Inhoud() {
       return <ChipsetScreen onClose={terug} />
     case 'instellingen':
       return <SettingsScreen onClose={terug} />
+    case 'klassement':
+      return <KlassementScreen onClose={terug} />
     default:
       return (
         <HomeScreen
           onNieuw={() => ga('nieuw')}
           onChipsets={() => ga('chipsets')}
+          onKlassement={() => ga('klassement')}
           onInstellingen={() => ga('instellingen')}
         />
       )
