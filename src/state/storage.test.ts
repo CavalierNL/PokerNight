@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  loadAvonden,
   loadChipsets,
   OPSLAG_VERSIE,
   loadPreferences,
   loadTournament,
+  loadSpelers,
   naamruimte,
+  saveAvonden,
   saveChipsets,
   savePreferences,
+  saveSpelers,
   saveTournament,
 } from './storage'
 import { PRESETS } from '../domain/chipset'
@@ -197,12 +201,17 @@ describe('opslag van een preview', () => {
     opslagModule.saveChipsets(PRESETS)
     opslagModule.saveSettings(settings)
     opslagModule.savePreferences({ sound: false, wakeLock: true })
+    opslagModule.saveSpelers(['Ann'])
+    opslagModule.saveAvonden([{ id: 1, datum: 2, uitslag: ['Ann'] }])
 
-    // Alle vier, want één vergeten sleutel is precies de fout die niemand ziet.
+    // Allemaal, want één vergeten sleutel is precies de fout die niemand ziet.
+    // Komt er een sleutel bij, dan hoort hij hier ook bij te staan.
     expect([...opslag.keys()].sort()).toEqual([
+      'pokernight.pr-12.avonden',
       'pokernight.pr-12.chipsets',
       'pokernight.pr-12.preferences',
       'pokernight.pr-12.settings',
+      'pokernight.pr-12.spelers',
       'pokernight.pr-12.tournament',
     ])
   })
@@ -221,6 +230,59 @@ describe('opslag van een preview', () => {
     // hij vangt een preview die niet alleen leest maar ook overschrijft.
     const opnieuw = await laadOnder('/PokerNight/')
     expect(opnieuw.loadTournament()?.settings.startingStack).toBe(settings.startingStack)
+  })
+})
+
+describe('vaste spelers', () => {
+  it('begint leeg', () => {
+    expect(loadSpelers()).toEqual([])
+  })
+
+  it('bewaart en leest de lijst terug', () => {
+    saveSpelers(['Ann', 'Bob'])
+    expect(loadSpelers()).toEqual(['Ann', 'Bob'])
+  })
+
+  it('gooit onbruikbare namen eruit in plaats van de hele lijst', () => {
+    // Eén kapot element hoort niet de vaste spelers van een heel seizoen te
+    // kosten.
+    opslag.set(
+      'pokernight.spelers',
+      JSON.stringify({ version: OPSLAG_VERSIE, data: ['Ann', 42, '', '  ', 'Bob'] }),
+    )
+    expect(loadSpelers()).toEqual(['Ann', 'Bob'])
+  })
+})
+
+describe('avonden', () => {
+  const avond = { id: 1, datum: 2, uitslag: ['Ann', 'Bob'] }
+
+  it('begint leeg', () => {
+    expect(loadAvonden()).toEqual([])
+  })
+
+  it('bewaart en leest avonden terug', () => {
+    saveAvonden([avond])
+    expect(loadAvonden()).toEqual([avond])
+  })
+
+  it('houdt de goede avonden over als er één kapot is', () => {
+    opslag.set(
+      'pokernight.avonden',
+      JSON.stringify({
+        version: OPSLAG_VERSIE,
+        data: [avond, { id: 'fout' }, { id: 2, datum: 3, uitslag: [7] }, null],
+      }),
+    )
+    expect(loadAvonden()).toEqual([avond])
+  })
+
+  it('negeert avonden uit een oudere versie van de app', () => {
+    opslag.set(
+      'pokernight.avonden',
+      JSON.stringify({ version: OPSLAG_VERSIE - 1, data: [avond] }),
+    )
+    expect(loadAvonden()).toEqual([])
   })
 })
 

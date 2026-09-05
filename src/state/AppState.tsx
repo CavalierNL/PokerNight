@@ -2,20 +2,28 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import {
   createTournament,
+  isAfgelopen,
   reduce,
+  uitslag,
+  winnaar,
   type Action,
   type Settings,
   type Tournament,
 } from '../domain/tournament'
+import { metAvond, type Avond } from '../domain/klassement'
 import type { Chipset } from '../domain/chipset'
 import {
+  loadAvonden,
   loadChipsets,
   loadPreferences,
   loadSettings,
+  loadSpelers,
   loadTournament,
+  saveAvonden,
   saveChipsets,
   savePreferences,
   saveSettings,
+  saveSpelers,
   saveTournament,
   type OpslagStatus,
   type Preferences,
@@ -26,6 +34,10 @@ type AppState = {
   settings: Settings | null
   chipsets: Chipset[]
   preferences: Preferences
+  /** De vaste spelers van de groep, waaruit het setupscherm laat kiezen. */
+  spelers: string[]
+  /** Elke afgeronde avond, oplopend op datum. Voedt het klassement. */
+  avonden: Avond[]
   /** `false` zodra opslaan een keer mislukt is; het scherm waarschuwt dan. */
   storageOk: boolean
   start: (settings: Settings, chipset: Chipset) => void
@@ -33,6 +45,7 @@ type AppState = {
   discard: () => void
   setChipsets: (chipsets: Chipset[]) => void
   setPreferences: (preferences: Preferences) => void
+  setSpelers: (spelers: string[]) => void
 }
 
 const Context = createContext<AppState | null>(null)
@@ -42,6 +55,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings | null>(() => loadSettings())
   const [chipsets, setChipsetsState] = useState<Chipset[]>(() => loadChipsets())
   const [preferences, setPreferencesState] = useState<Preferences>(() => loadPreferences())
+  const [spelers, setSpelersState] = useState<string[]>(() => loadSpelers())
+  const [avonden, setAvonden] = useState<Avond[]>(() => loadAvonden())
   const [storageOk, setStorageOk] = useState(true)
 
   const meld = useCallback((status: OpslagStatus) => {
@@ -61,7 +76,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     meld(saveChipsets(chipsets))
     meld(savePreferences(preferences))
-  }, [chipsets, preferences, meld])
+    meld(saveSpelers(spelers))
+    meld(saveAvonden(avonden))
+  }, [chipsets, preferences, spelers, avonden, meld])
+
+  /**
+   * Schrijft een afgeronde avond bij in het klassement.
+   *
+   * Alleen als er één winnaar is. Loopt een toernooi af op de klok met meerdere
+   * spelers over, dan is de bovenkant van `uitslag` gewoon de zitvolgorde, en
+   * daar punten aan hangen zou iemand een overwinning geven die hij niet
+   * gespeeld heeft.
+   *
+   * `metAvond` is idempotent op het starttijdstip, dus dit effect mag zo vaak
+   * lopen als het wil zonder dezelfde avond twee keer bij te schrijven.
+   */
+  useEffect(() => {
+    if (!tournament || !isAfgelopen(tournament) || !winnaar(tournament)) return
+    const avond: Avond = {
+      id: tournament.startedAt,
+      datum: tournament.finishedAt ?? tournament.startedAt,
+      uitslag: uitslag(tournament).map((speler) => speler.name),
+    }
+    setAvonden((huidig) => metAvond(huidig, avond))
+  }, [tournament])
 
   const start = useCallback(
     (nieuwe: Settings, chipset: Chipset) => {
@@ -84,14 +122,28 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       settings,
       chipsets,
       preferences,
+      spelers,
+      avonden,
       storageOk,
       start,
       dispatch,
       discard,
       setChipsets: setChipsetsState,
       setPreferences: setPreferencesState,
+      setSpelers: setSpelersState,
     }),
-    [tournament, settings, chipsets, preferences, storageOk, start, dispatch, discard],
+    [
+      tournament,
+      settings,
+      chipsets,
+      preferences,
+      spelers,
+      avonden,
+      storageOk,
+      start,
+      dispatch,
+      discard,
+    ],
   )
 
   return <Context.Provider value={waarde}>{children}</Context.Provider>

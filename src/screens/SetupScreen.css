@@ -371,3 +371,33 @@ input[type='checkbox'] {
   transform: rotate(7deg) translateX(-14px);
   margin-right: 0.25rem;
 }
+
+/*
+ * De vaste spelers als aantikbare namen boven het namenveld. Wikkelend, want met
+ * tien vaste spelers past één rij niet op een telefoon.
+ */
+.vastekeuze {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.vastekeuze__naam {
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--creme-zacht);
+  background: transparent;
+  border: 1px solid var(--creme-zacht);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Aangetikt is een vulling en geen randkleur: in het donker aan tafel is een
+   kleurverschil op een lijn van één pixel niet te zien. */
+.vastekeuze__naam--aan {
+  color: var(--felt-diep);
+  background: var(--creme-zacht);
+  border-color: var(--creme-zacht);
+}

@@ -385,6 +385,59 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.handen')).toHaveCount(0)
   })
 
+  test('schrijft een afgeronde avond bij in het klassement', async ({ page }) => {
+    // Eigen namen: de tests delen één browser, dus er staan al avonden van
+    // eerdere tests in het klassement. Alleen deze twee regels zijn van ons.
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Xander\nYara\n')
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Xander' }).click()
+    await expect(page.locator('.eindscherm__winnaar')).toHaveText('Yara')
+    await page.getByRole('button', { name: 'Klaar' }).click()
+
+    await page.getByRole('button', { name: 'Klassement' }).click()
+    const yara = page.locator('.stand__regel', { hasText: 'Yara' })
+    const xander = page.locator('.stand__regel', { hasText: 'Xander' })
+    // Twee spelers, dus de winnaar krijgt er twee en de verliezer één.
+    await expect(yara.locator('.stand__punten')).toHaveText('2')
+    await expect(xander.locator('.stand__punten')).toHaveText('1')
+    await expect(yara).toContainText('1× gewonnen')
+
+    // En de overwinning staat met datum in de hall of fame.
+    const vandaag = new Date().toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+    await expect(page.locator('.fame__regel').first()).toContainText('Yara')
+    await expect(page.locator('.fame__regel').first()).toContainText(vandaag)
+  })
+
+  test('houdt een vaste spelerslijst bij die het setupscherm aanbiedt', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Klassement' }).click()
+
+    await page.getByLabel('Naam erbij').fill('Nour')
+    await page.getByRole('button', { name: 'Toevoegen' }).click()
+    await expect(page.locator('.vastelijst__regel', { hasText: 'Nour' })).toBeVisible()
+
+    // Terug naar het setupscherm: de naam is daar aan te tikken, en komt dan in
+    // het namenveld te staan. Dat is de hele reden dat de lijst bestaat — zo
+    // wordt de schrijfwijze elke avond dezelfde.
+    await page.getByRole('button', { name: 'Terug' }).click()
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    const namen = page.getByLabel('Namen, één per regel')
+    await namen.fill('Ann\n')
+    await page.getByRole('button', { name: 'Nour' }).click()
+    await expect(namen).toHaveValue('Ann\nNour')
+
+    // Nog een keer tikken haalt hem er weer uit.
+    await page.getByRole('button', { name: 'Nour' }).click()
+    await expect(namen).toHaveValue('Ann')
+  })
+
   test('laat een laatkomer instappen', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()

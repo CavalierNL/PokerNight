@@ -1,4 +1,5 @@
 import { PRESETS, type Chipset } from '../domain/chipset'
+import type { Avond } from '../domain/klassement'
 import type { Settings, Tournament } from '../domain/tournament'
 
 /**
@@ -37,6 +38,8 @@ const SLEUTELS = {
   chipsets: `${NAAM}.chipsets`,
   settings: `${NAAM}.settings`,
   preferences: `${NAAM}.preferences`,
+  spelers: `${NAAM}.spelers`,
+  avonden: `${NAAM}.avonden`,
 } as const
 
 /**
@@ -162,4 +165,44 @@ export function loadPreferences(): Preferences {
 
 export function savePreferences(preferences: Preferences): OpslagStatus {
   return schrijf(SLEUTELS.preferences, preferences)
+}
+
+/**
+ * De vaste spelers van de groep. Bestaat zodat het klassement dezelfde persoon
+ * over meerdere avonden herkent: namen worden aangetikt in plaats van getypt, en
+ * dan levert 'bram' geen tweede Bram op naast 'Bram'.
+ */
+export function loadSpelers(): string[] {
+  const waarde = lees(SLEUTELS.spelers)
+  if (!Array.isArray(waarde)) return []
+  return waarde.filter((naam): naam is string => typeof naam === 'string' && naam.trim() !== '')
+}
+
+export function saveSpelers(spelers: string[]): OpslagStatus {
+  return schrijf(SLEUTELS.spelers, spelers)
+}
+
+/**
+ * Controleert of een ingelezen avond bruikbaar is. Net als bij een toernooi:
+ * zonder deze controle crasht het klassementscherm op de eerste render en blijft
+ * het kapotte record staan, waardoor het scherm onbereikbaar wordt.
+ */
+function isAvond(waarde: unknown): waarde is Avond {
+  if (!isObject(waarde)) return false
+  if (typeof waarde.id !== 'number' || typeof waarde.datum !== 'number') return false
+  return (
+    Array.isArray(waarde.uitslag) && waarde.uitslag.every((naam) => typeof naam === 'string')
+  )
+}
+
+export function loadAvonden(): Avond[] {
+  const waarde = lees(SLEUTELS.avonden)
+  if (!Array.isArray(waarde)) return []
+  // Per avond filteren en niet alles weggooien bij één kapot record: een
+  // klassement van twee jaar hoort niet te verdwijnen door een enkele avond.
+  return waarde.filter(isAvond)
+}
+
+export function saveAvonden(avonden: Avond[]): OpslagStatus {
+  return schrijf(SLEUTELS.avonden, avonden)
 }

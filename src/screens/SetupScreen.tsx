@@ -36,7 +36,7 @@ export function SetupScreen({
   onTerug: () => void
   onGestart: () => void
 }) {
-  const { chipsets, settings, start, storageOk } = useAppState()
+  const { chipsets, settings, spelers, start, storageOk } = useAppState()
 
   const [namenTekst, setNamenTekst] = useState(
     settings ? settings.playerNames.join('\n') : STANDAARD_NAMEN,
@@ -233,6 +233,39 @@ export function SetupScreen({
 
       <div className="setup__raster">
         <Panel title="Spelers">
+          {/*
+            De vaste spelers als aantikbare namen boven het veld. Getypt mag ook
+            — voor een gast, en omdat een lijst afdwingen betekent dat je hem
+            eerst moet vullen voordat je kunt spelen. Maar aantikken is de
+            gewone weg, en dat is wat het klassement nodig heeft: 'bram' en
+            'Bram' zijn daar twee mensen.
+          */}
+          {spelers.length > 0 && (
+            <div className="vastekeuze">
+              {spelers.map((naam) => {
+                const meedoen = spelerNamen.includes(naam)
+                return (
+                  <button
+                    key={naam}
+                    type="button"
+                    className={`vastekeuze__naam${meedoen ? ' vastekeuze__naam--aan' : ''}`}
+                    aria-pressed={meedoen}
+                    onClick={() =>
+                      setNamenTekst(
+                        (meedoen
+                          ? spelerNamen.filter((andere) => andere !== naam)
+                          : [...spelerNamen, naam]
+                        ).join('\n'),
+                      )
+                    }
+                  >
+                    {naam}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <label className="veld">
             <span>Namen, één per regel</span>
             <textarea rows={8} value={namenTekst} onChange={(e) => setNamenTekst(e.target.value)} />
