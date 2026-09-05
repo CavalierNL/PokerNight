@@ -76,9 +76,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     meld(saveChipsets(chipsets))
     meld(savePreferences(preferences))
-    meld(saveSpelers(spelers))
+  }, [chipsets, preferences, meld])
+
+  /**
+   * Het klassement in een eigen effect, en niet bij de chipsets hierboven.
+   *
+   * Twee redenen. Het klassement is het enige in deze app dat jaren meegaat, dus
+   * het hoort niet meegeschreven te worden als er iets aan een pokerdoos of aan
+   * het geluid verandert — zou het klassement ooit leeg ingelezen worden, dan
+   * legde één keer geluid uitzetten dat meteen vast. En bij een volle opslag
+   * gaat dit als eerste, zodat de ruimte niet al op is aan gegevens die je zo
+   * weer opnieuw maakt.
+   */
+  const eersteKlassementRender = useRef(true)
+  useEffect(() => {
+    if (eersteKlassementRender.current) {
+      eersteKlassementRender.current = false
+      return
+    }
     meld(saveAvonden(avonden))
-  }, [chipsets, preferences, spelers, avonden, meld])
+    meld(saveSpelers(spelers))
+  }, [avonden, spelers, meld])
 
   /**
    * Schrijft een afgeronde avond bij in het klassement.
@@ -88,13 +106,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    * daar punten aan hangen zou iemand een overwinning geven die hij niet
    * gespeeld heeft.
    *
-   * `metAvond` is idempotent op het starttijdstip, dus dit effect mag zo vaak
-   * lopen als het wil zonder dezelfde avond twee keer bij te schrijven.
+   * `metAvond` sleutelt op het starttijdstip, dus een refresh — waarbij het
+   * afgeronde toernooi opnieuw uit de opslag komt — schrijft niet nog een keer
+   * bij. Wordt de uitslag na "Ongedaan maken" alsnog een andere, dan vervangt
+   * die de eerste; zie `metAvond`.
    */
   useEffect(() => {
     if (!tournament || !isAfgelopen(tournament) || !winnaar(tournament)) return
     const avond: Avond = {
       id: tournament.startedAt,
+      // `isAfgelopen` is `finishedAt !== undefined`, maar dat narrowt het type
+      // niet; vandaar de fallback, die onbereikbaar is.
       datum: tournament.finishedAt ?? tournament.startedAt,
       uitslag: uitslag(tournament).map((speler) => speler.name),
     }

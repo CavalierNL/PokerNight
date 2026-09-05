@@ -22,8 +22,9 @@ function datumTekst(ms: number): string {
  *
  * Die twee staan bewust op één scherm: het klassement herkent dezelfde persoon
  * alleen als de naam elke avond precies gelijk is, en dat lukt door hem aan te
- * tikken in plaats van te typen. Wie hier ontbreekt valt in het klassement uiteen
- * in twee mensen, en dat zie je nergens anders.
+ * tikken in plaats van te typen. Wordt een naam de ene avond anders geschreven
+ * dan de andere, dan staat diezelfde persoon in het klassement als twee spelers
+ * — en dit scherm is de enige plek waar dat op te merken valt.
  */
 export function KlassementScreen({ onClose }: { onClose: () => void }) {
   const { spelers, avonden, setSpelers, storageOk } = useAppState()
@@ -32,15 +33,27 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
   const stand = klassement(avonden)
   const overwinningen = hallOfFame(avonden)
 
+  /** Voor het vergelijken van namen; zie `bestaatAl`. */
+  function genormaliseerd(naam: string): string {
+    return naam.trim().toLocaleLowerCase('nl')
+  }
+
+  // Hoofdletterongevoelig, want de hele reden dat deze lijst bestaat is dat
+  // 'bram' en 'Bram' niet twee mensen worden. Hem letterlijk vergelijken zou
+  // precies dat toelaten in de lijst die het moet voorkomen.
+  function bestaatAl(naam: string): boolean {
+    return spelers.some((andere) => genormaliseerd(andere) === genormaliseerd(naam))
+  }
+
   // Namen die wel gespeeld hebben maar niet in de vaste lijst staan. Meestal een
   // gast, soms een tikfout die het klassement in tweeën heeft gehakt.
   const onbekend = [...new Set(stand.map((regel) => regel.naam))].filter(
-    (naam) => !spelers.includes(naam),
+    (naam) => !bestaatAl(naam),
   )
 
   function voegToe(naam: string) {
     const schoon = naam.trim()
-    if (schoon === '' || spelers.includes(schoon)) return
+    if (schoon === '' || bestaatAl(schoon)) return
     setSpelers([...spelers, schoon])
     setNieuw('')
   }
@@ -137,18 +150,32 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
               <span>Naam erbij</span>
               <input value={nieuw} onChange={(e) => setNieuw(e.target.value)} />
             </label>
-            <Button type="submit" variant="ghost" disabled={nieuw.trim() === ''}>
+            <Button type="submit" variant="ghost" disabled={nieuw.trim() === '' || bestaatAl(nieuw)}>
               Toevoegen
             </Button>
           </form>
 
+          {/* Zonder deze regel doet de knop niets en zegt niets, en sta je naar
+              een gevuld veld te kijken. */}
+          {nieuw.trim() !== '' && bestaatAl(nieuw) && (
+            <p className="uitleg">Die staat er al in.</p>
+          )}
+
           {onbekend.length > 0 && (
             <>
-              {/* Het enige plek waar een tikfout in een naam zichtbaar wordt: in
-                  het klassement zelf lijkt 'bram' gewoon een tweede speler. */}
+              {/* De enige plek waar een tikfout in een naam zichtbaar wordt: in
+                  het klassement zelf lijkt 'bram' gewoon een tweede speler.
+
+                  "Erbij" is bedoeld voor een gast die vaker komt. Het repareert
+                  een verkeerd geschreven naam níét — de al vastgelegde avonden
+                  blijven op die schrijfwijze staan, dus de twee regels in de
+                  stand blijven twee regels. Dat staat er met zoveel woorden bij,
+                  want anders lijkt die knop een oplossing. */}
               <p className="uitleg">
-                Deze namen hebben gespeeld maar staan niet in de lijst. Een gast — of een
-                schrijfwijze die per ongeluk twee spelers van één persoon maakte.
+                Deze namen hebben gespeeld maar staan niet in de lijst. Meestal een gast; soms
+                een schrijfwijze die per ongeluk twee spelers van één persoon maakte. Erbij
+                zetten helpt voor de vólgende avond — de stand hierboven blijft staan zoals hij
+                staat.
               </p>
               <ul className="vastelijst vastelijst--onbekend">
                 {onbekend.map((naam) => (

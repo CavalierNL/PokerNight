@@ -398,6 +398,13 @@ export function TournamentScreen() {
                     <li key={speler.name + i}>{speler.name}</li>
                   ))}
                 </ol>
+                {/* Hier en niet alleen op het klassementscherm: daar staat de
+                    uitleg in de lege staat, en die is weg zodra er één avond in
+                    staat — precies wanneer je hem nodig hebt. */}
+                <p className="uitleg">
+                  Deze avond telt niet mee voor het klassement: zonder één winnaar is er geen
+                  volgorde om punten aan te hangen.
+                </p>
               </>
             )}
             <div className="levelscherm__knoppen">

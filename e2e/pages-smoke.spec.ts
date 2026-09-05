@@ -385,17 +385,18 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.handen')).toHaveCount(0)
   })
 
-  test('schrijft een afgeronde avond bij in het klassement', async ({ page }) => {
-    // Eigen namen: de tests delen één browser, dus er staan al avonden van
-    // eerdere tests in het klassement. Alleen deze twee regels zijn van ons.
-    await page.goto('./')
-    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
-    await page.getByLabel('Namen, één per regel').fill('Xander\nYara\n')
-    await startEnGaZitten(page)
+  test('telt afgeronde avonden op in het klassement', async ({ page }) => {
+    async function speelAvond(winnaar: string, verliezer: string) {
+      await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+      await page.getByLabel('Namen, één per regel').fill(`${winnaar}\n${verliezer}\n`)
+      await startEnGaZitten(page)
+      await page.getByRole('button', { name: verliezer }).click()
+      await expect(page.locator('.eindscherm__winnaar')).toHaveText(winnaar)
+      await page.getByRole('button', { name: 'Klaar' }).click()
+    }
 
-    await page.getByRole('button', { name: 'Xander' }).click()
-    await expect(page.locator('.eindscherm__winnaar')).toHaveText('Yara')
-    await page.getByRole('button', { name: 'Klaar' }).click()
+    await page.goto('./')
+    await speelAvond('Yara', 'Xander')
 
     await page.getByRole('button', { name: 'Klassement' }).click()
     const yara = page.locator('.stand__regel', { hasText: 'Yara' })
@@ -403,16 +404,31 @@ test.describe.serial('de gepubliceerde site', () => {
     // Twee spelers, dus de winnaar krijgt er twee en de verliezer één.
     await expect(yara.locator('.stand__punten')).toHaveText('2')
     await expect(xander.locator('.stand__punten')).toHaveText('1')
+    await expect(yara).toContainText('1 avond')
     await expect(yara).toContainText('1× gewonnen')
 
-    // En de overwinning staat met datum in de hall of fame.
+    // De overwinning staat met datum in de hall of fame.
     const vandaag = new Date().toLocaleDateString('nl-NL', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     })
+    await expect(page.locator('.fame__regel')).toHaveCount(1)
     await expect(page.locator('.fame__regel').first()).toContainText('Yara')
     await expect(page.locator('.fame__regel').first()).toContainText(vandaag)
+
+    // Een tweede avond, nu andersom. Optellen over avonden is het enige wat
+    // dit scherm doet en zonder een tweede avond blijft dat ongedekt.
+    await page.getByRole('button', { name: 'Terug' }).click()
+    await speelAvond('Xander', 'Yara')
+    await page.getByRole('button', { name: 'Klassement' }).click()
+
+    // Allebei 3 punten en één overwinning, dus de naam beslist: Xander boven Yara.
+    await expect(yara.locator('.stand__punten')).toHaveText('3')
+    await expect(xander.locator('.stand__punten')).toHaveText('3')
+    await expect(page.locator('.stand__regel').first()).toContainText('Xander')
+    await expect(yara).toContainText('2 avonden')
+    await expect(page.locator('.fame__regel')).toHaveCount(2)
   })
 
   test('houdt een vaste spelerslijst bij die het setupscherm aanbiedt', async ({ page }) => {
@@ -431,11 +447,19 @@ test.describe.serial('de gepubliceerde site', () => {
     const namen = page.getByLabel('Namen, één per regel')
     await namen.fill('Ann\n')
     await page.getByRole('button', { name: 'Nour' }).click()
-    await expect(namen).toHaveValue('Ann\nNour')
+    // Met de afsluitende lege regel erachter: daar staat de cursor klaar voor de
+    // volgende naam, en die hoort een aangetikte naam niet weg te poetsen.
+    await expect(namen).toHaveValue('Ann\nNour\n')
 
     // Nog een keer tikken haalt hem er weer uit.
     await page.getByRole('button', { name: 'Nour' }).click()
-    await expect(namen).toHaveValue('Ann')
+    await expect(namen).toHaveValue('Ann\n')
+
+    // En de lijst overleeft een herlaadbeurt. Zonder deze controle zou
+    // saveSpelers volledig kunnen wegvallen zonder dat één test het merkt.
+    await page.reload()
+    await page.getByRole('button', { name: 'Klassement' }).click()
+    await expect(page.locator('.vastelijst__regel', { hasText: 'Nour' })).toBeVisible()
   })
 
   test('laat een laatkomer instappen', async ({ page }) => {
