@@ -385,6 +385,50 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.handen')).toHaveCount(0)
   })
 
+  test('rekent side pots uit voor de spelers aan tafel', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Ann\nBob\nCem\n')
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Side pots' }).click()
+    // De namen komen uit het toernooi, dus je tikt alleen bedragen in.
+    await expect(page.locator('.potinvoer__regel')).toHaveCount(3)
+
+    await page.getByLabel('Inzet van Ann').fill('200')
+    await page.getByLabel('Inzet van Bob').fill('200')
+    await page.getByLabel('Inzet van Cem').fill('50')
+
+    // Cem kon maar 50 mee: een hoofdpot van 150 waar hij om meespeelt, en een
+    // side pot van 300 waar alleen Ann en Bob om spelen.
+    const potten = page.locator('.potten__regel')
+    await expect(potten).toHaveCount(2)
+
+    // Wie er om speelt, niet in welke volgorde: de tafel wordt geloot, dus de
+    // zitvolgorde — en daarmee de volgorde in deze regel — verschilt per run.
+    const kanshebbers = async (index: number) =>
+      (await potten.nth(index).locator('.potten__spelers').innerText())
+        .split(',')
+        .map((naam) => naam.trim())
+        .sort()
+
+    await expect(potten.first()).toContainText('150')
+    expect(await kanshebbers(0)).toEqual(['Ann', 'Bob', 'Cem'])
+    await expect(potten.last()).toContainText('300')
+    expect(await kanshebbers(1)).toEqual(['Ann', 'Bob'])
+
+    // Wie folt betaalt mee maar dingt niet mee: de hoofdpot blijft 150 en Cem
+    // verdwijnt eruit.
+    await page.getByRole('button', { name: 'Fold voor Cem' }).click()
+    await expect(potten.first()).toContainText('150')
+    expect(await kanshebbers(0)).toEqual(['Ann', 'Bob'])
+
+    // Opzoeken is geen pauze: de klok loopt door.
+    await expect(page.getByText('GEPAUZEERD')).toHaveCount(0)
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await expect(page.locator('.potinvoer')).toHaveCount(0)
+  })
+
   test('laat een laatkomer instappen', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()

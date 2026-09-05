@@ -8,6 +8,7 @@ import { useAppState } from '../state/AppState'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
 import { HandenVenster } from '../components/HandenVenster'
+import { SidePotVenster } from '../components/SidePotVenster'
 import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
@@ -61,6 +62,7 @@ export function TournamentScreen() {
   const [schemaOpen, setSchemaOpen] = useState(false)
   const [laatkomerOpen, setLaatkomerOpen] = useState(false)
   const [handenOpen, setHandenOpen] = useState(false)
+  const [sidePotsOpen, setSidePotsOpen] = useState(false)
   // Het level waarvoor iemand het geluid heeft stilgezet. Bewaard als index en
   // niet als vlag, zodat het volgende level vanzelf weer geluid geeft zonder dat
   // er ergens een reset hoeft te staan die vergeten kan worden.
@@ -156,6 +158,14 @@ export function TournamentScreen() {
           */}
           <button className="tafel__balklink" onClick={() => setHandenOpen(true)}>
             Wat wint?
+          </button>
+          {/*
+            Wél naast "Wat wint?" en niet bij het schema: dit zijn de twee dingen
+            die je opzoekt terwijl een hand wordt uitbetaald. Het schema gaat over
+            de avond, deze twee over de hand die nu op tafel ligt.
+          */}
+          <button className="tafel__balklink" onClick={() => setSidePotsOpen(true)}>
+            Side pots
           </button>
         </div>
 
@@ -340,6 +350,15 @@ export function TournamentScreen() {
       )}
 
       {handenOpen && <HandenVenster onSluiten={() => setHandenOpen(false)} />}
+
+      {sidePotsOpen && (
+        <SidePotVenster
+          // Alleen wie nog in het spel is: iemand die eerder op de avond
+          // afgetikt is kan deze hand niets in de pot hebben.
+          spelers={nogInHetSpel(tournament).map((speler) => speler.name)}
+          onSluiten={() => setSidePotsOpen(false)}
+        />
+      )}
 
       {schemaOpen && (
         <SchemaVenster tournament={tournament} onSluiten={() => setSchemaOpen(false)} />

@@ -567,3 +567,97 @@
 .minikaart--rood {
   color: #c0392b;
 }
+
+/*
+ * Side pots: per speler een regel met naam, bedrag en een fold-schakelaar. Eén
+ * raster voor de hele lijst, zodat de invoervelden onder elkaar uitlijnen ook
+ * als de namen sterk in lengte verschillen.
+ */
+.potinvoer {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.potinvoer__regel {
+  display: contents;
+}
+
+.potinvoer__naam {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.potinvoer__bedrag {
+  width: 5.5rem;
+  padding: 0.3rem 0.4rem;
+  font: inherit;
+  text-align: right;
+}
+
+.potinvoer__fold {
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--creme-zacht);
+  background: transparent;
+  border: 1px solid var(--creme-zacht);
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+/* Ingedrukt is een vulling en niet alleen een randkleur: in het donker aan tafel
+   is een kleurverschil op een lijn van één pixel niet te zien. */
+.potinvoer__fold--aan {
+  color: var(--felt-diep);
+  background: var(--creme-zacht);
+}
+
+/*
+ * De uitkomst. Drie kolommen omdat het bedrag de kolom is die je zoekt: die
+ * hoort onder elkaar te staan, niet achter een naam van wisselende lengte.
+ */
+.potten {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+}
+
+.potten__regel {
+  display: contents;
+}
+
+.potten__naam {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.potten__bedrag {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  color: var(--goud);
+  text-align: right;
+}
+
+.potten__spelers {
+  text-align: left;
+  color: var(--creme-zacht);
+  overflow-wrap: anywhere;
+}
+
+/* Wisselgeld is geen pot om te winnen; dat mag ook zo lezen. */
+.potten__regel--terug .potten__bedrag {
+  color: var(--creme-zacht);
+}
