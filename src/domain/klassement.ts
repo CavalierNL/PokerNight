@@ -108,3 +108,92 @@ export function metAvond(avonden: readonly Avond[], avond: Avond): Avond[] {
 function zelfdeUitslag(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((naam, index) => naam === b[index])
 }
+
+/**
+ * De vorm van een geëxporteerd klassement. `app` en `versie` staan erin zodat
+ * een verkeerd bestand — een willekeurige JSON, of een export uit een latere
+ * versie met een andere vorm — herkend wordt in plaats van half ingelezen.
+ */
+export type Backup = { app: 'pokernight'; versie: number; avonden: Avond[]; spelers: string[] }
+
+export const BACKUP_VERSIE = 1
+
+function isObject(waarde: unknown): waarde is Record<string, unknown> {
+  return typeof waarde === 'object' && waarde !== null
+}
+
+/**
+ * Of een ingelezen waarde een bruikbare avond is.
+ *
+ * Staat hier en niet bij de opslag omdat twee kanten hem nodig hebben: wat uit
+ * localStorage komt en wat uit een geïmporteerd bestand komt. Beide zijn even
+ * onbetrouwbaar, en één plek betekent dat ze niet uit elkaar kunnen lopen.
+ */
+export function isAvond(waarde: unknown): waarde is Avond {
+  if (!isObject(waarde)) return false
+  // Number.isFinite en niet `typeof === 'number'`: NaN komt door die laatste
+  // heen, en levert dan "Invalid Date" in de hall of fame plus een comparator
+  // die nergens consistent op sorteert.
+  if (!Number.isFinite(waarde.id) || !Number.isFinite(waarde.datum)) return false
+  return (
+    Array.isArray(waarde.uitslag) &&
+    // Een lege uitslag telt nergens punten voor maar wordt wel als gespeelde
+    // avond meegeteld; dat is een record zonder betekenis.
+    waarde.uitslag.length > 0 &&
+    waarde.uitslag.every((naam) => typeof naam === 'string')
+  )
+}
+
+export function maakBackup(avonden: readonly Avond[], spelers: readonly string[]): Backup {
+  return { app: 'pokernight', versie: BACKUP_VERSIE, avonden: [...avonden], spelers: [...spelers] }
+}
+
+/**
+ * Leest een geïmporteerd bestand. Geeft `null` als het er geen van ons is.
+ *
+ * Kapotte avonden binnen een verder geldig bestand worden overgeslagen en niet
+ * fataal: net als bij de opslag kost dat hoogstens één avond in plaats van de
+ * hele import.
+ */
+export function leesBackup(ruw: unknown): Backup | null {
+  if (!isObject(ruw)) return null
+  if (ruw.app !== 'pokernight' || ruw.versie !== BACKUP_VERSIE) return null
+  if (!Array.isArray(ruw.avonden) || !Array.isArray(ruw.spelers)) return null
+  return {
+    app: 'pokernight',
+    versie: BACKUP_VERSIE,
+    avonden: ruw.avonden.filter(isAvond),
+    spelers: ruw.spelers.filter(
+      (naam): naam is string => typeof naam === 'string' && naam.trim() !== '',
+    ),
+  }
+}
+
+/**
+ * Voegt een reeks avonden samen met wat er al is.
+ *
+ * Leunt op `metAvond`, dus tweemaal hetzelfde bestand inlezen levert geen
+ * dubbele avonden op, en een bestand met een gecorrigeerde uitslag overschrijft
+ * de oude. Dat maakt importeren een veilige handeling: bij twijfel doe je het
+ * gewoon nog een keer.
+ */
+export function metAvonden(bestaand: readonly Avond[], erbij: readonly Avond[]): Avond[] {
+  return erbij.reduce<Avond[]>((tot, avond) => metAvond(tot, avond), [...bestaand])
+}
+
+/**
+ * Voegt twee spelerslijsten samen zonder dezelfde naam twee keer op te nemen.
+ * Hoofdletterongevoelig, om dezelfde reden als het klassementscherm: 'bram' en
+ * 'Bram' horen één speler te zijn. De bestaande schrijfwijze wint.
+ */
+export function metSpelers(bestaand: readonly string[], erbij: readonly string[]): string[] {
+  const bekend = new Set(bestaand.map((naam) => naam.toLocaleLowerCase('nl')))
+  const uit = [...bestaand]
+  for (const naam of erbij) {
+    const sleutel = naam.toLocaleLowerCase('nl')
+    if (bekend.has(sleutel)) continue
+    bekend.add(sleutel)
+    uit.push(naam)
+  }
+  return uit
+}

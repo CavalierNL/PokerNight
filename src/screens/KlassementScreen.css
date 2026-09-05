@@ -123,3 +123,34 @@
   flex: 1;
   margin-bottom: 0;
 }
+
+.bewaren {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/*
+ * Een file-input is zelf niet als knop te stylen, dus hij zit onzichtbaar in een
+ * label dat wél als knop getekend wordt. Niet `display: none`: dan valt hij uit
+ * de tabvolgorde en is de knop met een toetsenbord niet meer te bereiken.
+ */
+.bewaren__inlezen {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.bewaren__inlezen input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* De focusrand hoort om het label, want de input zelf is onzichtbaar. */
+.bewaren__inlezen:focus-within {
+  outline: 2px solid var(--goud);
+  outline-offset: 1px;
+}

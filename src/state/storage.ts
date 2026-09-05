@@ -1,5 +1,5 @@
 import { PRESETS, type Chipset } from '../domain/chipset'
-import type { Avond } from '../domain/klassement'
+import { isAvond, type Avond } from '../domain/klassement'
 import type { Settings, Tournament } from '../domain/tournament'
 
 /**
@@ -203,21 +203,6 @@ export function saveSpelers(spelers: string[]): OpslagStatus {
  * zonder deze controle crasht het klassementscherm op de eerste render en blijft
  * het kapotte record staan, waardoor het scherm onbereikbaar wordt.
  */
-function isAvond(waarde: unknown): waarde is Avond {
-  if (!isObject(waarde)) return false
-  // Number.isFinite en niet `typeof === 'number'`: NaN komt door die laatste
-  // heen, en levert dan "Invalid Date" in de hall of fame plus een comparator
-  // die nergens consistent op sorteert.
-  if (!Number.isFinite(waarde.id) || !Number.isFinite(waarde.datum)) return false
-  return (
-    Array.isArray(waarde.uitslag) &&
-    // Een lege uitslag telt nergens punten voor maar wordt wel als gespeelde
-    // avond meegeteld; dat is een record zonder betekenis.
-    waarde.uitslag.length > 0 &&
-    waarde.uitslag.every((naam) => typeof naam === 'string')
-  )
-}
-
 export function loadAvonden(): Avond[] {
   const waarde = lees(SLEUTELS.avonden, KLASSEMENT_VERSIE)
   if (!Array.isArray(waarde)) return []

@@ -10,7 +10,7 @@ import {
   type Settings,
   type Tournament,
 } from '../domain/tournament'
-import { metAvond, type Avond } from '../domain/klassement'
+import { metAvond, metAvonden, metSpelers, type Avond, type Backup } from '../domain/klassement'
 import type { Chipset } from '../domain/chipset'
 import {
   loadAvonden,
@@ -46,6 +46,8 @@ type AppState = {
   setChipsets: (chipsets: Chipset[]) => void
   setPreferences: (preferences: Preferences) => void
   setSpelers: (spelers: string[]) => void
+  /** Voegt een ingelezen bestand samen met wat er al is. */
+  importeerKlassement: (backup: Backup) => void
 }
 
 const Context = createContext<AppState | null>(null)
@@ -138,6 +140,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const discard = useCallback(() => setTournament(null), [])
 
+  /**
+   * Samenvoegen en niet vervangen: wie op twee toestellen speelt hoort niet te
+   * hoeven kiezen welk van beide klassementen wint. `metAvonden` sleutelt op het
+   * starttijdstip, dus hetzelfde bestand twee keer inlezen verandert niets — en
+   * dat maakt importeren een handeling waar je niet over hoeft na te denken.
+   */
+  const importeerKlassement = useCallback((backup: Backup) => {
+    setAvonden((huidig) => metAvonden(huidig, backup.avonden))
+    setSpelersState((huidig) => metSpelers(huidig, backup.spelers))
+  }, [])
+
   const waarde = useMemo<AppState>(
     () => ({
       tournament,
@@ -153,6 +166,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setChipsets: setChipsetsState,
       setPreferences: setPreferencesState,
       setSpelers: setSpelersState,
+      importeerKlassement,
     }),
     [
       tournament,
@@ -165,6 +179,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       start,
       dispatch,
       discard,
+      importeerKlassement,
     ],
   )
 

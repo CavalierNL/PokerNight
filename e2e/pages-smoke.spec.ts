@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 
 /**
@@ -429,6 +430,44 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.stand__regel').first()).toContainText('Xander')
     await expect(yara).toContainText('2 avonden')
     await expect(page.locator('.fame__regel')).toHaveCount(2)
+  })
+
+  test('bewaart het klassement in een bestand en leest het terug', async ({ page }) => {
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await page.getByLabel('Namen, één per regel').fill('Pim\nQuinn\n')
+    await startEnGaZitten(page)
+    await page.getByRole('button', { name: 'Quinn' }).click()
+
+    // Opslaan kan meteen op het eindscherm: dat is het moment waarop er iets
+    // nieuws te bewaren is en iedereen nog om de tafel zit.
+    const wachtOpDownload = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Klassement opslaan' }).click()
+    const download = await wachtOpDownload
+
+    expect(download.suggestedFilename()).toMatch(/^pokernight-klassement-\d{4}-\d{2}-\d{2}\.json$/)
+    const pad = await download.path()
+    const inhoud = JSON.parse(await readFile(pad, 'utf8'))
+    expect(inhoud.app).toBe('pokernight')
+    expect(inhoud.avonden).toHaveLength(1)
+    expect(inhoud.avonden[0].uitslag).toEqual(['Pim', 'Quinn'])
+
+    await page.getByRole('button', { name: 'Klaar' }).click()
+
+    // Nu het klassement leegmaken alsof de browser het gewist heeft, en het
+    // bestand terugzetten.
+    await page.evaluate(() => localStorage.removeItem('pokernight.avonden'))
+    await page.reload()
+    await page.getByRole('button', { name: 'Klassement' }).click()
+    await expect(page.getByText('Nog geen avond gespeeld')).toBeVisible()
+
+    await page.locator('.bewaren__inlezen input').setInputFiles(pad)
+    await expect(page.getByText('1 avond ingelezen en samengevoegd.')).toBeVisible()
+    await expect(page.locator('.stand__regel', { hasText: 'Pim' })).toContainText('2')
+
+    // Nog een keer hetzelfde bestand mag niets verdubbelen.
+    await page.locator('.bewaren__inlezen input').setInputFiles(pad)
+    await expect(page.locator('.fame__regel')).toHaveCount(1)
   })
 
   test('houdt een vaste spelerslijst bij die het setupscherm aanbiedt', async ({ page }) => {

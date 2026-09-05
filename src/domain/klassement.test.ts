@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { hallOfFame, klassement, metAvond, puntenVoor, type Avond } from './klassement'
+import {
+  BACKUP_VERSIE,
+  hallOfFame,
+  klassement,
+  leesBackup,
+  maakBackup,
+  metAvond,
+  metAvonden,
+  metSpelers,
+  puntenVoor,
+  type Avond,
+} from './klassement'
 
 /** 3 maart 2026, 4 maart, enzovoort — alleen de volgorde doet ertoe. */
 function datum(dag: number): number {
@@ -188,5 +199,74 @@ describe('metAvond', () => {
   it('houdt de avonden op volgorde van datum', () => {
     const uit = metAvond([avond(2, 17, ['Bob'])], avond(1, 3, ['Ann']))
     expect(uit.map((a) => a.id)).toEqual([1, 2])
+  })
+})
+
+describe('backup', () => {
+  const avondA = avond(1, 3, ['Ann', 'Bob'])
+  const avondB = avond(2, 10, ['Bob', 'Ann'])
+
+  it('leest terug wat het schrijft', () => {
+    const backup = maakBackup([avondA, avondB], ['Ann', 'Bob'])
+    // Door JSON heen, want dat is de weg die een echt bestand aflegt.
+    expect(leesBackup(JSON.parse(JSON.stringify(backup)))).toEqual(backup)
+  })
+
+  it('weigert een bestand dat niet van deze app is', () => {
+    expect(leesBackup({ avonden: [avondA], spelers: [] })).toBeNull()
+    expect(leesBackup({ app: 'iets-anders', versie: 1, avonden: [], spelers: [] })).toBeNull()
+    expect(leesBackup('hallo')).toBeNull()
+    expect(leesBackup(null)).toBeNull()
+  })
+
+  it('weigert een bestand uit een andere versie', () => {
+    // Een latere versie kan een andere vorm hebben; half inlezen is erger dan
+    // niet inlezen.
+    const uitDeToekomst = { ...maakBackup([avondA], []), versie: BACKUP_VERSIE + 1 }
+    expect(leesBackup(uitDeToekomst)).toBeNull()
+  })
+
+  it('slaat een kapotte avond over zonder de rest te laten vallen', () => {
+    const gehavend = { ...maakBackup([avondA], ['Ann']), avonden: [avondA, { id: 'fout' }, null] }
+    expect(leesBackup(gehavend)?.avonden).toEqual([avondA])
+  })
+})
+
+describe('metAvonden', () => {
+  it('voegt alles toe wat er nog niet was', () => {
+    const uit = metAvonden([avond(1, 3, ['Ann'])], [avond(2, 10, ['Bob'])])
+    expect(uit.map((a) => a.id)).toEqual([1, 2])
+  })
+
+  it('levert bij twee keer hetzelfde bestand geen dubbele avonden op', () => {
+    // Dat maakt importeren een veilige handeling: bij twijfel doe je het nog
+    // een keer.
+    const bestand = [avond(1, 3, ['Ann', 'Bob']), avond(2, 10, ['Bob', 'Ann'])]
+    const eenmaal = metAvonden([], bestand)
+    expect(metAvonden(eenmaal, bestand)).toEqual(eenmaal)
+  })
+
+  it('laat een gecorrigeerde uitslag uit het bestand winnen', () => {
+    const uit = metAvonden([avond(1, 3, ['Ann', 'Bob'])], [avond(1, 3, ['Bob', 'Ann'])])
+    expect(uit).toHaveLength(1)
+    expect(uit[0].uitslag).toEqual(['Bob', 'Ann'])
+  })
+
+  it('raakt de meegegeven lijst niet aan', () => {
+    const bestaand = [avond(1, 3, ['Ann'])]
+    metAvonden(bestaand, [avond(2, 10, ['Bob'])])
+    expect(bestaand).toHaveLength(1)
+  })
+})
+
+describe('metSpelers', () => {
+  it('voegt samen zonder dubbelen', () => {
+    expect(metSpelers(['Ann', 'Bob'], ['Bob', 'Cem'])).toEqual(['Ann', 'Bob', 'Cem'])
+  })
+
+  it('ziet een andere schrijfwijze als dezelfde speler', () => {
+    // Anders levert importeren precies de splitsing op die de vaste lijst moet
+    // voorkomen. De bestaande schrijfwijze wint.
+    expect(metSpelers(['Bram'], ['bram'])).toEqual(['Bram'])
   })
 })

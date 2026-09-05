@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { Button } from '../components/Button'
 import { Kop } from '../components/Kop'
 import { Panel } from '../components/Panel'
 import { TrashIcon } from '../components/TrashIcon'
 import { useAppState } from '../state/AppState'
 import { hallOfFame, klassement } from '../domain/klassement'
+import { bewaarAlsBestand, leesBestand } from '../state/bestand'
 import './SetupScreen.css'
 import './KlassementScreen.css'
 
@@ -32,8 +33,9 @@ function datumTekst(ms: number): string {
  * als twee spelers — en dit scherm is de enige plek waar dat op te merken valt.
  */
 export function KlassementScreen({ onClose }: { onClose: () => void }) {
-  const { spelers, avonden, setSpelers, storageOk } = useAppState()
+  const { spelers, avonden, setSpelers, importeerKlassement, storageOk } = useAppState()
   const [nieuw, setNieuw] = useState('')
+  const [melding, setMelding] = useState('')
 
   const stand = klassement(avonden)
   const overwinningen = hallOfFame(avonden)
@@ -63,6 +65,31 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
     setNieuw('')
   }
 
+  function exporteer() {
+    bewaarAlsBestand(avonden, spelers, Date.now())
+    setMelding(`${avonden.length} ${avonden.length === 1 ? 'avond' : 'avonden'} opgeslagen.`)
+  }
+
+  async function importeer(e: ChangeEvent<HTMLInputElement>) {
+    const bestand = e.target.files?.[0]
+    // Het veld leegmaken, anders geeft hetzelfde bestand nog eens kiezen geen
+    // change-event en lijkt de knop kapot.
+    e.target.value = ''
+    if (!bestand) return
+
+    const backup = await leesBestand(bestand)
+    if (!backup) {
+      setMelding('Dit lijkt geen klassementbestand van PokerNight.')
+      return
+    }
+    importeerKlassement(backup)
+    // Wat erin zat, niet wat erbij kwam: dat tweede is nul als je hetzelfde
+    // bestand nog eens inleest, en dan lijkt het mislukt terwijl het klopt.
+    setMelding(
+      `${backup.avonden.length} ${backup.avonden.length === 1 ? 'avond' : 'avonden'} ingelezen en samengevoegd.`,
+    )
+  }
+
   return (
     <div className="setup">
       <Kop>Klassement</Kop>
@@ -74,6 +101,31 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="setup__raster">
+        <Panel title="Bewaren">
+          {/*
+            Bovenaan en niet onderaan: de browser kan dit klassement kwijtraken
+            zonder dat iemand het merkt, en dan is een knop onder een lange lijst
+            precies de knop die je nooit gezien hebt.
+          */}
+          <p className="uitleg">
+            Een browser bewaart dit niet voor altijd — Safari wist opgeslagen gegevens na zeven
+            dagen zonder bezoek, en een nieuw toestel begint sowieso leeg. Zet het af en toe in
+            een bestand.
+          </p>
+          <div className="bewaren">
+            <Button variant="ghost" onClick={exporteer} disabled={avonden.length === 0}>
+              Opslaan als bestand
+            </Button>
+            {/* Een label om de verborgen file-input, want die is zelf niet als
+                knop te stylen zonder hem uit de tabvolgorde te halen. */}
+            <label className="knop knop--ghost bewaren__inlezen">
+              Bestand inlezen
+              <input type="file" accept="application/json,.json" onChange={importeer} />
+            </label>
+          </div>
+          {melding && <p className="uitleg">{melding}</p>}
+        </Panel>
+
         <Panel title="Hall of fame">
           {overwinningen.length === 0 ? (
             <p className="uitleg">Hier komt elke overwinning te staan, met de datum erbij.</p>
