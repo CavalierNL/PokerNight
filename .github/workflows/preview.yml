@@ -1,0 +1,206 @@
+name: PR-preview
+
+# Zet elke PR als eigen site op gh-pages, onder pr-preview/pr-<n>/, en ruimt hem
+# op als de PR dichtgaat. De echte site staat in de root van diezelfde branch;
+# deploy.yml houdt deze map bij het publiceren met opzet heel.
+#
+# Vereist dezelfde eenmalige Pages-instelling als deploy.yml (Source op branch
+# `gh-pages` / root). Staat die er niet, dan slaagt deze workflow en geeft de
+# preview-URL in de comment een 404; niets in CI merkt dat.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # Opruimen luistert bewust naar pull_request_target, om twee redenen:
+  #
+  #  - het draait altijd de versie van dit bestand op de default branch, dus een
+  #    branch kan zijn eigen teardown niet uitzetten;
+  #  - het krijgt een schrijftoken, ook bij een PR vanaf een fork. Met
+  #    `pull_request` is dat token read-only en zou opruimen daar nooit lukken.
+  #
+  # Bijkomend: `pull_request` draait op `refs/pull/<n>/merge`, en die ref is bij
+  # een conflicterende PR niet bruikbaar — precies de verlaten PR die je wél
+  # opgeruimd wilt hebben.
+  #
+  # Dat dit veilig is hangt aan twee dingen die hieronder staan en die je niet
+  # los mag maken: de checkout heeft bewust geen `ref:` (en haalt dus de base
+  # binnen, niet de PR-head), en elke stap die de PR-inhoud aanraakt staat achter
+  # `if: github.event_name == 'pull_request'`. Deze job draait met
+  # `contents: write`.
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+# Per PR, en niet gedeeld met deploy.yml (`gh-pages-main`): een deploy en een
+# preview draaien gerust tegelijk. Al het kruisverkeer naar gh-pages wordt
+# opgevangen door de rebase-lus in push-gh-pages.sh.
+#
+# `cancel-in-progress` staat alleen aan voor de bouwkant. Een opruiming mag nooit
+# afgebroken worden — de PR is dan dicht, dus `closed` vuurt nooit meer en de
+# preview blijft voorgoed staan. Zo wacht een opruiming netjes op een lopende
+# preview-build in plaats van hem te annuleren en daarna de map te missen die die
+# build alsnog pusht.
+concurrency:
+  group: gh-pages-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  preview:
+    # Een PR vanaf een fork krijgt geen preview: github.token is daar read-only,
+    # wat je ook in permissions zet, dus de push zou toch falen. Overslaan is
+    # eerlijker dan een rode check op een PR waar de indiener niets aan kan doen.
+    # Bij het sluiten draait de job wel: die heeft de fork-kant niet nodig.
+    if: >-
+      github.event_name == 'pull_request_target'
+      || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controleer het PR-nummer
+        # Een lege expressie zet een lege *string*, geen ongezette variabele, dus
+        # `set -u` grijpt hier niet in. Zonder deze controle zou de bouwkant naar
+        # `pr-preview/pr-/` schrijven en de opruimkant vrolijk melden dat er niets
+        # op te ruimen viel — allebei groen.
+        run: |
+          case "${PR}" in
+            ''|*[!0-9]*) echo "::error::PR-nummer ontbreekt of is geen getal"; exit 1 ;;
+          esac
+
+      - uses: actions/setup-node@v4
+        if: github.event_name == 'pull_request'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: github.event_name == 'pull_request'
+
+      - name: Bouw met de preview-base
+        if: github.event_name == 'pull_request'
+        env:
+          # De base zit in de bundel gebakken, dus een preview is een eigen build
+          # en niet dezelfde bestanden op een ander pad. vite.config.ts weigert
+          # een PAGES_BASE die niet de vorm heeft die naamruimte() herkent, zodat
+          # een wijziging hier niet stilzwijgend de opslagscheiding opheft.
+          PAGES_BASE: /${{ github.event.repository.name }}/pr-preview/pr-${{ github.event.pull_request.number }}/
+        run: npm run build
+
+      - name: Controleer dat er echt een site uit kwam
+        if: github.event_name == 'pull_request'
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html ontbreekt"; exit 1; }
+          # En dat hij op de preview-base wijst. Een build die op de gewone base
+          # uitkomt laadt hier gewoon, maar deelt dan de opslag met de echte site.
+          grep -q "/pr-preview/pr-${PR}/assets/" dist/index.html \
+            || { echo "::error::assets in dist/index.html wijzen niet naar de preview-base"; exit 1; }
+
+      - name: Haal gh-pages op of maak hem aan
+        id: gh-pages
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            echo "bestaat=true" >> "$GITHUB_OUTPUT"
+          else
+            ls_exit=$?
+            # Exitcode 2 is "geen match gevonden"; al het andere (netwerk, auth)
+            # is een echte fout en mag niet als "branch bestaat nog niet" gelezen
+            # worden — dan zouden we een lege gh-pages aanmaken over een goede heen.
+            if [ $ls_exit -eq 2 ]; then
+              echo "bestaat=false" >> "$GITHUB_OUTPUT"
+              mkdir -p gh-pages && cd gh-pages
+              git init -b gh-pages
+              git remote add origin "${REPO_URL}"
+            else
+              echo "::error::git ls-remote mislukte met exitcode ${ls_exit}"
+              exit 1
+            fi
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gh-pages.outputs.bestaat == 'true'
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Zet de preview neer
+        if: github.event_name == 'pull_request'
+        run: |
+          rm -rf "gh-pages/pr-preview/pr-${PR}"
+          mkdir -p "gh-pages/pr-preview/pr-${PR}"
+          cp -r dist/. "gh-pages/pr-preview/pr-${PR}/"
+
+      - name: Ruim de preview op
+        if: github.event_name == 'pull_request_target'
+        run: rm -rf "gh-pages/pr-preview/pr-${PR}"
+
+      - name: Push naar gh-pages
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            boodschap="Ruim preview van PR #${PR} op"
+          else
+            boodschap="Preview van PR #${PR}"
+          fi
+          bash .github/scripts/push-gh-pages.sh gh-pages "$boodschap"
+
+      - name: Controleer dat de preview echt weg is
+        if: github.event_name == 'pull_request_target'
+        # De exitcode van het opruimen bewijst niets: `rm -rf` slaagt ook op een
+        # pad dat niet bestaat, en "niets te committen" is ononderscheidbaar van
+        # "ik keek op de verkeerde plek". Alleen de remote is bewijs, en die
+        # vragen we ná onze eigen push op. Blijft er iets staan, dan is dat de
+        # laatste kans om het te zien: de PR is dicht, dus `closed` vuurt niet
+        # nog een keer.
+        run: |
+          cd gh-pages
+          git fetch --quiet origin gh-pages
+          if git ls-tree -r --name-only FETCH_HEAD | grep -q "^pr-preview/pr-${PR}/"; then
+            echo "::error::pr-preview/pr-${PR} staat nog op gh-pages na het opruimen"
+            exit 1
+          fi
+
+      - name: Zet de link in de PR
+        id: comment
+        if: github.event_name == 'pull_request'
+        # Niet kritiek: de preview staat er al, dus een rate limit mag de job niet
+        # omgooien. Wel zichtbaar — zie de stap hierna. Zonder die stap zou een
+        # structureel kapotte comment (weggehaalde permissie, tikfout) elke PR
+        # groen laten terwijl niemand ooit een link krijgt.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          eigenaar=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          url="https://${eigenaar}.github.io/${{ github.event.repository.name }}/pr-preview/pr-${PR}/"
+          # printf met enkele aanhalingstekens: de tekst mag niet inspringen (dat
+          # maakt er in Markdown een codeblok van) en de backticks eromheen mogen
+          # niet als commando-substitutie gelezen worden.
+          tekst=$(printf '🃏 **Preview:** %s\n\nEigen `localStorage`, dus een toernooi hier raakt de echte site niet.' "$url")
+          # Bijwerken in plaats van een nieuwe comment, anders groeit de PR bij
+          # elke push met een regel die hetzelfde zegt. `--paginate` omdat de API
+          # er standaard dertig teruggeeft: op een langere PR valt onze comment
+          # anders van pagina 1 af en komt er elke keer een nieuwe bij. En jq
+          # kiest de eerste in plaats van `head`, zodat een echte fout van
+          # `gh api` hier niet als "nog geen comment" gelezen wordt.
+          bestaand=$(gh api --paginate "repos/${REPO}/issues/${PR}/comments" \
+            --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("**Preview:**"))) | .id] | first // empty')
+          if [ -n "$bestaand" ]; then
+            gh api "repos/${REPO}/issues/comments/${bestaand}" -X PATCH -f body="${tekst}"
+          else
+            gh pr comment "${PR}" --body "${tekst}"
+          fi
+
+      - name: Meld het als de link niet geplaatst is
+        if: github.event_name == 'pull_request' && steps.comment.outcome == 'failure'
+        run: echo "::warning::De preview staat er wel, maar de link plaatsen mislukte"

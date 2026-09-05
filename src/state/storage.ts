@@ -1,11 +1,42 @@
 import { PRESETS, type Chipset } from '../domain/chipset'
 import type { Settings, Tournament } from '../domain/tournament'
 
+/**
+ * Onder welke naam deze build zijn spullen opslaat. `localStorage` hoort bij een
+ * origin en niet bij een pad, dus een PR-preview op
+ * /PokerNight/pr-preview/pr-12/ deelt de opslag met de echte site op
+ * /PokerNight/. Zonder eigen naam doet een preview een van twee dingen met het
+ * lopende toernooi van de echte site, en geen van beide is zichtbaar:
+ *
+ *  - schrijft de preview een andere OPSLAG_VERSIE, dan leest de echte site zijn
+ *    eigen toernooi daarna niet meer terug (`lees` geeft undefined bij een
+ *    andere versie) en staat de gebruiker zonder melding weer op het setupscherm;
+ *  - schrijft de preview dezelfde versie in een veranderde vorm — een PR die de
+ *    bump vergat — dan komt hij door `isTournament` heen en is het wél de crash
+ *    die de versie moest afvangen.
+ *
+ * Het pad komt als parameter binnen zodat dit te testen is zonder een build met
+ * een andere base. De gewone site houdt `pokernight`, zodat bestaande opslag
+ * gewoon blijft staan.
+ *
+ * De afsluitende slash is optioneel omdat Vite `import.meta.env.BASE_URL` niet
+ * normaliseert: een `PAGES_BASE` zonder slash komt er ongewijzigd uit, en dan
+ * zou een preview stilletjes op de productienaam terugvallen. vite.config.ts
+ * weigert zo'n base ook, maar de terugval hier hoort niet de gevaarlijke kant op
+ * te wijzen.
+ */
+export function naamruimte(basisPad: string): string {
+  const pr = /\/pr-preview\/(pr-\d+)(?:\/|$)/.exec(basisPad)?.[1]
+  return pr ? `pokernight.${pr}` : 'pokernight'
+}
+
+const NAAM = naamruimte(import.meta.env.BASE_URL)
+
 const SLEUTELS = {
-  tournament: 'pokernight.tournament',
-  chipsets: 'pokernight.chipsets',
-  settings: 'pokernight.settings',
-  preferences: 'pokernight.preferences',
+  tournament: `${NAAM}.tournament`,
+  chipsets: `${NAAM}.chipsets`,
+  settings: `${NAAM}.settings`,
+  preferences: `${NAAM}.preferences`,
 } as const
 
 /**

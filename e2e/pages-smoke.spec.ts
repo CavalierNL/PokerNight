@@ -53,16 +53,47 @@ test.describe.serial('de gepubliceerde site', () => {
     const sha = process.env.GITHUB_SHA
     test.skip(!sha, 'Alleen zinvol in CI, waar GITHUB_SHA de gedeployde commit is.')
 
+    // Ruimer dan de 60 seconden uit de config, anders kapt de test zelf de poll
+    // hieronder af en leest een trage publicatie als een mislukte.
+    test.setTimeout(360_000)
+
     // Pages heeft na een deploy soms even nodig voordat de nieuwe versie overal
     // via de CDN te zien is. Hier wachten we daar echt op, in plaats van te
     // hopen dat een retry zonder wachttijd het oplost.
+    //
+    // Ruim genomen omdat we naar een branch publiceren: onze workflow is klaar
+    // zodra de push door is, maar daarna draait GitHub nog zijn eigen build over
+    // gh-pages. Die stap zit niet in onze wachtketen, dus hij valt volledig
+    // binnen deze poll.
+    //
+    // Alleen de eerste poging wacht zo lang. Playwright herstart bij een fout het
+    // hele serial-blok, dus zonder deze knik zou een publicatie die een kwartier
+    // duurt op de derde poging alsnog groen worden — een echte regressie in de
+    // deploypijplijn die dan als "even geduld" voorbijkomt.
+    const wachtMs = test.info().retry === 0 ? 300_000 : 30_000
+
     await expect
       .poll(
         async () => {
-          await page.goto('./', { waitUntil: 'domcontentloaded' })
-          return page.locator('meta[name="build-sha"]').getAttribute('content')
+          // Via `request` en niet via `goto`, om twee redenen. `expect.poll`
+          // roept de callback buiten zijn eigen try aan, dus een navigatiefout —
+          // DNS, connection reset, een timeout — zou de test meteen laten falen
+          // in plaats van het opnieuw te proberen, en juist vlak na een push is
+          // dat het waarschijnlijkste. En Pages stuurt max-age=600 op HTML, dus
+          // een index.html die in de cache belandt zou de poll zijn hele duur
+          // vastpinnen; langer wachten helpt daar per definitie niet tegen.
+          try {
+            const respons = await page.request.get('./', {
+              headers: { 'cache-control': 'no-cache' },
+            })
+            const html = await respons.text()
+            return /<meta[^>]*name="build-sha"[^>]*content="([^"]*)"/.exec(html)?.[1] ?? null
+          } catch {
+            // Nog niet bereikbaar; volgende ronde opnieuw.
+            return null
+          }
         },
-        { timeout: 120_000, intervals: [2_000] },
+        { timeout: wachtMs, intervals: [5_000] },
       )
       .toBe(sha)
   })

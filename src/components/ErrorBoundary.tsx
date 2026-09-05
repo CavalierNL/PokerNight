@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { saveTournament } from '../state/storage'
 
 /**
  * Vangt een crash tijdens het renderen op. Zonder dit haalt React de hele app van
@@ -35,11 +36,13 @@ export class ErrorBoundary extends Component<
           <button
             className="knop knop--primair"
             onClick={() => {
-              try {
-                localStorage.removeItem('pokernight.tournament')
-              } catch {
-                // Niets te doen; de herlaadpoging hieronder is dan de enige optie.
-              }
+              // Via de opslaglaag en niet met een letterlijke sleutel: die
+              // hangt af van de base, en in een PR-preview zou een vaste naam
+              // hier het toernooi van de echte site wissen terwijl het kapotte
+              // toernooi van de preview blijft staan. saveTournament meldt zelf
+              // 'mislukt' bij geblokkeerde opslag; hier is er niets mee te doen,
+              // want de herlaadpoging hieronder is dan de enige optie.
+              saveTournament(null)
               location.reload()
             }}
           >

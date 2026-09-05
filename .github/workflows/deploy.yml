@@ -1,5 +1,18 @@
 name: Deploy naar GitHub Pages
 
+# Publiceert naar de `gh-pages`-branch en niet meer via actions/deploy-pages.
+# Reden: Pages kent één bron, en previews per PR vragen om submappen op die
+# branch (zie preview.yml). Twee gevolgen die je moet weten:
+#
+#  - Er hoort een eenmalige repo-instelling bij: Settings -> Pages -> Source op
+#    "Deploy from a branch" -> `gh-pages` / `(root)`. Staat die nog op "GitHub
+#    Actions", dan slaagt deze workflow maar publiceert GitHub niets en blijft de
+#    oude site staan. Niets in CI dwingt dit af; de rooktest onderaan wordt dan
+#    rood omdat de build-sha nooit verandert.
+#  - GitHub draait na onze push zijn eigen buildstap over de branch, en zet daar
+#    Jekyll bij aan. Vandaar `public/.nojekyll`, dat via `dist/` in de root van
+#    gh-pages belandt en die verwerking uitschakelt.
+
 on:
   push:
     branches: [main]
@@ -7,16 +20,28 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# Per bron, niet gedeeld met preview.yml: die gebruikt `gh-pages-pr-<n>`. Een
+# deploy en een preview serialiseren dus *niet* — ze draaien gerust tegelijk, en
+# bij het mergen van een PR gebeurt dat gegarandeerd. Deze groep voorkomt alleen
+# dat twee opeenvolgende pushes naar main elkaar in de weg lopen. Al het
+# kruisverkeer wordt opgevangen door de rebase-lus in push-gh-pages.sh; dat is
+# geen vangnet voor een zeldzaam geval maar het enige mechanisme dat er is.
 concurrency:
-  group: pages
+  group: gh-pages-main
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      # Nodig om naar gh-pages te kunnen pushen. Geldt voor de hele job, dus ook
+      # tijdens `npm ci` en de Playwright-run; wil je die scope kleiner, dan moet
+      # het publiceren naar een eigen job met `dist` als artifact.
+      contents: write
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,32 +65,86 @@ jobs:
             test-results
           if-no-files-found: error
           retention-days: 7
-      - uses: actions/configure-pages@v5
-        with:
-          # Zet Pages zelf aan als dat nog niet handmatig gedaan is.
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
 
-  deploy:
+      - name: Controleer dat er echt een site gebouwd is
+        # `npm run build` kan met 0 eindigen en toch een lege dist achterlaten.
+        # De stap hieronder maakt de root van gh-pages leeg vóór het kopiëren, dus
+        # zonder deze controle publiceren we een lege site en merkt de rooktest
+        # dat pas als hij al live staat.
+        run: test -f dist/index.html || { echo "::error::dist/index.html ontbreekt"; exit 1; }
+
+      - name: Haal gh-pages op of maak hem aan
+        id: gh-pages
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            echo "bestaat=true" >> "$GITHUB_OUTPUT"
+          else
+            ls_exit=$?
+            # Exitcode 2 is "geen match gevonden"; al het andere (netwerk, auth)
+            # is een echte fout en mag niet als "branch bestaat nog niet" gelezen
+            # worden — dan zouden we een lege gh-pages aanmaken over een goede heen.
+            if [ $ls_exit -eq 2 ]; then
+              echo "bestaat=false" >> "$GITHUB_OUTPUT"
+              mkdir -p gh-pages && cd gh-pages
+              git init -b gh-pages
+              git remote add origin "${REPO_URL}"
+            else
+              echo "::error::git ls-remote mislukte met exitcode ${ls_exit}"
+              exit 1
+            fi
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gh-pages.outputs.bestaat == 'true'
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Zet de nieuwe site in de root
+        run: |
+          # De previews van openstaande PR's staan op dezelfde branch en mogen
+          # niet meegewist worden; zonder deze omweg haalt het leegmaken
+          # hieronder ze weg en is elke preview-URL dood tot de PR opnieuw pusht.
+          # Een eigen tijdelijke map, want een vast pad zou op een hergebruikte
+          # runner de previews van een vórige run kunnen terugzetten.
+          bewaard=$(mktemp -d)
+          if [ -d gh-pages/pr-preview ]; then
+            mv gh-pages/pr-preview "$bewaard/"
+          fi
+          # CNAME blijft ook staan: Pages bewaart een eigen domein op de
+          # publicatiebranch, en dat weggooien zet het domein stil uit.
+          find gh-pages -mindepth 1 -maxdepth 1 -not -name '.git' -not -name 'CNAME' -exec rm -rf {} +
+          cp -r dist/. gh-pages/
+          if [ -d "$bewaard/pr-preview" ]; then
+            mv "$bewaard/pr-preview" gh-pages/
+          fi
+          rmdir "$bewaard" 2>/dev/null || true
+
+      - name: Push naar gh-pages
+        # De commit die hieruit komt raakt pr-preview/ niet, want die map is
+        # hierboven ongewijzigd teruggezet. Daardoor kan een rebase van een
+        # verlate deploy geen zojuist opgeruimde preview terughalen.
+        #
+        # Let op: dat twee deploys elkaar niet stil overschrijven berust erop dat
+        # index.html altijd verschilt — de build-sha-metatag uit vite.config.ts
+        # zorgt daarvoor, dus een verouderde deploy botst en wordt rood. Wordt
+        # die stempel ooit weggehaald of deterministisch gemaakt, dan wordt dit
+        # een schone rebase en overschrijft oud stilletjes nieuw.
+        run: bash .github/scripts/push-gh-pages.sh gh-pages "Publiceer ${GITHUB_SHA}"
+
+  # Draait tegen de gepubliceerde site. Publiceren is met deze opzet in tweeën
+  # gevallen: onze push, en daarna de eigen Pages-build van GitHub. Deze job hangt
+  # aan de eerste, dus hij wacht in de poll hieronder op de tweede. Hij houdt een
+  # kapotte deploy niet tegen — hij maakt hem zichtbaar in plaats van stil, iets
+  # wat de unit tests niet kunnen.
+  rooktest:
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    outputs:
-      page_url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-
-  # Draait tegen de zojuist gepubliceerde site. Let op de volgorde: dit gebeurt
-  # ná publicatie, dus het houdt een kapotte deploy niet tegen — het maakt hem
-  # zichtbaar in plaats van stil, iets wat de unit tests niet kunnen.
-  rooktest:
-    needs: deploy
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -74,9 +153,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # De URL kwam eerder uit actions/deploy-pages; die output bestaat niet meer
+      # nu we naar een branch publiceren, dus stellen we hem zelf samen. De
+      # hostnaam is kleingeschreven, het pad houdt de schrijfwijze van de repo.
+      # Dit veronderstelt een projectsite; bij een eigen domein via CNAME klopt
+      # hij niet meer (zie ook het voorbehoud bij `base` in vite.config.ts).
+      - name: Stel de Pages-URL samen
+        id: url
+        run: |
+          eigenaar=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "page_url=https://${eigenaar}.github.io/${{ github.event.repository.name }}/" >> "$GITHUB_OUTPUT"
       - run: npm run test:e2e
         env:
-          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          PAGE_URL: ${{ steps.url.outputs.page_url }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
