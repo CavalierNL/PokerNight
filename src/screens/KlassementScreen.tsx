@@ -101,31 +101,6 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="setup__raster">
-        <Panel title="Bewaren">
-          {/*
-            Bovenaan en niet onderaan: de browser kan dit klassement kwijtraken
-            zonder dat iemand het merkt, en dan is een knop onder een lange lijst
-            precies de knop die je nooit gezien hebt.
-          */}
-          <p className="uitleg">
-            Een browser bewaart dit niet voor altijd — Safari wist opgeslagen gegevens na zeven
-            dagen zonder bezoek, en een nieuw toestel begint sowieso leeg. Zet het af en toe in
-            een bestand.
-          </p>
-          <div className="bewaren">
-            <Button variant="ghost" onClick={exporteer} disabled={avonden.length === 0}>
-              Opslaan als bestand
-            </Button>
-            {/* Een label om de verborgen file-input, want die is zelf niet als
-                knop te stylen zonder hem uit de tabvolgorde te halen. */}
-            <label className="knop knop--ghost bewaren__inlezen">
-              Bestand inlezen
-              <input type="file" accept="application/json,.json" onChange={importeer} />
-            </label>
-          </div>
-          {melding && <p className="uitleg">{melding}</p>}
-        </Panel>
-
         <Panel title="Hall of fame">
           {overwinningen.length === 0 ? (
             <p className="uitleg">Hier komt elke overwinning te staan, met de datum erbij.</p>
@@ -251,6 +226,32 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
             </>
           )}
         </Panel>
+        <Panel title="Bewaren">
+          {/*
+            Onderaan: dit is het minst belangrijke op dit scherm, en je komt
+            hier voor de uitslagen. Dat het daarmee onder een lange lijst kan
+            wegzakken is opgevangen doordat "Klassement opslaan" ook op het
+            eindscherm staat — precies op het moment dat er iets te bewaren is.
+          */}
+          <p className="uitleg">
+            Een browser bewaart dit niet voor altijd — Safari wist opgeslagen gegevens na zeven
+            dagen zonder bezoek, en een nieuw toestel begint sowieso leeg. Zet het af en toe in
+            een bestand.
+          </p>
+          <div className="bewaren">
+            <Button variant="ghost" onClick={exporteer} disabled={avonden.length === 0}>
+              Opslaan als bestand
+            </Button>
+            {/* Een label om de verborgen file-input, want die is zelf niet als
+                knop te stylen zonder hem uit de tabvolgorde te halen. */}
+            <label className="knop knop--ghost bewaren__inlezen">
+              Bestand inlezen
+              <input type="file" accept="application/json,.json" onChange={importeer} />
+            </label>
+          </div>
+          {melding && <p className="uitleg">{melding}</p>}
+        </Panel>
+
       </div>
 
       <Button onClick={onClose}>Terug</Button>
