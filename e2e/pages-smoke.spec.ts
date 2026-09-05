@@ -65,13 +65,35 @@ test.describe.serial('de gepubliceerde site', () => {
     // zodra de push door is, maar daarna draait GitHub nog zijn eigen build over
     // gh-pages. Die stap zit niet in onze wachtketen, dus hij valt volledig
     // binnen deze poll.
+    //
+    // Alleen de eerste poging wacht zo lang. Playwright herstart bij een fout het
+    // hele serial-blok, dus zonder deze knik zou een publicatie die een kwartier
+    // duurt op de derde poging alsnog groen worden — een echte regressie in de
+    // deploypijplijn die dan als "even geduld" voorbijkomt.
+    const wachtMs = test.info().retry === 0 ? 300_000 : 30_000
+
     await expect
       .poll(
         async () => {
-          await page.goto('./', { waitUntil: 'domcontentloaded' })
-          return page.locator('meta[name="build-sha"]').getAttribute('content')
+          // Via `request` en niet via `goto`, om twee redenen. `expect.poll`
+          // roept de callback buiten zijn eigen try aan, dus een navigatiefout —
+          // DNS, connection reset, een timeout — zou de test meteen laten falen
+          // in plaats van het opnieuw te proberen, en juist vlak na een push is
+          // dat het waarschijnlijkste. En Pages stuurt max-age=600 op HTML, dus
+          // een index.html die in de cache belandt zou de poll zijn hele duur
+          // vastpinnen; langer wachten helpt daar per definitie niet tegen.
+          try {
+            const respons = await page.request.get('./', {
+              headers: { 'cache-control': 'no-cache' },
+            })
+            const html = await respons.text()
+            return /<meta[^>]*name="build-sha"[^>]*content="([^"]*)"/.exec(html)?.[1] ?? null
+          } catch {
+            // Nog niet bereikbaar; volgende ronde opnieuw.
+            return null
+          }
         },
-        { timeout: 300_000, intervals: [5_000] },
+        { timeout: wachtMs, intervals: [5_000] },
       )
       .toBe(sha)
   })

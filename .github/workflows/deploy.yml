@@ -2,9 +2,16 @@ name: Deploy naar GitHub Pages
 
 # Publiceert naar de `gh-pages`-branch en niet meer via actions/deploy-pages.
 # Reden: Pages kent één bron, en previews per PR vragen om submappen op die
-# branch (zie preview.yml). Gevolg: GitHub draait na onze push zijn eigen
-# buildstap, dus de site staat er later op dan bij een Actions-deploy. Daar is
-# de rooktest onderaan op gerekend.
+# branch (zie preview.yml). Twee gevolgen die je moet weten:
+#
+#  - Er hoort een eenmalige repo-instelling bij: Settings -> Pages -> Source op
+#    "Deploy from a branch" -> `gh-pages` / `(root)`. Staat die nog op "GitHub
+#    Actions", dan slaagt deze workflow maar publiceert GitHub niets en blijft de
+#    oude site staan. Niets in CI dwingt dit af; de rooktest onderaan wordt dan
+#    rood omdat de build-sha nooit verandert.
+#  - GitHub draait na onze push zijn eigen buildstap over de branch, en zet daar
+#    Jekyll bij aan. Vandaar `public/.nojekyll`, dat via `dist/` in de root van
+#    gh-pages belandt en die verwerking uitschakelt.
 
 on:
   push:
@@ -14,9 +21,12 @@ on:
 permissions:
   contents: read
 
-# Dezelfde groepsnaam als in preview.yml, zodat een deploy en een preview elkaar
-# niet gelijktijdig naar `gh-pages` proberen te duwen. Botsen ze alsnog — de
-# groepen zijn per PR — dan vangt de rebase-lus in "Push naar gh-pages" dat op.
+# Per bron, niet gedeeld met preview.yml: die gebruikt `gh-pages-pr-<n>`. Een
+# deploy en een preview serialiseren dus *niet* — ze draaien gerust tegelijk, en
+# bij het mergen van een PR gebeurt dat gegarandeerd. Deze groep voorkomt alleen
+# dat twee opeenvolgende pushes naar main elkaar in de weg lopen. Al het
+# kruisverkeer wordt opgevangen door de rebase-lus in push-gh-pages.sh; dat is
+# geen vangnet voor een zeldzaam geval maar het enige mechanisme dat er is.
 concurrency:
   group: gh-pages-main
   cancel-in-progress: true
@@ -25,7 +35,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      # Nodig om naar gh-pages te kunnen pushen.
+      # Nodig om naar gh-pages te kunnen pushen. Geldt voor de hele job, dus ook
+      # tijdens `npm ci` en de Playwright-run; wil je die scope kleiner, dan moet
+      # het publiceren naar een eigen job met `dist` als artifact.
       contents: write
     defaults:
       run:
@@ -54,6 +66,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Controleer dat er echt een site gebouwd is
+        # `npm run build` kan met 0 eindigen en toch een lege dist achterlaten.
+        # De stap hieronder maakt de root van gh-pages leeg vóór het kopiëren, dus
+        # zonder deze controle publiceren we een lege site en merkt de rooktest
+        # dat pas als hij al live staat.
+        run: test -f dist/index.html || { echo "::error::dist/index.html ontbreekt"; exit 1; }
+
       - name: Haal gh-pages op of maak hem aan
         id: gh-pages
         env:
@@ -63,8 +82,9 @@ jobs:
             echo "bestaat=true" >> "$GITHUB_OUTPUT"
           else
             ls_exit=$?
-            # Exitcode 2 is "geen match gevonden"; al het andere is een echte
-            # fout en mag niet als "branch bestaat nog niet" gelezen worden.
+            # Exitcode 2 is "geen match gevonden"; al het andere (netwerk, auth)
+            # is een echte fout en mag niet als "branch bestaat nog niet" gelezen
+            # worden — dan zouden we een lege gh-pages aanmaken over een goede heen.
             if [ $ls_exit -eq 2 ]; then
               echo "bestaat=false" >> "$GITHUB_OUTPUT"
               mkdir -p gh-pages && cd gh-pages
@@ -87,47 +107,38 @@ jobs:
           # De previews van openstaande PR's staan op dezelfde branch en mogen
           # niet meegewist worden; zonder deze omweg haalt het leegmaken
           # hieronder ze weg en is elke preview-URL dood tot de PR opnieuw pusht.
+          # Een eigen tijdelijke map, want een vast pad zou op een hergebruikte
+          # runner de previews van een vórige run kunnen terugzetten.
+          bewaard=$(mktemp -d)
           if [ -d gh-pages/pr-preview ]; then
-            mv gh-pages/pr-preview /tmp/pr-preview-bewaard
+            mv gh-pages/pr-preview "$bewaard/"
           fi
-          find gh-pages -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} +
+          # CNAME blijft ook staan: Pages bewaart een eigen domein op de
+          # publicatiebranch, en dat weggooien zet het domein stil uit.
+          find gh-pages -mindepth 1 -maxdepth 1 -not -name '.git' -not -name 'CNAME' -exec rm -rf {} +
           cp -r dist/. gh-pages/
-          if [ -d /tmp/pr-preview-bewaard ]; then
-            mv /tmp/pr-preview-bewaard gh-pages/pr-preview
+          if [ -d "$bewaard/pr-preview" ]; then
+            mv "$bewaard/pr-preview" gh-pages/
           fi
+          rmdir "$bewaard" 2>/dev/null || true
 
       - name: Push naar gh-pages
-        run: |
-          cd gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --staged --quiet; then
-            echo "Niets veranderd aan de site"
-            exit 0
-          fi
-          git commit -m "Publiceer ${GITHUB_SHA}"
-          gelukt=false
-          for poging in 1 2 3; do
-            if git push origin gh-pages; then
-              gelukt=true
-              break
-            fi
-            echo "::warning::Push mislukt (poging ${poging}/3), rebasen en opnieuw"
-            if ! git pull --rebase origin gh-pages; then
-              echo "::error::git pull --rebase mislukte op poging ${poging}/3"
-              git rebase --abort 2>/dev/null || true
-              exit 1
-            fi
-          done
-          if [ "$gelukt" != "true" ]; then
-            echo "::error::Push naar gh-pages mislukt na 3 pogingen"
-            exit 1
-          fi
+        # De commit die hieruit komt raakt pr-preview/ niet, want die map is
+        # hierboven ongewijzigd teruggezet. Daardoor kan een rebase van een
+        # verlate deploy geen zojuist opgeruimde preview terughalen.
+        #
+        # Let op: dat twee deploys elkaar niet stil overschrijven berust erop dat
+        # index.html altijd verschilt — de build-sha-metatag uit vite.config.ts
+        # zorgt daarvoor, dus een verouderde deploy botst en wordt rood. Wordt
+        # die stempel ooit weggehaald of deterministisch gemaakt, dan wordt dit
+        # een schone rebase en overschrijft oud stilletjes nieuw.
+        run: bash .github/scripts/push-gh-pages.sh gh-pages "Publiceer ${GITHUB_SHA}"
 
-  # Draait tegen de zojuist gepubliceerde site. Let op de volgorde: dit gebeurt
-  # ná publicatie, dus het houdt een kapotte deploy niet tegen — het maakt hem
-  # zichtbaar in plaats van stil, iets wat de unit tests niet kunnen.
+  # Draait tegen de gepubliceerde site. Publiceren is met deze opzet in tweeën
+  # gevallen: onze push, en daarna de eigen Pages-build van GitHub. Deze job hangt
+  # aan de eerste, dus hij wacht in de poll hieronder op de tweede. Hij houdt een
+  # kapotte deploy niet tegen — hij maakt hem zichtbaar in plaats van stil, iets
+  # wat de unit tests niet kunnen.
   rooktest:
     needs: build
     runs-on: ubuntu-latest
@@ -145,6 +156,8 @@ jobs:
       # De URL kwam eerder uit actions/deploy-pages; die output bestaat niet meer
       # nu we naar een branch publiceren, dus stellen we hem zelf samen. De
       # hostnaam is kleingeschreven, het pad houdt de schrijfwijze van de repo.
+      # Dit veronderstelt een projectsite; bij een eigen domein via CNAME klopt
+      # hij niet meer (zie ook het voorbehoud bij `base` in vite.config.ts).
       - name: Stel de Pages-URL samen
         id: url
         run: |

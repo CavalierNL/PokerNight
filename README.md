@@ -41,6 +41,23 @@ npm run test:e2e # rooktest in een echte browser tegen een previewbuild
 npm run build    # statische build in dist/
 ```
 
+## Publiceren
+
+De site staat op de `gh-pages`-branch: `main` in de root, en elke openstaande
+PR onder `pr-preview/pr-<n>/`. Een PR krijgt zo zijn eigen draaiende versie, met
+een link in een comment op de PR zelf.
+
+Dat vraagt één instelling die geen enkele workflow kan afdwingen: **Settings →
+Pages → Source op "Deploy from a branch" → `gh-pages` / `(root)`**. Staat die
+verkeerd, dan slagen de workflows gewoon maar publiceert GitHub niets — de site
+blijft op de laatste versie staan en elke preview-URL geeft een 404.
+
+Een preview draait op dezelfde origin als de echte site en deelt dus in principe
+dezelfde `localStorage`. Daarom krijgt hij zijn eigen sleutels
+(`pokernight.pr-<n>.*` in plaats van `pokernight.*`); zonder die scheiding zou
+het uitproberen van een opslagwijziging het lopende toernooi van de echte site
+wissen.
+
 ## Opzet
 
 `src/domain/` bevat alle rekenlogica als pure TypeScript: geen React, geen DOM,

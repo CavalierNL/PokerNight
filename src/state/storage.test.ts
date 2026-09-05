@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   loadChipsets,
   OPSLAG_VERSIE,
@@ -148,18 +148,79 @@ describe('naamruimte', () => {
   })
 
   it('geeft elke PR-preview een eigen hoek', () => {
+    expect(naamruimte('/PokerNight/pr-preview/pr-3/')).toBe('pokernight.pr-3')
     expect(naamruimte('/PokerNight/pr-preview/pr-12/')).toBe('pokernight.pr-12')
-    // Twee previews mogen elkaar niet in de weg zitten.
-    expect(naamruimte('/PokerNight/pr-preview/pr-3/')).not.toBe(
-      naamruimte('/PokerNight/pr-preview/pr-4/'),
-    )
   })
 
-  it('trapt niet in een map die er alleen op lijkt', () => {
-    // Een echte pagina van de site die toevallig zo heet hoort de gewone opslag
-    // te houden; alleen het patroon dat de workflow maakt telt.
+  it('herkent een base zonder afsluitende slash', () => {
+    // Vite normaliseert import.meta.env.BASE_URL niet, dus dit pad kan er echt
+    // uitkomen. Zou de regex een slash eisen, dan viel de preview terug op de
+    // productienaam en schreef hij over een lopend toernooi heen.
+    expect(naamruimte('/PokerNight/pr-preview/pr-12')).toBe('pokernight.pr-12')
+  })
+
+  it('trapt niet in een pad dat er alleen op lijkt', () => {
+    // De regex moet precies het patroon vangen dat preview.yml als PAGES_BASE
+    // zet, en niets wat daar toevallig op lijkt — anders bepaalt een tikfout in
+    // de workflow stilzwijgend welke opslag een preview gebruikt.
     expect(naamruimte('/PokerNight/pr-preview/')).toBe('pokernight')
     expect(naamruimte('/PokerNight/pr-previews/pr-12/')).toBe('pokernight')
+    expect(naamruimte('/PokerNight/pr-preview/pr-abc/')).toBe('pokernight')
+  })
+})
+
+/**
+ * De tests hierboven dekken de functie, niet de bedrading. Zonder onderstaande
+ * kan elke sleutel losraken van `naamruimte` zonder dat er iets omvalt: de
+ * overige tests prikken op letterlijke productienamen, en die blijven kloppen
+ * als een sleutel de naamruimte helemaal overslaat.
+ *
+ * Vandaar `resetModules` plus een verse import: de naamruimte wordt één keer bij
+ * het laden van de module bepaald, dus een andere BASE_URL vraagt om een andere
+ * modulelading.
+ */
+describe('opslag van een preview', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  async function laadOnder(basisPad: string) {
+    vi.stubEnv('BASE_URL', basisPad)
+    vi.resetModules()
+    return import('./storage')
+  }
+
+  it('schrijft elke sleutel onder de naamruimte van de preview', async () => {
+    const opslagModule = await laadOnder('/PokerNight/pr-preview/pr-12/')
+    opslagModule.saveTournament(createTournament(settings, KLEINE_DOOS, 1))
+    opslagModule.saveChipsets(PRESETS)
+    opslagModule.saveSettings(settings)
+    opslagModule.savePreferences({ sound: false, wakeLock: true })
+
+    // Alle vier, want één vergeten sleutel is precies de fout die niemand ziet.
+    expect([...opslag.keys()].sort()).toEqual([
+      'pokernight.pr-12.chipsets',
+      'pokernight.pr-12.preferences',
+      'pokernight.pr-12.settings',
+      'pokernight.pr-12.tournament',
+    ])
+  })
+
+  it('laat het toernooi van de echte site met rust', async () => {
+    const echt = await laadOnder('/PokerNight/')
+    const toernooi = createTournament(settings, KLEINE_DOOS, 1)
+    echt.saveTournament(toernooi)
+
+    // De preview ziet het toernooi van de echte site niet...
+    const preview = await laadOnder('/PokerNight/pr-preview/pr-12/')
+    expect(preview.loadTournament()).toBeNull()
+    preview.saveTournament(createTournament({ ...settings, startingStack: 999 }, KLEINE_DOOS, 1))
+
+    // ...en heeft het na afloop ook niet aangeraakt. Dit is de helft die telt:
+    // hij vangt een preview die niet alleen leest maar ook overschrijft.
+    const opnieuw = await laadOnder('/PokerNight/')
+    expect(opnieuw.loadTournament()?.settings.startingStack).toBe(settings.startingStack)
   })
 })
 
