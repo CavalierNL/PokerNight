@@ -17,14 +17,19 @@ function datumTekst(ms: number): string {
 }
 
 /**
- * De stand over alle gespeelde avonden, plus de lijst met vaste spelers waar het
- * setupscherm uit laat kiezen.
+ * De hall of fame, de stand over alle gespeelde avonden, en de lijst met vaste
+ * spelers waar het setupscherm uit laat kiezen.
  *
- * Die twee staan bewust op één scherm: het klassement herkent dezelfde persoon
- * alleen als de naam elke avond precies gelijk is, en dat lukt door hem aan te
- * tikken in plaats van te typen. Wordt een naam de ene avond anders geschreven
- * dan de andere, dan staat diezelfde persoon in het klassement als twee spelers
- * — en dit scherm is de enige plek waar dat op te merken valt.
+ * De overwinningen staan bovenaan omdat dat de vraag is waarmee je dit scherm
+ * opent: wie won er ook alweer vorige keer. De stand is het naslagwerk daarnaast.
+ * Op een telefoon vallen de panelen onder elkaar, dus deze volgorde bepaalt daar
+ * wat je zonder scrollen ziet.
+ *
+ * De vaste spelers staan hier en niet bij de instellingen: het klassement herkent
+ * dezelfde persoon alleen als de naam elke avond precies gelijk is, en dat lukt
+ * door hem aan te tikken in plaats van te typen. Wordt een naam de ene avond
+ * anders geschreven dan de andere, dan staat diezelfde persoon in het klassement
+ * als twee spelers — en dit scherm is de enige plek waar dat op te merken valt.
  */
 export function KlassementScreen({ onClose }: { onClose: () => void }) {
   const { spelers, avonden, setSpelers, storageOk } = useAppState()
@@ -69,6 +74,21 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="setup__raster">
+        <Panel title="Hall of fame">
+          {overwinningen.length === 0 ? (
+            <p className="uitleg">Hier komt elke overwinning te staan, met de datum erbij.</p>
+          ) : (
+            <ol className="fame">
+              {overwinningen.map((zege, index) => (
+                <li key={`${zege.datum}-${index}`} className="fame__regel">
+                  <span className="fame__naam">{zege.naam}</span>
+                  <span className="fame__datum">{datumTekst(zege.datum)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
+
         <Panel title="Stand">
           {stand.length === 0 ? (
             <p className="uitleg">
@@ -97,21 +117,6 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
                 Zo weegt een volle tafel zwaarder dan een tafel met z'n drieën.
               </p>
             </>
-          )}
-        </Panel>
-
-        <Panel title="Hall of fame">
-          {overwinningen.length === 0 ? (
-            <p className="uitleg">Hier komt elke overwinning te staan, met de datum erbij.</p>
-          ) : (
-            <ol className="fame">
-              {overwinningen.map((zege, index) => (
-                <li key={`${zege.datum}-${index}`} className="fame__regel">
-                  <span className="fame__naam">{zege.naam}</span>
-                  <span className="fame__datum">{datumTekst(zege.datum)}</span>
-                </li>
-              ))}
-            </ol>
           )}
         </Panel>
 
