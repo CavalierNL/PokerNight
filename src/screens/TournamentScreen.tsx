@@ -8,6 +8,7 @@ import { useAppState } from '../state/AppState'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
 import { HandenVenster } from '../components/HandenVenster'
+import { SidePotVenster } from '../components/SidePotVenster'
 import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
@@ -61,6 +62,7 @@ export function TournamentScreen() {
   const [schemaOpen, setSchemaOpen] = useState(false)
   const [laatkomerOpen, setLaatkomerOpen] = useState(false)
   const [handenOpen, setHandenOpen] = useState(false)
+  const [sidePotsOpen, setSidePotsOpen] = useState(false)
   // Het level waarvoor iemand het geluid heeft stilgezet. Bewaard als index en
   // niet als vlag, zodat het volgende level vanzelf weer geluid geeft zonder dat
   // er ergens een reset hoeft te staan die vergeten kan worden.
@@ -150,12 +152,22 @@ export function TournamentScreen() {
           </span>
           <span>{playersLeft(tournament)} spelers</span>
           {/*
-            In de balk en niet bij het schema onder de klok: het zijn twee
-            dingen die je om heel verschillende redenen opzoekt, en naast
-            elkaar tik je de verkeerde.
+            "Wat wint?" en "Side pots" staan hier samen, en het schema staat
+            bewust ver weg onder de klok. De as is: deze twee gaan over de hand
+            die nu op tafel ligt, het schema gaat over de avond. Ze naast elkaar
+            zetten scheelt zoeken op het moment dat een pot wordt uitbetaald.
+
+            Dat botst niet met de reden dat het schema apart staat — daar zou een
+            misgreep je uit de hand halen terwijl je moet uitbetalen. Hier openen
+            beide knoppen alleen een leesvenster, dus een misgreep kost een tik.
+            Vergelijk de levelknoppen hierboven, die juist klein blijven omdat
+            een misgreep dáár de blinds verzet.
           */}
           <button className="tafel__balklink" onClick={() => setHandenOpen(true)}>
             Wat wint?
+          </button>
+          <button className="tafel__balklink" onClick={() => setSidePotsOpen(true)}>
+            Side pots
           </button>
         </div>
 
@@ -340,6 +352,15 @@ export function TournamentScreen() {
       )}
 
       {handenOpen && <HandenVenster onSluiten={() => setHandenOpen(false)} />}
+
+      {sidePotsOpen && (
+        <SidePotVenster
+          // Alleen wie nog in het spel is: iemand die eerder op de avond
+          // afgetikt is kan deze hand niets in de pot hebben.
+          spelers={nogInHetSpel(tournament).map((speler) => speler.name)}
+          onSluiten={() => setSidePotsOpen(false)}
+        />
+      )}
 
       {schemaOpen && (
         <SchemaVenster tournament={tournament} onSluiten={() => setSchemaOpen(false)} />
