@@ -661,3 +661,14 @@
 .potten__regel--terug .potten__bedrag {
   color: var(--creme-zacht);
 }
+
+/* Het totaal staat los van de potten: het is geen pot maar een controlegetal. */
+.potten__regel--totaal .potten__naam,
+.potten__regel--totaal .potten__bedrag {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--felt-licht);
+}
+
+.potten__regel--totaal .potten__bedrag {
+  color: var(--creme);
+}

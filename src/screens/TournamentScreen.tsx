@@ -152,18 +152,20 @@ export function TournamentScreen() {
           </span>
           <span>{playersLeft(tournament)} spelers</span>
           {/*
-            In de balk en niet bij het schema onder de klok: het zijn twee
-            dingen die je om heel verschillende redenen opzoekt, en naast
-            elkaar tik je de verkeerde.
+            "Wat wint?" en "Side pots" staan hier samen, en het schema staat
+            bewust ver weg onder de klok. De as is: deze twee gaan over de hand
+            die nu op tafel ligt, het schema gaat over de avond. Ze naast elkaar
+            zetten scheelt zoeken op het moment dat een pot wordt uitbetaald.
+
+            Dat botst niet met de reden dat het schema apart staat — daar zou een
+            misgreep je uit de hand halen terwijl je moet uitbetalen. Hier openen
+            beide knoppen alleen een leesvenster, dus een misgreep kost een tik.
+            Vergelijk de levelknoppen hierboven, die juist klein blijven omdat
+            een misgreep dáár de blinds verzet.
           */}
           <button className="tafel__balklink" onClick={() => setHandenOpen(true)}>
             Wat wint?
           </button>
-          {/*
-            Wél naast "Wat wint?" en niet bij het schema: dit zijn de twee dingen
-            die je opzoekt terwijl een hand wordt uitbetaald. Het schema gaat over
-            de avond, deze twee over de hand die nu op tafel ligt.
-          */}
           <button className="tafel__balklink" onClick={() => setSidePotsOpen(true)}>
             Side pots
           </button>

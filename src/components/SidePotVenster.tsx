@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from './Button'
-import { verdeelPotten, type Inzet } from '../domain/sidepots'
+import { totaalUit, verdeelPotten, type Inzet } from '../domain/sidepots'
 
 /**
  * Rekent uit wie waar recht op heeft na een hand met all-ins op verschillende
@@ -19,22 +19,33 @@ export function SidePotVenster({
   spelers: string[]
   onSluiten: () => void
 }) {
-  // De ingetikte tekst en niet het getal, zodat een veld leeg mag zijn terwijl
-  // je typt in plaats van meteen op 0 te springen.
-  const [bedragen, setBedragen] = useState<Record<string, string>>({})
-  const [gefold, setGefold] = useState<Record<string, boolean>>({})
+  /*
+   * Op plaats aan tafel gesleuteld en niet op naam. Namen zijn niet uniek — het
+   * setupscherm trimt ze alleen — en met twee spelers die Jan heten zouden beide
+   * velden aan één waarde hangen: je tikt bij de ene Jan 50 in en de andere
+   * springt mee, met een pot die twee keer zo groot is als hij hoort. Een naam
+   * als "constructor" zou bovendien een eigenschap van Object.prototype lezen.
+   *
+   * De tekst en niet het getal, zodat een veld leeg mag zijn terwijl je typt in
+   * plaats van meteen op 0 te springen.
+   */
+  const [bedragen, setBedragen] = useState<string[]>(() => spelers.map(() => ''))
+  const [gefold, setGefold] = useState<boolean[]>(() => spelers.map(() => false))
 
-  const inzetten: Inzet[] = spelers.map((naam) => {
-    const getal = Number(bedragen[naam])
-    return {
-      naam,
-      bedrag: Number.isFinite(getal) && getal > 0 ? Math.floor(getal) : 0,
-      gefold: gefold[naam] === true,
-    }
-  })
+  function zet<T>(lijst: T[], index: number, waarde: T): T[] {
+    return lijst.map((eerder, i) => (i === index ? waarde : eerder))
+  }
 
-  const { potten, terug } = verdeelPotten(inzetten)
-  const totaal = inzetten.reduce((som, inzet) => som + inzet.bedrag, 0)
+  // Het afronden en het wegfilteren van onbruikbare bedragen gebeurt in
+  // verdeelPotten, zodat de regel op de getestte plek staat.
+  const inzetten: Inzet[] = spelers.map((naam, index) => ({
+    naam,
+    bedrag: Number(bedragen[index]),
+    gefold: gefold[index],
+  }))
+
+  const verdeling = verdeelPotten(inzetten)
+  const totaal = totaalUit(verdeling)
 
   return (
     <div className="levelscherm">
@@ -49,8 +60,8 @@ export function SidePotVenster({
 
         <div className="schema__lijst">
           <ul className="potinvoer">
-            {spelers.map((naam) => (
-              <li key={naam} className="potinvoer__regel">
+            {spelers.map((naam, index) => (
+              <li key={`${naam}-${index}`} className="potinvoer__regel">
                 <span className="potinvoer__naam">{naam}</span>
                 <input
                   className="potinvoer__bedrag"
@@ -58,17 +69,17 @@ export function SidePotVenster({
                   min={0}
                   inputMode="numeric"
                   aria-label={`Inzet van ${naam}`}
-                  value={bedragen[naam] ?? ''}
-                  onChange={(e) => setBedragen((vorig) => ({ ...vorig, [naam]: e.target.value }))}
+                  value={bedragen[index]}
+                  onChange={(e) => setBedragen((vorig) => zet(vorig, index, e.target.value))}
                 />
                 {/* Een schakelaar en geen vinkje: aan tafel tik je hier met een
                     duim op, en een vinkje van 14 pixels raak je dan niet. */}
                 <button
                   type="button"
-                  className={`potinvoer__fold${gefold[naam] ? ' potinvoer__fold--aan' : ''}`}
+                  className={`potinvoer__fold${gefold[index] ? ' potinvoer__fold--aan' : ''}`}
                   aria-label={`Fold voor ${naam}`}
-                  aria-pressed={gefold[naam] === true}
-                  onClick={() => setGefold((vorig) => ({ ...vorig, [naam]: !vorig[naam] }))}
+                  aria-pressed={gefold[index]}
+                  onClick={() => setGefold((vorig) => zet(vorig, index, !vorig[index]))}
                 >
                   fold
                 </button>
@@ -84,24 +95,35 @@ export function SidePotVenster({
           </p>
         ) : (
           <ol className="potten">
-            {potten.map((pot, index) => (
+            {verdeling.potten.map((pot, index) => (
               <li key={index} className="potten__regel">
                 <span className="potten__naam">
                   {index === 0 ? 'Hoofdpot' : `Side pot ${index}`}
                 </span>
                 <span className="potten__bedrag">{pot.bedrag}</span>
+                {/* "niemand" is geen vangnet maar het contract uit
+                    verdeelPotten: een pot zonder kanshebbers betekent verkeerde
+                    invoer en hoort zichtbaar te blijven, niet verborgen. */}
                 <span className="potten__spelers">
                   {pot.kanshebbers.length > 0 ? pot.kanshebbers.join(', ') : 'niemand'}
                 </span>
               </li>
             ))}
-            {terug && (
+            {verdeling.terug && (
               <li className="potten__regel potten__regel--terug">
                 <span className="potten__naam">Terug</span>
-                <span className="potten__bedrag">{terug.bedrag}</span>
-                <span className="potten__spelers">{terug.naam}</span>
+                <span className="potten__bedrag">{verdeling.terug.bedrag}</span>
+                <span className="potten__spelers">{verdeling.terug.naam}</span>
               </li>
             )}
+            {/* De controle die aan tafel telt: klopt dit met wat er in het midden
+                ligt? Zonder dit totaal is een vertikte min of een half fiche —
+                allebei genegeerd door de rekenkern — nergens aan te zien. */}
+            <li className="potten__regel potten__regel--totaal">
+              <span className="potten__naam">Totaal</span>
+              <span className="potten__bedrag">{totaal}</span>
+              <span className="potten__spelers">in het midden</span>
+            </li>
           </ol>
         )}
 
