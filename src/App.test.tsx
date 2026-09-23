@@ -208,14 +208,37 @@ describe('tafelscherm', () => {
     expect(html).toContain('Klaar rond')
   })
 
-  it('laat de eindtijd weg als alleen eliminaties de blinds verhogen', () => {
-    bewaarToernooi({ trigger: 'elimination' })
-    const html = renderToStaticMarkup(
+  /** Het tafelscherm met een toernooi uit de opslag. */
+  function tafel(overrides: Partial<Settings> = {}): string {
+    bewaarToernooi(overrides)
+    return renderToStaticMarkup(
       <AppStateProvider>
         <TournamentScreen />
       </AppStateProvider>,
     )
-    expect(html).not.toContain('klaar rond')
+  }
+
+  it('toont de eindtijd ook als alleen eliminaties de blinds verhogen', () => {
+    // De blinds volgen dan de uitvallers, maar de avond is nog steeds om als de
+    // speelduur om is — en dat hoort te zien te zijn.
+    expect(tafel({ trigger: 'elimination' })).toContain('Klaar rond')
+  })
+
+  it('laat de eindtijd weg bij last man standing', () => {
+    expect(tafel({ trigger: 'elimination', durationMinutes: undefined })).not.toContain(
+      'Klaar rond',
+    )
+  })
+
+  it('telt af naar het einde van de avond als alleen eliminaties de blinds verhogen', () => {
+    // Anders staat er een teller die optelt en nergens aankomt: dat was de bug.
+    const klok = tafel({ trigger: 'elimination' })
+    expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>180:00<')
+  })
+
+  it('telt op bij last man standing, want daar loopt niets af', () => {
+    const klok = tafel({ trigger: 'elimination', durationMinutes: undefined })
+    expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>0:00<')
   })
 })
 

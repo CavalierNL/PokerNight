@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aftelTijdMs,
   averageStack,
   averageStackInBigBlinds,
   createTournament,
@@ -286,8 +287,17 @@ describe('verwachte eindtijd', () => {
     expect(expectedEndAt(gepauzeerd, T0 + 20 * MINUUT)!).toBe(expectedEndAt(t, T0)! + 20 * MINUUT)
   })
 
-  it('bestaat niet als alleen eliminaties de blinds verhogen', () => {
-    expect(expectedEndAt(maak({ trigger: 'elimination' }), T0)).toBeUndefined()
+  it('wijst bij blinds op eliminatie naar het einde van de speelduur', () => {
+    // De blinds volgen de eliminaties, maar de avond heeft wel een einde. Dat
+    // is de andere instelling, en die hoort hier gewoon te gelden.
+    const t = maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 })
+    expect(expectedEndAt(t, T0 + MINUUT)).toBe(T0 + 4 * MINUUT)
+  })
+
+  it('bestaat niet zonder afgesproken speelduur', () => {
+    expect(
+      expectedEndAt(maak({ trigger: 'elimination', durationMinutes: undefined }), T0),
+    ).toBeUndefined()
   })
 })
 
@@ -588,5 +598,68 @@ describe('het einde van de speelduur', () => {
     const terug = reduce(t, { type: 'undo', now: T0 + 16 * MINUUT })
     expect(isAfgelopen(terug)).toBe(false)
     expect(terug.levelIndex).toBe(t.levelIndex)
+  })
+})
+
+describe('de speelduur als alleen eliminaties de blinds verhogen', () => {
+  /** Vier minuten in twee levels van twee, met blinds op eliminaties. */
+  const avond = (overrides: Partial<Settings> = {}) =>
+    maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2, ...overrides })
+
+  it('sluit het toernooi af zodra de speelduur verstreken is', () => {
+    expect(isAfgelopen(reduce(avond(), { type: 'tick', now: T0 + 4 * MINUUT }))).toBe(true)
+  })
+
+  it('sluit het geen tel eerder af', () => {
+    expect(isAfgelopen(reduce(avond(), { type: 'tick', now: T0 + 4 * MINUUT - 1 }))).toBe(false)
+  })
+
+  it('verhoogt de blinds onderweg nog steeds niet', () => {
+    // De helft die niet mag veranderen: wanneer de blinds omhoog gaan en
+    // wanneer de avond klaar is zijn twee losse instellingen.
+    expect(reduce(avond(), { type: 'tick', now: T0 + 3 * MINUUT }).levelIndex).toBe(0)
+  })
+
+  it('telt een pauze niet mee in de speelduur', () => {
+    let t = reduce(avond(), { type: 'togglePause', now: T0 + MINUUT })
+    t = reduce(t, { type: 'togglePause', now: T0 + 4 * MINUUT })
+    expect(isAfgelopen(reduce(t, { type: 'tick', now: T0 + 6 * MINUUT }))).toBe(false)
+    expect(isAfgelopen(reduce(t, { type: 'tick', now: T0 + 7 * MINUUT }))).toBe(true)
+  })
+
+  it('speelt zonder afgesproken speelduur door tot er een over is', () => {
+    const t = avond({ durationMinutes: undefined })
+    expect(isAfgelopen(reduce(t, { type: 'tick', now: T0 + 99 * MINUUT }))).toBe(false)
+  })
+})
+
+describe('aftelTijdMs', () => {
+  it('telt af naar het einde van het level als de klok de blinds opschuift', () => {
+    const t = maak()
+    expect(aftelTijdMs(t, T0 + MINUUT)).toBe(remainingMs(t, T0 + MINUUT))
+  })
+
+  it('telt af naar het einde van de avond als alleen eliminaties tellen', () => {
+    const t = maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 })
+    expect(aftelTijdMs(t, T0 + MINUUT)).toBe(3 * MINUUT)
+  })
+
+  it('staat stil tijdens een pauze', () => {
+    // Anders loopt de teller op het scherm door terwijl er niet gespeeld wordt.
+    const t = reduce(maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 }), {
+      type: 'togglePause',
+      now: T0 + MINUUT,
+    })
+    expect(aftelTijdMs(t, T0 + 3 * MINUUT)).toBe(3 * MINUUT)
+  })
+
+  it('zakt niet door nul heen', () => {
+    const t = maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 })
+    expect(aftelTijdMs(t, T0 + 99 * MINUUT)).toBe(0)
+  })
+
+  it('telt niets af zonder afgesproken speelduur', () => {
+    const t = maak({ trigger: 'elimination', durationMinutes: undefined })
+    expect(aftelTijdMs(t, T0 + MINUUT)).toBeUndefined()
   })
 })

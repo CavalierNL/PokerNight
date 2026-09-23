@@ -181,10 +181,13 @@ export function isLastLevel(state: Tournament): boolean {
  * vanzelf op met elke pauze. Alleen zinvol als de tijd de levels opschuift.
  */
 export function expectedEndAt(state: Tournament, now: number): number | undefined {
-  // Zonder eindtijd zegt het laatste level niets over wanneer het klaar is: er
-  // wordt gespeeld tot er één over is.
-  if (state.settings.durationMinutes === undefined) return undefined
-  if (state.settings.trigger === 'elimination') return undefined
+  // Zonder afgesproken duur zegt het laatste level niets over wanneer het klaar
+  // is: er wordt gespeeld tot er één over is.
+  const over = resterendeSpeelduurMs(state, now)
+  if (over === undefined) return undefined
+  // Schuift de klok de blinds niet op, dan is het einde van de avond het enige
+  // wat de klok nog bepaalt.
+  if (!advancesOnTime(state.settings.trigger)) return now + over
   const levelsTeGaan = state.levels.length - state.levelIndex - 1
   return now + remainingMs(state, now) + levelsTeGaan * state.settings.levelMinutes * 60_000
 }
@@ -229,10 +232,40 @@ export function uitslag(state: Tournament): Player[] {
   return [...nogInHetSpel(state), ...afgevallen(state)]
 }
 
-/** De tijd die er werkelijk gespeeld is: zonder de pauzes. */
+/**
+ * De tijd die er werkelijk gespeeld is: zonder de pauzes.
+ *
+ * Tijdens een pauze is het peilmoment het begin van die pauze. De lopende pauze
+ * zit namelijk nog niet in `pausedMs` — die wordt pas bij hervatten bijgeteld —
+ * dus zonder dat zou een teller die hierop leunt doorlopen terwijl er niet
+ * gespeeld wordt.
+ */
 export function speelduurMs(state: Tournament, now: number): number {
-  const eind = state.finishedAt ?? now
-  return Math.max(0, eind - state.startedAt - state.pausedMs)
+  const peil = state.finishedAt ?? (state.clock.state === 'paused' ? state.clock.pausedAt : now)
+  return Math.max(0, peil - state.startedAt - state.pausedMs)
+}
+
+/**
+ * Wat er van de afgesproken speelduur over is, of `undefined` als er geen duur
+ * is afgesproken en er dus tot de laatste man gespeeld wordt.
+ */
+function resterendeSpeelduurMs(state: Tournament, now: number): number | undefined {
+  const duur = state.settings.durationMinutes
+  if (duur === undefined) return undefined
+  return Math.max(0, duur * 60_000 - speelduurMs(state, now))
+}
+
+/**
+ * Waar de grote klok naartoe telt, of `undefined` als er niets afloopt en
+ * alleen de verstreken tijd iets zegt.
+ *
+ * Schuift de klok de blinds op, dan telt hij naar het einde van het level. Doet
+ * hij dat niet, dan is het einde van de avond het enige wat nog afloopt — en
+ * dat hangt aan "wanneer het klaar is", een andere instelling dan de blinds.
+ */
+export function aftelTijdMs(state: Tournament, now: number): number | undefined {
+  if (advancesOnTime(state.settings.trigger)) return remainingMs(state, now)
+  return resterendeSpeelduurMs(state, now)
 }
 
 /**
@@ -339,7 +372,17 @@ export function reduce(state: Tournament, action: Action): Tournament {
     case 'tick': {
       if (state.finishedAt !== undefined) return state
       if (state.clock.state === 'paused') return state
-      if (!advancesOnTime(state.settings.trigger)) return state
+
+      // Schuift de klok de blinds niet op, dan blijft alleen de vraag over of de
+      // avond om is. Die hangt aan "wanneer het klaar is" en mag hier niet
+      // sneuvelen omdat de blinds toevallig op eliminaties lopen: dat zijn twee
+      // losse instellingen, over twee verschillende dingen.
+      if (!advancesOnTime(state.settings.trigger)) {
+        const over = resterendeSpeelduurMs(state, action.now)
+        if (over === undefined || over > 0) return state
+        return withHistory(state, klaar(core(state), action.now, 0), action.now)
+      }
+
       if (remainingMs(state, action.now) > 0) return state
 
       const volgende = goToNextLevel(core(state), action.now)

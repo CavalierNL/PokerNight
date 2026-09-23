@@ -16,6 +16,7 @@ import { roundToPayable } from '../domain/amounts'
 import { prepareSetup } from '../domain/setup'
 import type { Chipset } from '../domain/chipset'
 import {
+  aftelTijdMs,
   afgevallen,
   averageStack,
   averageStackInBigBlinds,
@@ -111,11 +112,11 @@ export function TournamentScreen() {
   const eindtijd = expectedEndAt(tournament, now)
   const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
 
-  // Bij de trigger "alleen eliminatie" gebeurt er niets als de tijd om is, dus
-  // toont de klok de verstreken toernooitijd in plaats van een aftelling.
-  // Tijdens een pauze staat hij stil.
-  const peilmoment = tournament.clock.state === 'paused' ? tournament.clock.pausedAt : now
-  const verstreken = peilmoment - tournament.startedAt - tournament.pausedMs
+  // De grote klok telt af naar wat er afloopt: het einde van het level, of —
+  // als de klok de blinds niet opschuift — het einde van de avond. Loopt er
+  // niets af, zoals bij last man standing, dan is de verstreken speeltijd het
+  // enige getal dat iets zegt en telt hij op.
+  const aftellen = aftelTijdMs(tournament, now)
 
   return (
     <>
@@ -175,7 +176,7 @@ export function TournamentScreen() {
 
         <div className="tafel__midden">
           <div className={`tafel__klok${bijnaOm ? ' tafel__klok--bijna' : ''}`}>
-            {formatteerTijd(telAfOpTijd ? resterend : verstreken)}
+            {formatteerTijd(aftellen ?? speelduurMs(tournament, now))}
           </div>
           <div className="tafel__blinds">
             <span className="tafel__blind">
