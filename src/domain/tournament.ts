@@ -181,15 +181,12 @@ export function isLastLevel(state: Tournament): boolean {
  * vanzelf op met elke pauze. Alleen zinvol als de tijd de levels opschuift.
  */
 export function expectedEndAt(state: Tournament, now: number): number | undefined {
-  // Zonder afgesproken duur zegt het laatste level niets over wanneer het klaar
-  // is: er wordt gespeeld tot er één over is.
+  // De avond eindigt als de afgesproken speelduur om is. De levels zeggen daar
+  // niets over: die gaan over de blinds, en een eliminatie die er een overslaat
+  // maakt de avond niet korter. Zonder afgesproken duur valt er niets te
+  // verwachten — dan wordt er gespeeld tot er één over is.
   const over = resterendeSpeelduurMs(state, now)
-  if (over === undefined) return undefined
-  // Schuift de klok de blinds niet op, dan is het einde van de avond het enige
-  // wat de klok nog bepaalt.
-  if (!advancesOnTime(state.settings.trigger)) return now + over
-  const levelsTeGaan = state.levels.length - state.levelIndex - 1
-  return now + remainingMs(state, now) + levelsTeGaan * state.settings.levelMinutes * 60_000
+  return over === undefined ? undefined : now + over
 }
 
 export function playersLeft(state: Tournament): number {
@@ -256,16 +253,24 @@ function resterendeSpeelduurMs(state: Tournament, now: number): number | undefin
 }
 
 /**
- * Waar de grote klok naartoe telt, of `undefined` als er niets afloopt en
- * alleen de verstreken tijd iets zegt.
+ * Waar de grote klok naartoe telt: het eerstvolgende moment waarop er iets
+ * verandert — het einde van dit level of het einde van de avond, wat het eerst
+ * komt. `undefined` als er niets afloopt; dan is de verstreken speeltijd het
+ * enige getal dat iets zegt en telt de klok op.
  *
- * Schuift de klok de blinds op, dan telt hij naar het einde van het level. Doet
- * hij dat niet, dan is het einde van de avond het enige wat nog afloopt — en
- * dat hangt aan "wanneer het klaar is", een andere instelling dan de blinds.
+ * Op het laatste level, en als de klok de blinds sowieso niet opschuift,
+ * verandert er aan de blinds niets meer. Een levelklok die op nul blijft staan
+ * is dan geen aftelling maar ruis, dus telt daar alleen de avond nog.
  */
 export function aftelTijdMs(state: Tournament, now: number): number | undefined {
-  if (advancesOnTime(state.settings.trigger)) return remainingMs(state, now)
-  return resterendeSpeelduurMs(state, now)
+  const avond = resterendeSpeelduurMs(state, now)
+  const level =
+    advancesOnTime(state.settings.trigger) && !isLastLevel(state)
+      ? remainingMs(state, now)
+      : undefined
+  if (level === undefined) return avond
+  if (avond === undefined) return level
+  return Math.min(level, avond)
 }
 
 /**
@@ -373,26 +378,25 @@ export function reduce(state: Tournament, action: Action): Tournament {
       if (state.finishedAt !== undefined) return state
       if (state.clock.state === 'paused') return state
 
-      // Schuift de klok de blinds niet op, dan blijft alleen de vraag over of de
-      // avond om is. Die hangt aan "wanneer het klaar is" en mag hier niet
-      // sneuvelen omdat de blinds toevallig op eliminaties lopen: dat zijn twee
-      // losse instellingen, over twee verschillende dingen.
-      if (!advancesOnTime(state.settings.trigger)) {
-        const over = resterendeSpeelduurMs(state, action.now)
-        if (over === undefined || over > 0) return state
+      // De avond is om als de afgesproken speelduur om is, en anders niet. Dat
+      // staat los van de levels: die gaan over de blinds, niet over wanneer je
+      // stopt. Zo trekt een instelling over de blinds niet stil de keuze over
+      // het einde in, en verkort een eliminatie die een level opschuift de
+      // avond niet. `=== 0` dekt ook "geen afgesproken duur": dan is dit
+      // `undefined` en eindigt er niets op de klok.
+      if (resterendeSpeelduurMs(state, action.now) === 0) {
         return withHistory(state, klaar(core(state), action.now, 0), action.now)
       }
 
+      if (!advancesOnTime(state.settings.trigger)) return state
       if (remainingMs(state, action.now) > 0) return state
 
+      // Zijn de levels op maar de avond nog niet, dan blijven de blinds staan
+      // waar ze staan en wordt er doorgespeeld — net als zonder afgesproken
+      // duur. Geen geschiedenisstap, anders staat die na vijf seconden tikken
+      // vol met niets.
       const volgende = goToNextLevel(core(state), action.now)
-      if (volgende) return withHistory(state, volgende, action.now)
-
-      // Het laatste level is uitgespeeld. Met een afgesproken speelduur is het
-      // toernooi daarmee afgelopen; zonder duur wordt er doorgespeeld tot er één
-      // over is, en blijven de blinds staan waar ze staan.
-      if (state.settings.durationMinutes === undefined) return state
-      return withHistory(state, klaar(core(state), action.now, 0), action.now)
+      return volgende ? withHistory(state, volgende, action.now) : state
     }
 
     case 'playerOut': {

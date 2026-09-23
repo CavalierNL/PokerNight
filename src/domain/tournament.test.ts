@@ -275,10 +275,16 @@ describe('gemiddelde stack', () => {
 })
 
 describe('verwachte eindtijd', () => {
-  it('telt de resterende levels bij de huidige klok op', () => {
+  it('wijst naar het einde van de afgesproken speelduur', () => {
     const t = maak({ trigger: 'time' })
-    const teGaan = t.levels.length - 1
-    expect(expectedEndAt(t, T0)).toBe(T0 + 15 * MINUUT + teGaan * 15 * MINUUT)
+    expect(expectedEndAt(t, T0)).toBe(T0 + 120 * MINUUT)
+  })
+
+  it('schuift niet naar voren als een eliminatie een level overslaat', () => {
+    // De blinds springen dan vooruit, maar de avond is nog even lang.
+    const t = maak({ durationMinutes: 4, levelMinutes: 2 })
+    const na = reduce(t, { type: 'playerOut', index: 0, now: T0 + 5_000 })
+    expect(expectedEndAt(na, T0 + 5_000)).toBe(T0 + 4 * MINUUT)
   })
 
   it('schuift op met elke pauze', () => {
@@ -562,39 +568,50 @@ describe('een laatkomer', () => {
 })
 
 describe('het einde van de speelduur', () => {
-  /** Speelt het laatste level uit met een lopende klok. */
-  function totHetLaatsteLevelOm(t: Tournament): Tournament {
+  /** Speelt de afgesproken duur uit met een lopende klok. */
+  function totDeSpeelduurOm(t: Tournament): Tournament {
     const uitgespeeld = reduce(naarLaatsteLevel(t), { type: 'bevestigLevel', now: T0 })
-    return reduce(uitgespeeld, { type: 'tick', now: T0 + 15 * MINUUT })
+    return reduce(uitgespeeld, { type: 'tick', now: T0 + 120 * MINUUT })
   }
 
-  it('sluit het toernooi af als het laatste level uitgespeeld is', () => {
-    const t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
-    expect(isAfgelopen(t)).toBe(true)
+  it('sluit het toernooi af als de afgesproken duur om is', () => {
+    expect(isAfgelopen(totDeSpeelduurOm(maak({ trigger: 'time' })))).toBe(true)
+  })
+
+  it('blijft doorspelen als de levels op zijn maar de duur nog niet', () => {
+    // De levels gaan over de blinds, niet over wanneer je stopt. Zijn ze op,
+    // dan blijven de blinds staan waar ze staan en speel je de duur uit.
+    const uitgespeeld = reduce(naarLaatsteLevel(maak({ trigger: 'time' })), {
+      type: 'bevestigLevel',
+      now: T0,
+    })
+    const na = reduce(uitgespeeld, { type: 'tick', now: T0 + 15 * MINUUT })
+    expect(isAfgelopen(na)).toBe(false)
+    expect(na.levelIndex).toBe(na.levels.length - 1)
   })
 
   it('wijst geen winnaar aan als er nog meerderen zitten', () => {
     // Zonder de stacks te tellen valt niet te zeggen wie voorstaat, en dat
     // gokt de app niet.
-    const t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    const t = totDeSpeelduurOm(maak({ trigger: 'time' }))
     expect(winnaar(t)).toBeUndefined()
     expect(nogInHetSpel(t)).toHaveLength(4)
   })
 
   it('speelt zonder afgesproken duur gewoon door', () => {
-    const t = totHetLaatsteLevelOm(maak({ trigger: 'time', durationMinutes: undefined }))
+    const t = totDeSpeelduurOm(maak({ trigger: 'time', durationMinutes: undefined }))
     expect(isAfgelopen(t)).toBe(false)
   })
 
   it('houdt op met tikken zodra het klaar is', () => {
-    let t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    let t = totDeSpeelduurOm(maak({ trigger: 'time' }))
     const naHetEinde = t
     for (let i = 0; i < 40; i++) t = reduce(t, { type: 'tick', now: T0 + 99 * MINUUT + i })
     expect(t).toBe(naHetEinde)
   })
 
   it('is terug te draaien naar het laatste level', () => {
-    const t = totHetLaatsteLevelOm(maak({ trigger: 'time' }))
+    const t = totDeSpeelduurOm(maak({ trigger: 'time' }))
     const terug = reduce(t, { type: 'undo', now: T0 + 16 * MINUUT })
     expect(isAfgelopen(terug)).toBe(false)
     expect(terug.levelIndex).toBe(t.levelIndex)
@@ -661,5 +678,46 @@ describe('aftelTijdMs', () => {
   it('telt niets af zonder afgesproken speelduur', () => {
     const t = maak({ trigger: 'elimination', durationMinutes: undefined })
     expect(aftelTijdMs(t, T0 + MINUUT)).toBeUndefined()
+  })
+})
+
+describe('een eliminatie verkort de avond niet', () => {
+  /** Vier minuten in twee levels van twee, met de huisregel-trigger. */
+  const avond = () => maak({ durationMinutes: 4, levelMinutes: 2 })
+
+  /** Iemand valt meteen uit, dus het laatste level begint na vijf seconden. */
+  function naDeEersteUitvaller(): Tournament {
+    const t = reduce(avond(), { type: 'playerOut', index: 0, now: T0 + 5_000 })
+    return reduce(t, { type: 'bevestigLevel', now: T0 + 5_000 })
+  }
+
+  it('speelt de hele afgesproken duur uit', () => {
+    // Hiervoor was dit 2:05 in plaats van 4:00: de levels waren op, dus stopte
+    // het toernooi — terwijl de gekozen speelduur vier minuten was.
+    const t = naDeEersteUitvaller()
+    expect(isAfgelopen(reduce(t, { type: 'tick', now: T0 + 3 * MINUUT }))).toBe(false)
+    expect(isAfgelopen(reduce(t, { type: 'tick', now: T0 + 4 * MINUUT }))).toBe(true)
+  })
+
+  it('laat de blinds ondertussen op het laatste level staan', () => {
+    const t = naDeEersteUitvaller()
+    const na = reduce(t, { type: 'tick', now: T0 + 3 * MINUUT })
+    expect(na.levelIndex).toBe(na.levels.length - 1)
+  })
+
+  it('telt op het laatste level af naar het einde van de avond', () => {
+    // De levelklok staat dan allang op nul; die zegt niets meer.
+    const t = naDeEersteUitvaller()
+    expect(aftelTijdMs(t, T0 + 3 * MINUUT)).toBe(MINUUT)
+  })
+
+  it('telt naar het einde van de avond zodra dat eerder komt dan het level', () => {
+    // Zes minuten in drie levels van twee: een uitvaller op 5:30 begint een
+    // vers level van twee minuten, maar de avond is over dertig seconden om.
+    const t = maak({ durationMinutes: 6, levelMinutes: 2 })
+    const uit = reduce(t, { type: 'playerOut', index: 0, now: T0 + 5.5 * MINUUT })
+    const door = reduce(uit, { type: 'bevestigLevel', now: T0 + 5.5 * MINUUT })
+    expect(door.levelIndex).toBe(1)
+    expect(aftelTijdMs(door, T0 + 5.5 * MINUUT)).toBe(0.5 * MINUUT)
   })
 })
