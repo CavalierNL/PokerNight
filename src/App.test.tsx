@@ -237,22 +237,26 @@ describe('tafelscherm', () => {
     expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>180:00<')
   })
 
-  it('toont de levelklok en de avondklok naast elkaar', () => {
-    // Twee verschillende vragen: wanneer gaan de blinds omhoog, en wanneer is
-    // de avond om. Eén getal dat van betekenis wisselt is niet uit te leggen.
+  it('zet de avondklok bovenaan en de levelklok eronder', () => {
+    // Twee verschillende vragen: hoe lang duurt de avond nog, en wanneer gaan
+    // de blinds omhoog. De eerste is de kop van het scherm.
     const html = tafel({ trigger: 'both' })
-    expect(html.slice(html.indexOf('tafel__klok'))).toContain('>15:00<')
-    expect(html.slice(html.indexOf('tafel__avondklok'))).toContain('180:00')
+    const avond = html.indexOf('>180:00<')
+    const level = html.indexOf('>15:00<')
+    expect(avond).toBeGreaterThan(-1)
+    expect(level).toBeGreaterThan(avond)
   })
 
-  it('laat de avondklok weg bij last man standing', () => {
-    expect(tafel({ durationMinutes: undefined })).not.toContain('tafel__avondklok')
+  it('laat de levelklok weg bij last man standing', () => {
+    // Dan is er geen avond om af te tellen en staat de levelklok zelf groot.
+    const html = tafel({ durationMinutes: undefined })
+    expect(html).not.toContain('tafel__levelklok')
+    expect(html).toContain('>15:00<')
   })
 
-  it('laat de avondklok weg als die zelf al de grote klok is', () => {
-    // Bij blinds op eliminatie loopt er geen levelklok, dus staat de avondklok
-    // groot. Hem er dan nog een keer onder zetten is dubbelop.
-    expect(tafel({ trigger: 'elimination' })).not.toContain('tafel__avondklok')
+  it('laat de levelklok weg als de blinds alleen op eliminaties omhoog gaan', () => {
+    // Er loopt er dan geen, dus valt er niets te tonen.
+    expect(tafel({ trigger: 'elimination' })).not.toContain('tafel__levelklok')
   })
 
   it('telt op bij last man standing, want daar loopt niets af', () => {

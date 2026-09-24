@@ -114,13 +114,21 @@ export function TournamentScreen() {
   const eindtijd = expectedEndAt(tournament, now)
   const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
 
-  // Twee klokken met elk hun eigen vraag: wanneer gaan de blinds omhoog, en
-  // wanneer is de avond om. De levelklok staat groot, want die verzet de blinds
-  // en daar let je aan tafel op. Is er geen levelklok, dan neemt de avondklok
-  // die plek in; loopt er helemaal niets af, dan telt de grote klok op.
+  // Twee klokken met elk hun eigen vraag, de avond bovenaan: hoe lang duurt
+  // het nog is waar je mee naar het scherm kijkt, wanneer de blinds omhoog gaan
+  // is de vraag daaronder. Is er geen avondklok, dan neemt de levelklok de grote
+  // plek in; loopt er niets af, dan telt de grote klok de speeltijd op.
   const levelAf = levelAftelMs(tournament, now)
   const avondAf = avondAftelMs(tournament, now)
-  const groteKlok = levelAf ?? avondAf ?? speelduurMs(tournament, now)
+  const groteKlok = avondAf ?? levelAf ?? speelduurMs(tournament, now)
+  const groteIsAvond = avondAf !== undefined
+  const groteLabel = groteIsAvond
+    ? 'Nog te spelen'
+    : levelAf !== undefined
+      ? 'Dit level'
+      : 'Gespeeld'
+  // Alleen eronder als hij niet zelf al de grote klok is.
+  const levelEronder = groteIsAvond ? levelAf : undefined
 
   return (
     <>
@@ -179,12 +187,22 @@ export function TournamentScreen() {
         </div>
 
         <div className="tafel__midden">
-          <div className={`tafel__klok${bijnaOm ? ' tafel__klok--bijna' : ''}`}>
+          <span className="tafel__kloklabel">{groteLabel}</span>
+          {/* De gouden waarschuwing hoort bij de levelklok, waar hij ook staat. */}
+          <div
+            className={`tafel__klok${!groteIsAvond && bijnaOm ? ' tafel__klok--bijna' : ''}`}
+          >
             {formatteerTijd(groteKlok)}
           </div>
-          {/* Alleen als de avondklok niet zelf al de grote klok is. */}
-          {levelAf !== undefined && avondAf !== undefined && (
-            <div className="tafel__avondklok">nog {formatteerTijd(avondAf)} te spelen</div>
+          {levelEronder !== undefined && (
+            <div className="tafel__levelklok">
+              <span className="tafel__kloklabel">Dit level</span>
+              <span
+                className={`tafel__levelklok-waarde${bijnaOm ? ' tafel__levelklok--bijna' : ''}`}
+              >
+                {formatteerTijd(levelEronder)}
+              </span>
+            </div>
           )}
           <div className="tafel__blinds">
             <span className="tafel__blind">
