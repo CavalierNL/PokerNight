@@ -7,8 +7,10 @@ import {
   currentLevel,
   expectedEndAt,
   isAfgelopen,
+  isLastLevel,
   levelAftelMs,
   opDeSlagVan,
+  nextLevel,
   nogInHetSpel,
   playersLeft,
   reduce,
@@ -101,23 +103,23 @@ describe('tick', () => {
     expect(reduce(t, { type: 'tick', now: T0 + 60 * MINUUT }).levelIndex).toBe(0)
   })
 
-  it('laat de state ongemoeid als er geen volgend level meer is', () => {
+  it('blijft stil nadat een level is omgegaan', () => {
     // Anders levert elke tick een nieuw object op. Het tafelscherm tikt vier keer
     // per seconde, dus dat betekent vier renders en vier schrijfacties naar
     // localStorage per seconde, en een undo-geschiedenis die binnen vijf seconden
-    // vol staat met lege stappen. Zonder afgesproken duur wordt er op het laatste
-    // level doorgespeeld tot er één over is: de klok loopt dus echt door.
+    // vol staat. Een omgaand level pauzeert de klok tot de tafel de nieuwe blinds
+    // bevestigt, dus daarna gebeurt er niets meer vanzelf.
     let laatste = naarLaatsteLevel(maak({ trigger: 'time', durationMinutes: undefined }))
     laatste = reduce(laatste, { type: 'bevestigLevel', now: T0 })
     const veelLater = T0 + 999 * MINUUT
     const na = reduce(laatste, { type: 'tick', now: veelLater })
-    expect(na).toBe(laatste)
+    expect(na).not.toBe(laatste)
 
-    let herhaald = laatste
+    let herhaald = na
     for (let i = 0; i < 40; i++) {
       herhaald = reduce(herhaald, { type: 'tick', now: veelLater + i })
     }
-    expect(herhaald.history.length).toBe(laatste.history.length)
+    expect(herhaald).toBe(na)
   })
 })
 
@@ -311,15 +313,24 @@ describe('verwachte eindtijd', () => {
 })
 
 describe('einde structuur', () => {
-  it('blijft op het laatste level staan', () => {
+  /** De enige reeks die echt ophoudt: een eigen lijst met bedragen. */
+  const eigenLijst = () => maak({ structure: 'manual', manualBigBlinds: [2, 4, 8] })
+
+  it('klimt door voorbij de gegenereerde reeks', () => {
     let t = maak({ trigger: 'time', durationMinutes: 30 })
-    const laatste = t.levels.length - 1
+    const gegenereerd = t.levels.length
     for (let i = 0; i < 10; i++) t = reduce(t, { type: 'advanceLevel', now: T0 })
-    expect(t.levelIndex).toBe(laatste)
+    expect(t.levelIndex).toBeGreaterThan(gegenereerd - 1)
+  })
+
+  it('blijft op het laatste bedrag van een eigen lijst staan', () => {
+    let t = eigenLijst()
+    for (let i = 0; i < 10; i++) t = reduce(t, { type: 'advanceLevel', now: T0 })
+    expect(t.levelIndex).toBe(t.levels.length - 1)
   })
 
   it('vult de undo-geschiedenis niet met lege stappen', () => {
-    const laatste = naarLaatsteLevel(maak())
+    const laatste = naarLaatsteLevel(eigenLijst())
     const na = reduce(laatste, { type: 'advanceLevel', now: T0 })
     expect(na).toBe(laatste)
   })
@@ -663,10 +674,16 @@ describe('de twee klokken', () => {
     expect(levelAftelMs(maak({ trigger: 'elimination' }), T0 + MINUUT)).toBeUndefined()
   })
 
-  it('heeft geen levelklok meer op het laatste level', () => {
-    // Daar verandert er niets meer aan de blinds, en een klok die naar nul loopt
-    // en daar blijft staan telt nergens naartoe.
-    expect(levelAftelMs(naarLaatsteLevel(maak()), T0)).toBeUndefined()
+  it('blijft het level aftellen voorbij de gegenereerde reeks', () => {
+    // Er komt altijd een level bij, dus er is geen laatste level meer waar de
+    // klok zou stilvallen.
+    expect(levelAftelMs(naarLaatsteLevel(maak()), T0)).toBeGreaterThan(0)
+  })
+
+  it('heeft geen levelklok meer op het laatste van een eigen lijst', () => {
+    // Daar komt er niets meer bij, dus telt de klok nergens naartoe.
+    const t = naarLaatsteLevel(maak({ structure: 'manual', manualBigBlinds: [2, 4] }))
+    expect(levelAftelMs(t, T0)).toBeUndefined()
   })
 
   it('telt de avond af naar het einde van de speelduur', () => {
@@ -825,5 +842,55 @@ describe('de eindstand na de speelduur', () => {
     const t = ingevuld()
     expect(winnaar(t)?.name).toBe('Max')
     expect(tik(t, 3, T0 + 135 * MINUUT)).toBe(t)
+  })
+})
+
+describe('de levels raken niet op', () => {
+  /** Tikt door tot voorbij het laatste gegenereerde level. */
+  function voorbijDeReeks(t: Tournament): Tournament {
+    const gegenereerd = t.levels.length
+    for (let i = 0; i < gegenereerd; i += 1) {
+      t = reduce(t, { type: 'advanceLevel', now: T0 })
+      t = reduce(t, { type: 'bevestigLevel', now: T0 })
+    }
+    return t
+  }
+
+  it('maakt er een bij als de reeks op is', () => {
+    // Een avond van vier minuten kreeg een handvol levels, maar met acht
+    // spelers kun je zeven keer aftikken. Dan stond je bovenaan vast.
+    const t = maak({ durationMinutes: 4, levelMinutes: 2 })
+    const gegenereerd = t.levels.length
+    const door = voorbijDeReeks(t)
+    expect(door.levelIndex).toBe(gegenereerd)
+    expect(door.levels.length).toBeGreaterThan(gegenereerd)
+  })
+
+  it('verdubbelt het vorige bedrag', () => {
+    // Kan zonder de pokerdoos, en dat is precies waarom het hier kan: een
+    // verdubbeld betaalbaar bedrag is weer betaalbaar.
+    const t = maak({ durationMinutes: 4, levelMinutes: 2 })
+    const laatste = t.levels[t.levels.length - 1]
+    const door = voorbijDeReeks(t)
+    const erbij = door.levels[door.levelIndex]
+    expect(erbij.bigBlind).toBe(laatste.bigBlind * 2)
+    expect(erbij.smallBlind).toBe(laatste.smallBlind * 2)
+  })
+
+  it('kent geen laatste level meer', () => {
+    expect(isLastLevel(naarLaatsteLevel(maak()))).toBe(false)
+  })
+
+  it('kondigt de volgende blinds aan, ook voorbij de reeks', () => {
+    const t = naarLaatsteLevel(maak())
+    const huidig = currentLevel(t)!
+    expect(nextLevel(t)?.bigBlind).toBe(huidig.bigBlind * 2)
+  })
+
+  it('groeit niet bij een eigen lijst met bedragen', () => {
+    // Die gaf de gebruiker zelf op; daar verzinnen we niets bij.
+    const t = naarLaatsteLevel(maak({ structure: 'manual', manualBigBlinds: [2, 4] }))
+    expect(isLastLevel(t)).toBe(true)
+    expect(reduce(t, { type: 'advanceLevel', now: T0 })).toBe(t)
   })
 })

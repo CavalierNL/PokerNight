@@ -162,8 +162,67 @@ export function currentLevel(state: Tournament): BlindLevel | undefined {
   return state.levels[state.levelIndex]
 }
 
+/**
+ * Het level na dit, ook als de gegenereerde reeks daar niet toe reikt.
+ *
+ * Aan tafel staat hieronder "volgende blinds". Dat er toevallig geen rij meer
+ * in de lijst stond mag daar niet uit maken: er komt er een bij zodra je hem
+ * nodig hebt.
+ */
 export function nextLevel(state: Tournament): BlindLevel | undefined {
-  return state.levels[state.levelIndex + 1]
+  const volgende = state.levels[state.levelIndex + 1]
+  if (volgende) return volgende
+  const huidig = state.levels[state.levelIndex]
+  return huidig && magGroeien(state.settings) ? verdubbeld(huidig) : undefined
+}
+
+/**
+ * Of de reeks er een level bij mag maken.
+ *
+ * Bij een eigen lijst met bedragen niet: die gaf de gebruiker zelf op, en daar
+ * verzinnen we niets bij. Is die lijst op, dan blijven de blinds staan waar ze
+ * staan. Een lege lijst valt terug op verdubbelen en groeit dus wel mee.
+ */
+function magGroeien(settings: Settings): boolean {
+  if (settings.structure !== 'manual') return true
+  return (settings.manualBigBlinds?.length ?? 0) === 0
+}
+
+/**
+ * Het volgende level: het vorige bedrag verdubbeld.
+ *
+ * Verdubbelen kan zonder de pokerdoos erbij te halen, en dat is precies waarom
+ * dit hier kan in plaats van in `buildStructure`: een verdubbeld betaalbaar
+ * bedrag is weer betaalbaar, dus small en big blijven allebei met hele fiches
+ * te leggen. De reducer heeft de doos niet, en zou hem anders in elke actie
+ * mee moeten krijgen.
+ *
+ * Een color-up komt er niet bij. Die hoort bij de doos, en dit zijn levels waar
+ * je alleen komt doordat er hard gespeeld is.
+ */
+function verdubbeld(level: BlindLevel): BlindLevel {
+  return {
+    index: level.index + 1,
+    smallBlind: level.smallBlind * 2,
+    bigBlind: level.bigBlind * 2,
+  }
+}
+
+/**
+ * De levellijst, zo nodig aangevuld tot `index` erin past, of `null` als dat
+ * niet kan. Staat de index er al in, dan komt dezelfde lijst terug.
+ */
+function metLevelTot(state: TournamentCore, index: number): BlindLevel[] | null {
+  if (index < 0) return null
+  if (index < state.levels.length) return state.levels
+  if (!magGroeien(state.settings)) return null
+  const levels = [...state.levels]
+  while (levels.length <= index) {
+    const vorige = levels[levels.length - 1]
+    if (!vorige) return null
+    levels.push(verdubbeld(vorige))
+  }
+  return levels
 }
 
 export function remainingMs(state: Tournament, now: number): number {
@@ -171,8 +230,13 @@ export function remainingMs(state: Tournament, now: number): number {
   return Math.max(0, state.clock.endsAt - now)
 }
 
+/**
+ * Of hier de reeks ophoudt. Alleen bij een eigen lijst met bedragen: overal
+ * anders komt er een level bij zodra je het nodig hebt, en is er dus geen
+ * laatste.
+ */
 export function isLastLevel(state: Tournament): boolean {
-  return state.levelIndex >= state.levels.length - 1
+  return state.levelIndex >= state.levels.length - 1 && !magGroeien(state.settings)
 }
 
 /**
@@ -358,9 +422,11 @@ function withHistory(state: Tournament, next: TournamentCore, now: number): Tour
  * staan, dan zou de eerstvolgende tick hem meteen weer vooruit zetten.
  */
 function naarLevel(state: TournamentCore, index: number, now: number): TournamentCore | null {
-  if (index < 0 || index >= state.levels.length) return null
+  const levels = metLevelTot(state, index)
+  if (levels === null) return null
   return {
     ...state,
+    levels,
     levelIndex: index,
     // De klok begint pas te lopen als de nieuwe blinds bevestigd zijn.
     clock: { state: 'paused', remainingMs: state.settings.levelMinutes * 60_000, pausedAt: now },
