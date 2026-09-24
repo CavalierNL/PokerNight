@@ -439,15 +439,31 @@ export function TournamentScreen() {
             ) : (
               <>
                 <span className="levelscherm__kop">De speelduur is om</span>
-                <span className="eindscherm__winnaar eindscherm__winnaar--samen">
-                  {nogInHetSpel(tournament)
-                    .map((p) => p.name)
-                    .join(', ')}
-                </span>
                 <span className="eindscherm__duur">
-                  staan er na {formatteerDuur(speelduurMs(tournament, now))} nog; de meeste chips
-                  wint
+                  na {formatteerDuur(speelduurMs(tournament, now))} spelen
                 </span>
+                {/*
+                  Wie van de overgeblevenen voorstaat weet alleen de tafel, dus
+                  vraagt het scherm erom in plaats van het te gokken: tel de
+                  chips en tik af zoals de hele avond al ging. Wie overblijft
+                  heeft gewonnen, en daarmee is de uitslag compleet.
+                */}
+                <span className="eindscherm__opdracht">
+                  Tel de chips en tik af, de kleinste stack eerst.
+                </span>
+                <div className="eindscherm__aftikken">
+                  {tournament.players.map((speler, index) =>
+                    speler.out ? null : (
+                      <button
+                        key={speler.name + index}
+                        className="speler"
+                        onClick={() => dispatch({ type: 'playerOut', index, now: Date.now() })}
+                      >
+                        {speler.name}
+                      </button>
+                    ),
+                  )}
+                </div>
                 {/* Doorgenummerd vanaf wie er nog zitten: dit zijn de plaatsen eronder. */}
                 <ol className="eindscherm__uitslag" start={nogInHetSpel(tournament).length + 1}>
                   {afgevallen(tournament).map((speler, i) => (
@@ -458,8 +474,9 @@ export function TournamentScreen() {
                     uitleg in de lege staat, en die is weg zodra er één avond in
                     staat — precies wanneer je hem nodig hebt. */}
                 <p className="uitleg">
-                  Deze avond telt niet mee voor het klassement: zonder één winnaar is er geen
-                  volgorde om punten aan te hangen.
+                  Zodra de volgorde compleet is telt deze avond mee voor het klassement. Sluit je
+                  af zonder aftikken, dan telt hij niet mee: zonder volgorde is er niets om punten
+                  aan te hangen.
                 </p>
               </>
             )}

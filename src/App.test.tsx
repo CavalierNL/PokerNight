@@ -614,24 +614,43 @@ describe('klassementscherm', () => {
 })
 
 describe('eindscherm zonder winnaar', () => {
-  it('meldt dat deze avond niet meetelt voor het klassement', () => {
-    // Loopt een toernooi af op de klok met meerdere spelers over, dan is de
-    // bovenkant van de uitslag de zitvolgorde en niet een rangorde. Dat het
-    // daarom niet meetelt hoort hier te staan: op het klassementscherm staat die
-    // uitleg alleen in de lege staat, en die verdwijnt zodra er één avond in
-    // staat — precies wanneer er iets te missen valt.
+  /** Een toernooi waarvan de speelduur afliep terwijl er nog vier zaten. */
+  function eindscherm(): string {
     const t = createTournament(settings, KLEINE_DOOS, 1_000_000)
     opslag.set(
       'pokernight.tournament',
       JSON.stringify({ version: OPSLAG_VERSIE, data: { ...t, finishedAt: 2_000_000 } }),
     )
-    const html = renderToStaticMarkup(
+    return renderToStaticMarkup(
       <AppStateProvider>
         <TournamentScreen />
       </AppStateProvider>,
     )
+  }
+
+  it('vraagt om de eindstand in plaats van de avond af te sluiten', () => {
+    const html = eindscherm()
     expect(html).toContain('De speelduur is om')
-    expect(html).toContain('telt niet mee voor het klassement')
+    expect(html).toContain('de kleinste stack eerst')
+  })
+
+  it('laat de overgeblevenen aftikken', () => {
+    // De namen staan er als knop en niet als opsomming: zonder die knoppen is
+    // er geen manier om de volgorde alsnog in te vullen, en dat was precies wat
+    // er aan tafel ontbrak. Alleen binnen het eindscherm gekeken, want de tafel
+    // eronder toont dezelfde namen.
+    const html = eindscherm()
+    const aftikken = html.slice(html.indexOf('eindscherm__aftikken'))
+    for (const naam of settings.playerNames) {
+      expect(aftikken).toContain(`>${naam}</button>`)
+    }
+  })
+
+  it('meldt dat de avond meetelt zodra de volgorde compleet is', () => {
+    // Op het klassementscherm staat die uitleg alleen in de lege staat, en die
+    // verdwijnt zodra er een avond in staat — precies wanneer er iets te missen
+    // valt.
+    expect(eindscherm()).toContain('telt deze avond mee voor het klassement')
   })
 })
 

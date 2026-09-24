@@ -16,6 +16,7 @@ import {
   speelduurMs,
   totalChips,
   uitslag,
+  wachtOpEindstand,
   winnaar,
   type Settings,
   type Tournament,
@@ -749,5 +750,80 @@ describe('opDeSlagVan', () => {
   it('zakt niet door nul heen', () => {
     // Aan het eind van de avond staat er anders een negatieve tijd.
     expect(opDeSlagVan(100, 999)).toBe(0)
+  })
+})
+
+describe('de eindstand na de speelduur', () => {
+  /**
+   * De speelduur loopt af terwijl er nog drie zitten: Sam is onderweg afgetikt,
+   * Ilse, Joost en Max zitten er nog.
+   */
+  function totDeTijdOm(): Tournament {
+    const gespeeld = reduce(maak({ trigger: 'time' }), {
+      type: 'playerOut',
+      index: 0,
+      now: T0 + MINUUT,
+    })
+    const uitgespeeld = reduce(naarLaatsteLevel(gespeeld), { type: 'bevestigLevel', now: T0 })
+    return reduce(uitgespeeld, { type: 'tick', now: T0 + 120 * MINUUT })
+  }
+
+  const tik = (t: Tournament, index: number, now: number) =>
+    reduce(t, { type: 'playerOut', index, now })
+
+  /** De eindstand zoals hij aan tafel ingevuld wordt: de kleinste stack eerst. */
+  function ingevuld(): Tournament {
+    return tik(tik(totDeTijdOm(), 2, T0 + 125 * MINUUT), 1, T0 + 130 * MINUUT)
+  }
+
+  it('wacht op de eindstand zodra de tijd om is met meerderen aan tafel', () => {
+    expect(wachtOpEindstand(totDeTijdOm())).toBe(true)
+  })
+
+  it('wacht nergens op zolang er gespeeld wordt', () => {
+    expect(wachtOpEindstand(maak())).toBe(false)
+  })
+
+  it('wacht nergens op als het toernooi is uitgespeeld', () => {
+    expect(wachtOpEindstand(totDeWinnaar(maak()))).toBe(false)
+  })
+
+  it('laat de overgeblevenen alsnog aftikken', () => {
+    expect(playersLeft(tik(totDeTijdOm(), 2, T0 + 125 * MINUUT))).toBe(2)
+  })
+
+  it('wijst de laatste die overblijft aan als winnaar', () => {
+    const t = ingevuld()
+    expect(winnaar(t)?.name).toBe('Max')
+    expect(wachtOpEindstand(t)).toBe(false)
+  })
+
+  it('zet de afgetikten boven wie er onderweg al uit lag', () => {
+    expect(uitslag(ingevuld()).map((p) => p.name)).toEqual(['Max', 'Ilse', 'Joost', 'Sam'])
+  })
+
+  it('rekent het chips tellen niet mee als speeltijd', () => {
+    // De avond was om toen de klok afliep; wat daarna gebeurt is opruimen.
+    const om = totDeTijdOm()
+    const t = ingevuld()
+    expect(playersLeft(t)).toBe(1)
+    expect(speelduurMs(t, T0 + 99 * MINUUT)).toBe(speelduurMs(om, T0 + 99 * MINUUT))
+  })
+
+  it('blijft afgelopen terwijl de eindstand ingevuld wordt', () => {
+    expect(isAfgelopen(tik(totDeTijdOm(), 2, T0 + 125 * MINUUT))).toBe(true)
+  })
+
+  it('is terug te draaien, voor als er verkeerd geteld is', () => {
+    const t = tik(totDeTijdOm(), 2, T0 + 125 * MINUUT)
+    const terug = reduce(t, { type: 'undo', now: T0 + 126 * MINUUT })
+    expect(wachtOpEindstand(terug)).toBe(true)
+    expect(playersLeft(terug)).toBe(3)
+  })
+
+  it('laat de winnaar daarna niet alsnog aftikken', () => {
+    const t = ingevuld()
+    expect(winnaar(t)?.name).toBe('Max')
+    expect(tik(t, 3, T0 + 135 * MINUUT)).toBe(t)
   })
 })

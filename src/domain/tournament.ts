@@ -197,6 +197,19 @@ export function isAfgelopen(state: Tournament): boolean {
   return state.finishedAt !== undefined
 }
 
+/**
+ * De speelduur is om terwijl er meerderen zaten: het toernooi is afgelopen,
+ * maar de volgorde waarin zij eindigden staat er nog niet in. Zolang dat zo is
+ * is er geen winnaar en telt de avond niet mee voor het klassement.
+ *
+ * Af te leiden uit wat er al staat, en dus geen apart veld: alleen de klok zet
+ * `finishedAt` met meer dan een speler over. Een eliminatie kan het niet, want
+ * die maakt de voorlaatste vanzelf winnaar.
+ */
+export function wachtOpEindstand(state: Tournament): boolean {
+  return state.finishedAt !== undefined && playersLeft(state) > 1
+}
+
 /** Wie er nog meedoet, in de volgorde waarin ze aan tafel zitten. */
 export function nogInHetSpel(state: Tournament): Player[] {
   return state.players.filter((p) => !p.out)
@@ -417,12 +430,19 @@ export function reduce(state: Tournament, action: Action): Tournament {
     }
 
     case 'playerOut': {
-      if (state.finishedAt !== undefined) return state
+      // Na afloop valt er nog een ding in te vullen: de eindstand, als de
+      // speelduur om was terwijl er meerderen zaten.
+      if (isAfgelopen(state) && !wachtOpEindstand(state)) return state
       if (state.players[action.index]?.out) return state
       const spelers = state.players.map((p, i) =>
         i === action.index ? { ...p, out: true, outAt: action.now } : p,
       )
       const volgende: TournamentCore = { ...core(state), players: spelers }
+
+      // De eindstand wordt na afloop ingevuld: aan het tijdstip van afloop, de
+      // klok en het level verandert niets meer. Wat er dan verstrijkt is chips
+      // tellen, en dat is geen speeltijd.
+      if (state.finishedAt !== undefined) return withHistory(state, volgende, action.now)
 
       // De laatste die afvalt maakt de ander winnaar. Dan gaan de blinds niet
       // meer omhoog en stopt de klok: wat daarna verstrijkt is opruimen.

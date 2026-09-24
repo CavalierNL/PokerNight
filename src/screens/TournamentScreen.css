@@ -452,10 +452,22 @@
   font-weight: 700;
 }
 
-/* Meerdere namen naast elkaar passen niet op de maat van één winnaar. */
-.eindscherm__winnaar--samen {
-  font-size: clamp(1.2rem, 5vw, 2rem);
-  line-height: 1.2;
+/*
+ * De opdracht boven de knoppen. Geen kop maar een zin: het is het enige moment
+ * waarop het scherm de tafel iets vraagt in plaats van iets meldt.
+ */
+.eindscherm__opdracht {
+  color: var(--creme-zacht);
+  max-width: 24rem;
+}
+
+/* Gecentreerd, anders dan aan tafel: hier is het geen rij onderin maar het
+   middelpunt van het scherm. */
+.eindscherm__aftikken {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 /* De link in de balk. Zelfde gewicht als de tekst ernaast: het is een verwijzing
