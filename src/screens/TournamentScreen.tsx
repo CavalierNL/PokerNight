@@ -27,6 +27,7 @@ import {
   isAfgelopen,
   laatkomerStack,
   levelAftelMs,
+  opDeSlagVan,
   nextLevel,
   nogInHetSpel,
   playersLeft,
@@ -129,6 +130,11 @@ export function TournamentScreen() {
       : 'Gespeeld'
   // Alleen eronder als hij niet zelf al de grote klok is.
   const levelEronder = groteIsAvond ? levelAf : undefined
+  // Staan ze onder elkaar, dan slaan ze samen om. De levelklok houdt zijn eigen
+  // slag: daar hangt het geluid aan het eind van een level aan, en die telt naar
+  // een moment waarop er echt iets gebeurt.
+  const groteGetoond =
+    levelEronder === undefined ? groteKlok : opDeSlagVan(groteKlok, levelEronder)
 
   return (
     <>
@@ -192,7 +198,7 @@ export function TournamentScreen() {
           <div
             className={`tafel__klok${!groteIsAvond && bijnaOm ? ' tafel__klok--bijna' : ''}`}
           >
-            {formatteerTijd(groteKlok)}
+            {formatteerTijd(groteGetoond)}
           </div>
           {levelEronder !== undefined && (
             <div className="tafel__levelklok">

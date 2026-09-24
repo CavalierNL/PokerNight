@@ -271,6 +271,26 @@ export function levelAftelMs(state: Tournament, now: number): number | undefined
 }
 
 /**
+ * Dezelfde tijd, maar op de secondeslag van een andere klok.
+ *
+ * Twee klokken onder elkaar verspringen alleen samen als hun eindmomenten een
+ * heel aantal seconden uit elkaar liggen, en dat zijn ze niet. De levelklok
+ * wordt opnieuw verankerd op het moment dat de nieuwe blinds bevestigd worden,
+ * en dat valt zelden op een hele seconde gespeelde tijd — alleen bij de
+ * allereerste bevestiging, want dan is die tijd precies nul. In de browser
+ * gemeten liepen ze na een levelwissel 750 ms uit de pas, en twee grote getallen
+ * die net na elkaar omslaan leidt af van waar je naar kijkt.
+ *
+ * Gelijkzetten kost onvermijdelijk een fractie aan een van de twee. Het verschil
+ * gaat er daarom altijd af en nooit bij: een klok mag best een fractie te weinig
+ * tonen, maar nooit meer tijd beloven dan er is.
+ */
+export function opDeSlagVan(ms: number, ander: number): number {
+  const verschil = (((ms - ander) % 1000) + 1000) % 1000
+  return Math.max(0, ms - verschil)
+}
+
+/**
  * Alle chips die in het spel zijn. Een uitgeschakelde speler telt mee: zijn
  * chips liggen bij wie hem eruit heeft gespeeld. Een laatkomer brengt zijn eigen
  * stack mee, en die hoeft niet de startstack te zijn.

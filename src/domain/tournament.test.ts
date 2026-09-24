@@ -8,6 +8,7 @@ import {
   expectedEndAt,
   isAfgelopen,
   levelAftelMs,
+  opDeSlagVan,
   nogInHetSpel,
   playersLeft,
   reduce,
@@ -721,5 +722,32 @@ describe('een eliminatie verkort de avond niet', () => {
     const t = naDeEersteUitvaller()
     const na = reduce(t, { type: 'tick', now: T0 + 2 * MINUUT + 5_000 })
     expect(na.levelIndex).toBe(2)
+  })
+})
+
+describe('opDeSlagVan', () => {
+  it('legt de ene klok op de secondeslag van de andere', () => {
+    // Gemeten in de browser: na een levelwissel versprongen de twee klokken
+    // 750 ms na elkaar, omdat de levelklok opnieuw verankerd wordt op het
+    // moment van bevestigen en dat zelden een hele seconde gespeelde tijd is.
+    expect(opDeSlagVan(90_000, 14_250) % 1000).toBe(250)
+    expect(opDeSlagVan(5_400_000, 899_123) % 1000).toBe(123)
+  })
+
+  it('haalt het verschil eraf en nooit erbij', () => {
+    // Een fractie te weinig tonen mag; meer tijd beloven dan er is niet.
+    for (const ms of [90_000, 12_345, 1_000_000]) {
+      expect(opDeSlagVan(ms, 7_777)).toBeLessThanOrEqual(ms)
+      expect(ms - opDeSlagVan(ms, 7_777)).toBeLessThan(1000)
+    }
+  })
+
+  it('laat een klok die al gelijk loopt met rust', () => {
+    expect(opDeSlagVan(90_250, 14_250)).toBe(90_250)
+  })
+
+  it('zakt niet door nul heen', () => {
+    // Aan het eind van de avond staat er anders een negatieve tijd.
+    expect(opDeSlagVan(100, 999)).toBe(0)
   })
 })
