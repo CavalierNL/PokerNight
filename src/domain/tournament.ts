@@ -162,8 +162,67 @@ export function currentLevel(state: Tournament): BlindLevel | undefined {
   return state.levels[state.levelIndex]
 }
 
+/**
+ * Het level na dit, ook als de gegenereerde reeks daar niet toe reikt.
+ *
+ * Aan tafel staat hieronder "volgende blinds". Dat er toevallig geen rij meer
+ * in de lijst stond mag daar niet uit maken: er komt er een bij zodra je hem
+ * nodig hebt.
+ */
 export function nextLevel(state: Tournament): BlindLevel | undefined {
-  return state.levels[state.levelIndex + 1]
+  const volgende = state.levels[state.levelIndex + 1]
+  if (volgende) return volgende
+  const huidig = state.levels[state.levelIndex]
+  return huidig && magGroeien(state.settings) ? verdubbeld(huidig) : undefined
+}
+
+/**
+ * Of de reeks er een level bij mag maken.
+ *
+ * Bij een eigen lijst met bedragen niet: die gaf de gebruiker zelf op, en daar
+ * verzinnen we niets bij. Is die lijst op, dan blijven de blinds staan waar ze
+ * staan. Een lege lijst valt terug op verdubbelen en groeit dus wel mee.
+ */
+function magGroeien(settings: Settings): boolean {
+  if (settings.structure !== 'manual') return true
+  return (settings.manualBigBlinds?.length ?? 0) === 0
+}
+
+/**
+ * Het volgende level: het vorige bedrag verdubbeld.
+ *
+ * Verdubbelen kan zonder de pokerdoos erbij te halen, en dat is precies waarom
+ * dit hier kan in plaats van in `buildStructure`: een verdubbeld betaalbaar
+ * bedrag is weer betaalbaar, dus small en big blijven allebei met hele fiches
+ * te leggen. De reducer heeft de doos niet, en zou hem anders in elke actie
+ * mee moeten krijgen.
+ *
+ * Een color-up komt er niet bij. Die hoort bij de doos, en dit zijn levels waar
+ * je alleen komt doordat er hard gespeeld is.
+ */
+function verdubbeld(level: BlindLevel): BlindLevel {
+  return {
+    index: level.index + 1,
+    smallBlind: level.smallBlind * 2,
+    bigBlind: level.bigBlind * 2,
+  }
+}
+
+/**
+ * De levellijst, zo nodig aangevuld tot `index` erin past, of `null` als dat
+ * niet kan. Staat de index er al in, dan komt dezelfde lijst terug.
+ */
+function metLevelTot(state: TournamentCore, index: number): BlindLevel[] | null {
+  if (index < 0) return null
+  if (index < state.levels.length) return state.levels
+  if (!magGroeien(state.settings)) return null
+  const levels = [...state.levels]
+  while (levels.length <= index) {
+    const vorige = levels[levels.length - 1]
+    if (!vorige) return null
+    levels.push(verdubbeld(vorige))
+  }
+  return levels
 }
 
 export function remainingMs(state: Tournament, now: number): number {
@@ -171,8 +230,13 @@ export function remainingMs(state: Tournament, now: number): number {
   return Math.max(0, state.clock.endsAt - now)
 }
 
+/**
+ * Of hier de reeks ophoudt. Alleen bij een eigen lijst met bedragen: overal
+ * anders komt er een level bij zodra je het nodig hebt, en is er dus geen
+ * laatste.
+ */
 export function isLastLevel(state: Tournament): boolean {
-  return state.levelIndex >= state.levels.length - 1
+  return state.levelIndex >= state.levels.length - 1 && !magGroeien(state.settings)
 }
 
 /**
@@ -181,12 +245,12 @@ export function isLastLevel(state: Tournament): boolean {
  * vanzelf op met elke pauze. Alleen zinvol als de tijd de levels opschuift.
  */
 export function expectedEndAt(state: Tournament, now: number): number | undefined {
-  // Zonder eindtijd zegt het laatste level niets over wanneer het klaar is: er
-  // wordt gespeeld tot er één over is.
-  if (state.settings.durationMinutes === undefined) return undefined
-  if (state.settings.trigger === 'elimination') return undefined
-  const levelsTeGaan = state.levels.length - state.levelIndex - 1
-  return now + remainingMs(state, now) + levelsTeGaan * state.settings.levelMinutes * 60_000
+  // De avond eindigt als de afgesproken speelduur om is. De levels zeggen daar
+  // niets over: die gaan over de blinds, en een eliminatie die er een overslaat
+  // maakt de avond niet korter. Zonder afgesproken duur valt er niets te
+  // verwachten — dan wordt er gespeeld tot er één over is.
+  const over = avondAftelMs(state, now)
+  return over === undefined ? undefined : now + over
 }
 
 export function playersLeft(state: Tournament): number {
@@ -242,10 +306,65 @@ export function uitslag(state: Tournament): Player[] {
   return [...nogInHetSpel(state), ...afgevallen(state)]
 }
 
-/** De tijd die er werkelijk gespeeld is: zonder de pauzes. */
+/**
+ * De tijd die er werkelijk gespeeld is: zonder de pauzes.
+ *
+ * Tijdens een pauze is het peilmoment het begin van die pauze. De lopende pauze
+ * zit namelijk nog niet in `pausedMs` — die wordt pas bij hervatten bijgeteld —
+ * dus zonder dat zou een teller die hierop leunt doorlopen terwijl er niet
+ * gespeeld wordt.
+ */
 export function speelduurMs(state: Tournament, now: number): number {
-  const eind = state.finishedAt ?? now
-  return Math.max(0, eind - state.startedAt - state.pausedMs)
+  const peil = state.finishedAt ?? (state.clock.state === 'paused' ? state.clock.pausedAt : now)
+  return Math.max(0, peil - state.startedAt - state.pausedMs)
+}
+
+/**
+ * Wat er van de afgesproken speelduur over is, of `undefined` als er geen duur
+ * is afgesproken en er dus tot de laatste man gespeeld wordt.
+ *
+ * De tegenhanger van `levelAftelMs`. Ze staan naast elkaar en worden naast
+ * elkaar getoond: het zijn twee verschillende vragen — wanneer gaan de blinds
+ * omhoog, en wanneer houdt de avond op — en één getal dat van betekenis wisselt
+ * is aan tafel niet uit te leggen.
+ */
+export function avondAftelMs(state: Tournament, now: number): number | undefined {
+  const duur = state.settings.durationMinutes
+  if (duur === undefined) return undefined
+  return Math.max(0, duur * 60_000 - speelduurMs(state, now))
+}
+
+/**
+ * Wat er van dit level nog over is, of `undefined` als er geen levelklok loopt.
+ *
+ * Dat laatste bij blinds die alleen op eliminaties omhoog gaan — er is dan geen
+ * levelklok — en op het laatste level, waar er niets meer volgt. Een klok die
+ * naar nul loopt en daar blijft staan telt nergens naartoe.
+ */
+export function levelAftelMs(state: Tournament, now: number): number | undefined {
+  if (!advancesOnTime(state.settings.trigger)) return undefined
+  if (isLastLevel(state)) return undefined
+  return remainingMs(state, now)
+}
+
+/**
+ * Dezelfde tijd, maar op de secondeslag van een andere klok.
+ *
+ * Twee klokken onder elkaar verspringen alleen samen als hun eindmomenten een
+ * heel aantal seconden uit elkaar liggen, en dat zijn ze niet. De levelklok
+ * wordt opnieuw verankerd op het moment dat de nieuwe blinds bevestigd worden,
+ * en dat valt zelden op een hele seconde gespeelde tijd — alleen bij de
+ * allereerste bevestiging, want dan is die tijd precies nul. In de browser
+ * gemeten liepen ze na een levelwissel 750 ms uit de pas, en twee grote getallen
+ * die net na elkaar omslaan leidt af van waar je naar kijkt.
+ *
+ * Gelijkzetten kost onvermijdelijk een fractie aan een van de twee. Het verschil
+ * gaat er daarom altijd af en nooit bij: een klok mag best een fractie te weinig
+ * tonen, maar nooit meer tijd beloven dan er is.
+ */
+export function opDeSlagVan(ms: number, ander: number): number {
+  const verschil = (((ms - ander) % 1000) + 1000) % 1000
+  return Math.max(0, ms - verschil)
 }
 
 /**
@@ -303,9 +422,11 @@ function withHistory(state: Tournament, next: TournamentCore, now: number): Tour
  * staan, dan zou de eerstvolgende tick hem meteen weer vooruit zetten.
  */
 function naarLevel(state: TournamentCore, index: number, now: number): TournamentCore | null {
-  if (index < 0 || index >= state.levels.length) return null
+  const levels = metLevelTot(state, index)
+  if (levels === null) return null
   return {
     ...state,
+    levels,
     levelIndex: index,
     // De klok begint pas te lopen als de nieuwe blinds bevestigd zijn.
     clock: { state: 'paused', remainingMs: state.settings.levelMinutes * 60_000, pausedAt: now },
@@ -352,17 +473,26 @@ export function reduce(state: Tournament, action: Action): Tournament {
     case 'tick': {
       if (state.finishedAt !== undefined) return state
       if (state.clock.state === 'paused') return state
+
+      // De avond is om als de afgesproken speelduur om is, en anders niet. Dat
+      // staat los van de levels: die gaan over de blinds, niet over wanneer je
+      // stopt. Zo trekt een instelling over de blinds niet stil de keuze over
+      // het einde in, en verkort een eliminatie die een level opschuift de
+      // avond niet. `=== 0` dekt ook "geen afgesproken duur": dan is dit
+      // `undefined` en eindigt er niets op de klok.
+      if (avondAftelMs(state, action.now) === 0) {
+        return withHistory(state, klaar(core(state), action.now, 0), action.now)
+      }
+
       if (!advancesOnTime(state.settings.trigger)) return state
       if (remainingMs(state, action.now) > 0) return state
 
+      // Zijn de levels op maar de avond nog niet, dan blijven de blinds staan
+      // waar ze staan en wordt er doorgespeeld — net als zonder afgesproken
+      // duur. Geen geschiedenisstap, anders staat die na vijf seconden tikken
+      // vol met niets.
       const volgende = goToNextLevel(core(state), action.now)
-      if (volgende) return withHistory(state, volgende, action.now)
-
-      // Het laatste level is uitgespeeld. Met een afgesproken speelduur is het
-      // toernooi daarmee afgelopen; zonder duur wordt er doorgespeeld tot er één
-      // over is, en blijven de blinds staan waar ze staan.
-      if (state.settings.durationMinutes === undefined) return state
-      return withHistory(state, klaar(core(state), action.now, 0), action.now)
+      return volgende ? withHistory(state, volgende, action.now) : state
     }
 
     case 'playerOut': {

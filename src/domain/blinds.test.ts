@@ -6,7 +6,7 @@ import {
   laatsteBigBlind,
   levelOpties,
   targetEndBigBlind,
-  LEVELS_ZONDER_DUUR,
+  MAX_LEVELS,
 } from './blinds'
 import { denominations, kanColorUp, STANDARD_500, TOERNOOI_DOOS } from './chipset'
 import type { StructureInput } from './blinds'
@@ -33,6 +33,48 @@ describe('levelCount', () => {
   it('geeft minstens twee levels', () => {
     expect(levelCount(10, 15)).toBe(2)
     expect(levelCount(0, 0)).toBe(2)
+  })
+})
+
+describe('de reeks stopt op een waarde, niet op het geplande aantal', () => {
+  const kort: StructureInput = { ...huisregel, durationMinutes: 4, levelMinutes: 2 }
+
+  it('gaat verder dan het geplande aantal levels', () => {
+    // Het geplande aantal stuurt de curve van 'Berekend' en verder niets. Het is
+    // geen grens aan de avond: schuiven eliminaties de levels op, dan moeten de
+    // blinds kunnen blijven klimmen in plaats van bovenaan te blijven staan.
+    expect(levelCount(4, 2)).toBe(2)
+    expect(buildStructure(kort, STANDARD_500).levels.length).toBeGreaterThan(2)
+  })
+
+  it('stopt waar het toernooi feitelijk beslist zou zijn', () => {
+    const structuur = buildStructure({ ...kort, players: 6, startingStack: 100 }, STANDARD_500)
+    const laatste = structuur.levels[structuur.levels.length - 1]
+    expect(laatste.bigBlind).toBeGreaterThanOrEqual(laatsteBigBlind(6, 100))
+    expect(structuur.levels.length).toBeLessThan(MAX_LEVELS)
+  })
+
+  it('kapt ook de ladder af, nu die geen duur meer hoeft te vullen', () => {
+    const structuur = buildStructure({ ...kort, kind: 'ladder' }, STANDARD_500)
+    const laatste = structuur.levels[structuur.levels.length - 1]
+    expect(laatste.bigBlind).toBeGreaterThanOrEqual(laatsteBigBlind(6, 100))
+  })
+
+  it('houdt bij handmatig precies de opgegeven bedragen aan', () => {
+    // Die heeft de gebruiker zelf opgegeven; daar verzinnen we er niet bij.
+    const structuur = buildStructure(
+      { ...kort, kind: 'manual', manualBigBlinds: [2, 4, 8] },
+      STANDARD_500,
+    )
+    expect(structuur.levels).toHaveLength(3)
+  })
+
+  it('laat het geplande aantal de curve van een berekende reeks sturen', () => {
+    // De helft die niet mag veranderen: minder levels gepland betekent grotere
+    // stappen, ook al zijn beide lijsten even lang.
+    const fijn = buildStructure({ ...huisregel, kind: 'calculated', levelMinutes: 15 }, STANDARD_500)
+    const grof = buildStructure({ ...huisregel, kind: 'calculated', levelMinutes: 60 }, STANDARD_500)
+    expect(grof.levels[1].bigBlind).toBeGreaterThan(fijn.levels[1].bigBlind)
   })
 })
 
@@ -331,7 +373,7 @@ describe('een toernooi zonder eindtijd', () => {
     const laatste = zonderDuur.levels[zonderDuur.levels.length - 1]
 
     expect(laatste.bigBlind).toBeGreaterThanOrEqual(laatsteBigBlind(spelers, stack))
-    expect(zonderDuur.levels.length).toBeLessThan(LEVELS_ZONDER_DUUR)
+    expect(zonderDuur.levels.length).toBeLessThan(MAX_LEVELS)
   })
 
   it('gaat verder dan waar een toernooi met een klok zou stoppen', () => {
@@ -355,7 +397,7 @@ describe('een toernooi zonder eindtijd', () => {
       { ...huisregel, kind: 'doubling', durationMinutes: undefined },
       STANDARD_500,
     )
-    expect(structuur.levels.length).toBeLessThan(LEVELS_ZONDER_DUUR)
+    expect(structuur.levels.length).toBeLessThan(MAX_LEVELS)
   })
 })
 

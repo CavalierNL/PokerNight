@@ -15,7 +15,7 @@ import { MultiChip } from '../components/MultiChip'
 import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
 import { GetalVeld } from '../components/GetalVeld'
-import { levelOpties, type StructureKind } from '../domain/blinds'
+import { geplandeLevels, levelOpties, type StructureKind } from '../domain/blinds'
 import type { Settings, Trigger } from '../domain/tournament'
 import './SetupScreen.css'
 
@@ -526,7 +526,11 @@ export function SetupScreen({
           </label>
         )}
 
-        <StructuurTabel levels={structuur.levels} levelMinutes={gekozenLengte} />
+        <StructuurTabel
+          levels={structuur.levels}
+          levelMinutes={gekozenLengte}
+          geplandeLevels={geplandeLevels(durationMinutes, gekozenLengte)}
+        />
 
         {structuur.colorUps.map((moment) => (
           <ColorUpRegel

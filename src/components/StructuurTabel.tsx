@@ -12,11 +12,20 @@ export function StructuurTabel({
   levels,
   levelMinutes,
   huidigLevel,
+  geplandeLevels,
 }: {
   levels: BlindLevel[]
   levelMinutes: number
   /** Het level dat nu gespeeld wordt; krijgt nadruk. Weglaten in de configuratie. */
   huidigLevel?: number
+  /**
+   * Het aantal levels dat in de geplande avond past. De reeks loopt daar
+   * voorbij, zodat de blinds kunnen blijven klimmen als eliminaties de levels
+   * opschuiven — maar die rijen bereik je alleen doordat er iemand uitvalt, dus
+   * een geplande starttijd bestaat er niet voor. Weglaten betekent: alles is
+   * gepland, en dat is het geval zonder afgesproken duur.
+   */
+  geplandeLevels?: number
 }) {
   return (
     <table className="structuur">
@@ -37,7 +46,11 @@ export function StructuurTabel({
             <td>
               {level.smallBlind} / {level.bigBlind}
             </td>
-            <td>{level.index * levelMinutes} min</td>
+            <td>
+              {geplandeLevels !== undefined && level.index >= geplandeLevels
+                ? '—'
+                : `${level.index * levelMinutes} min`}
+            </td>
           </tr>
         ))}
       </tbody>
