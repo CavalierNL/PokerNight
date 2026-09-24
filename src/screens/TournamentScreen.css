@@ -50,6 +50,14 @@
  * Small en big staan als twee benoemde bedragen naast elkaar, niet als "25 / 50".
  * Aan tafel wordt er naar dit scherm gewezen; dan moet er staan wat het is.
  */
+/* De avondklok onder de levelklok. Kleiner, want de levelklok is waar je aan
+   tafel op let; deze zegt hoe lang er nog gespeeld wordt. */
+.tafel__avondklok {
+  color: var(--creme-zacht);
+  font-size: 0.95rem;
+  margin-top: -0.4rem;
+}
+
 .tafel__blinds {
   display: flex;
   align-items: baseline;

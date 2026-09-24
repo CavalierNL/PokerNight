@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
-  aftelTijdMs,
+  avondAftelMs,
   averageStack,
   averageStackInBigBlinds,
   createTournament,
   currentLevel,
   expectedEndAt,
   isAfgelopen,
+  levelAftelMs,
   nogInHetSpel,
   playersLeft,
   reduce,
@@ -650,34 +651,49 @@ describe('de speelduur als alleen eliminaties de blinds verhogen', () => {
   })
 })
 
-describe('aftelTijdMs', () => {
-  it('telt af naar het einde van het level als de klok de blinds opschuift', () => {
+describe('de twee klokken', () => {
+  it('telt het level af zolang de klok de blinds opschuift', () => {
     const t = maak()
-    expect(aftelTijdMs(t, T0 + MINUUT)).toBe(remainingMs(t, T0 + MINUUT))
+    expect(levelAftelMs(t, T0 + MINUUT)).toBe(remainingMs(t, T0 + MINUUT))
   })
 
-  it('telt af naar het einde van de avond als alleen eliminaties tellen', () => {
-    const t = maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 })
-    expect(aftelTijdMs(t, T0 + MINUUT)).toBe(3 * MINUUT)
+  it('heeft geen levelklok als de blinds alleen op eliminaties omhoog gaan', () => {
+    expect(levelAftelMs(maak({ trigger: 'elimination' }), T0 + MINUUT)).toBeUndefined()
   })
 
-  it('staat stil tijdens een pauze', () => {
+  it('heeft geen levelklok meer op het laatste level', () => {
+    // Daar verandert er niets meer aan de blinds, en een klok die naar nul loopt
+    // en daar blijft staan telt nergens naartoe.
+    expect(levelAftelMs(naarLaatsteLevel(maak()), T0)).toBeUndefined()
+  })
+
+  it('telt de avond af naar het einde van de speelduur', () => {
+    expect(avondAftelMs(maak({ durationMinutes: 4, levelMinutes: 2 }), T0 + MINUUT)).toBe(3 * MINUUT)
+  })
+
+  it('laat de avondklok stilstaan tijdens een pauze', () => {
     // Anders loopt de teller op het scherm door terwijl er niet gespeeld wordt.
-    const t = reduce(maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 }), {
+    const t = reduce(maak({ durationMinutes: 4, levelMinutes: 2 }), {
       type: 'togglePause',
       now: T0 + MINUUT,
     })
-    expect(aftelTijdMs(t, T0 + 3 * MINUUT)).toBe(3 * MINUUT)
+    expect(avondAftelMs(t, T0 + 3 * MINUUT)).toBe(3 * MINUUT)
   })
 
-  it('zakt niet door nul heen', () => {
-    const t = maak({ trigger: 'elimination', durationMinutes: 4, levelMinutes: 2 })
-    expect(aftelTijdMs(t, T0 + 99 * MINUUT)).toBe(0)
+  it('laat de avondklok niet door nul heen zakken', () => {
+    const t = maak({ durationMinutes: 4, levelMinutes: 2 })
+    expect(avondAftelMs(t, T0 + 99 * MINUUT)).toBe(0)
   })
 
-  it('telt niets af zonder afgesproken speelduur', () => {
-    const t = maak({ trigger: 'elimination', durationMinutes: undefined })
-    expect(aftelTijdMs(t, T0 + MINUUT)).toBeUndefined()
+  it('heeft geen avondklok bij last man standing', () => {
+    expect(avondAftelMs(maak({ durationMinutes: undefined }), T0)).toBeUndefined()
+  })
+
+  it('laat ze naast elkaar lopen, elk met zijn eigen betekenis', () => {
+    // Hiervoor was dit een getal dat stilletjes van betekenis wisselde.
+    const t = maak({ durationMinutes: 60, levelMinutes: 15 })
+    expect(levelAftelMs(t, T0 + MINUUT)).toBe(14 * MINUUT)
+    expect(avondAftelMs(t, T0 + MINUUT)).toBe(59 * MINUUT)
   })
 })
 
@@ -699,25 +715,11 @@ describe('een eliminatie verkort de avond niet', () => {
     expect(isAfgelopen(reduce(t, { type: 'tick', now: T0 + 4 * MINUUT }))).toBe(true)
   })
 
-  it('laat de blinds ondertussen op het laatste level staan', () => {
+  it('laat de blinds ondertussen doorklimmen', () => {
+    // Het geplande aantal levels was twee, en die zijn na de eerste uitvaller
+    // op. De reeks loopt door, dus de blinds blijven niet bovenaan staan.
     const t = naDeEersteUitvaller()
-    const na = reduce(t, { type: 'tick', now: T0 + 3 * MINUUT })
-    expect(na.levelIndex).toBe(na.levels.length - 1)
-  })
-
-  it('telt op het laatste level af naar het einde van de avond', () => {
-    // De levelklok staat dan allang op nul; die zegt niets meer.
-    const t = naDeEersteUitvaller()
-    expect(aftelTijdMs(t, T0 + 3 * MINUUT)).toBe(MINUUT)
-  })
-
-  it('telt naar het einde van de avond zodra dat eerder komt dan het level', () => {
-    // Zes minuten in drie levels van twee: een uitvaller op 5:30 begint een
-    // vers level van twee minuten, maar de avond is over dertig seconden om.
-    const t = maak({ durationMinutes: 6, levelMinutes: 2 })
-    const uit = reduce(t, { type: 'playerOut', index: 0, now: T0 + 5.5 * MINUUT })
-    const door = reduce(uit, { type: 'bevestigLevel', now: T0 + 5.5 * MINUUT })
-    expect(door.levelIndex).toBe(1)
-    expect(aftelTijdMs(door, T0 + 5.5 * MINUUT)).toBe(0.5 * MINUUT)
+    const na = reduce(t, { type: 'tick', now: T0 + 2 * MINUUT + 5_000 })
+    expect(na.levelIndex).toBe(2)
   })
 })

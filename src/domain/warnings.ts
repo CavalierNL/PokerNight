@@ -1,4 +1,4 @@
-import type { Structure } from './blinds'
+import { geplandeLevels, type Structure } from './blinds'
 import type { Distribution, Shortage } from './distribution'
 import type { Settings } from './tournament'
 
@@ -83,8 +83,15 @@ export function setupWarnings(
   // veel eerder beslist dan de opgegeven duur suggereert.
   const gemiddeldeStackBijDrie = (spelers * settings.startingStack) / 3
   const drempel = gemiddeldeStackBijDrie / 10
+  //
+  // Gemeten tegen het geplande aantal levels en niet tegen de lengte van de
+  // reeks: die loopt door voorbij de geplande avond, zodat de blinds kunnen
+  // blijven klimmen als eliminaties de levels opschuiven. Zonder afgesproken
+  // duur is er geen plan en is de reeks zelf de maat.
+  const gepland =
+    geplandeLevels(settings.durationMinutes, settings.levelMinutes) ?? structure.levels.length
   const kritiek = structure.levels.findIndex((l) => l.bigBlind > drempel)
-  if (kritiek >= 0 && kritiek < structure.levels.length * 0.6) {
+  if (kritiek >= 0 && kritiek < gepland * 0.6) {
     const minuten = kritiek * settings.levelMinutes
     warnings.push({
       level: 'warning',

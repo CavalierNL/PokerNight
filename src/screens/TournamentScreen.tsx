@@ -14,10 +14,11 @@ import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
 import { prepareSetup } from '../domain/setup'
+import { geplandeLevels } from '../domain/blinds'
 import type { Chipset } from '../domain/chipset'
 import {
-  aftelTijdMs,
   afgevallen,
+  avondAftelMs,
   averageStack,
   averageStackInBigBlinds,
   colorUpAt,
@@ -25,6 +26,7 @@ import {
   expectedEndAt,
   isAfgelopen,
   laatkomerStack,
+  levelAftelMs,
   nextLevel,
   nogInHetSpel,
   playersLeft,
@@ -112,11 +114,13 @@ export function TournamentScreen() {
   const eindtijd = expectedEndAt(tournament, now)
   const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
 
-  // De grote klok telt af naar wat er afloopt: het einde van het level, of —
-  // als de klok de blinds niet opschuift — het einde van de avond. Loopt er
-  // niets af, zoals bij last man standing, dan is de verstreken speeltijd het
-  // enige getal dat iets zegt en telt hij op.
-  const aftellen = aftelTijdMs(tournament, now)
+  // Twee klokken met elk hun eigen vraag: wanneer gaan de blinds omhoog, en
+  // wanneer is de avond om. De levelklok staat groot, want die verzet de blinds
+  // en daar let je aan tafel op. Is er geen levelklok, dan neemt de avondklok
+  // die plek in; loopt er helemaal niets af, dan telt de grote klok op.
+  const levelAf = levelAftelMs(tournament, now)
+  const avondAf = avondAftelMs(tournament, now)
+  const groteKlok = levelAf ?? avondAf ?? speelduurMs(tournament, now)
 
   return (
     <>
@@ -176,8 +180,12 @@ export function TournamentScreen() {
 
         <div className="tafel__midden">
           <div className={`tafel__klok${bijnaOm ? ' tafel__klok--bijna' : ''}`}>
-            {formatteerTijd(aftellen ?? speelduurMs(tournament, now))}
+            {formatteerTijd(groteKlok)}
           </div>
+          {/* Alleen als de avondklok niet zelf al de grote klok is. */}
+          {levelAf !== undefined && avondAf !== undefined && (
+            <div className="tafel__avondklok">nog {formatteerTijd(avondAf)} te spelen</div>
+          )}
           <div className="tafel__blinds">
             <span className="tafel__blind">
               <span className="tafel__blind-label">Small</span>
@@ -562,6 +570,10 @@ function SchemaVenster({
             levels={tournament.levels}
             levelMinutes={tournament.settings.levelMinutes}
             huidigLevel={tournament.levelIndex}
+            geplandeLevels={geplandeLevels(
+              tournament.settings.durationMinutes,
+              tournament.settings.levelMinutes,
+            )}
           />
           {tournament.colorUps.map((moment) => (
             <ColorUpRegel

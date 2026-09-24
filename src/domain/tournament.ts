@@ -185,7 +185,7 @@ export function expectedEndAt(state: Tournament, now: number): number | undefine
   // niets over: die gaan over de blinds, en een eliminatie die er een overslaat
   // maakt de avond niet korter. Zonder afgesproken duur valt er niets te
   // verwachten — dan wordt er gespeeld tot er één over is.
-  const over = resterendeSpeelduurMs(state, now)
+  const over = avondAftelMs(state, now)
   return over === undefined ? undefined : now + over
 }
 
@@ -245,32 +245,29 @@ export function speelduurMs(state: Tournament, now: number): number {
 /**
  * Wat er van de afgesproken speelduur over is, of `undefined` als er geen duur
  * is afgesproken en er dus tot de laatste man gespeeld wordt.
+ *
+ * De tegenhanger van `levelAftelMs`. Ze staan naast elkaar en worden naast
+ * elkaar getoond: het zijn twee verschillende vragen — wanneer gaan de blinds
+ * omhoog, en wanneer houdt de avond op — en één getal dat van betekenis wisselt
+ * is aan tafel niet uit te leggen.
  */
-function resterendeSpeelduurMs(state: Tournament, now: number): number | undefined {
+export function avondAftelMs(state: Tournament, now: number): number | undefined {
   const duur = state.settings.durationMinutes
   if (duur === undefined) return undefined
   return Math.max(0, duur * 60_000 - speelduurMs(state, now))
 }
 
 /**
- * Waar de grote klok naartoe telt: het eerstvolgende moment waarop er iets
- * verandert — het einde van dit level of het einde van de avond, wat het eerst
- * komt. `undefined` als er niets afloopt; dan is de verstreken speeltijd het
- * enige getal dat iets zegt en telt de klok op.
+ * Wat er van dit level nog over is, of `undefined` als er geen levelklok loopt.
  *
- * Op het laatste level, en als de klok de blinds sowieso niet opschuift,
- * verandert er aan de blinds niets meer. Een levelklok die op nul blijft staan
- * is dan geen aftelling maar ruis, dus telt daar alleen de avond nog.
+ * Dat laatste bij blinds die alleen op eliminaties omhoog gaan — er is dan geen
+ * levelklok — en op het laatste level, waar er niets meer volgt. Een klok die
+ * naar nul loopt en daar blijft staan telt nergens naartoe.
  */
-export function aftelTijdMs(state: Tournament, now: number): number | undefined {
-  const avond = resterendeSpeelduurMs(state, now)
-  const level =
-    advancesOnTime(state.settings.trigger) && !isLastLevel(state)
-      ? remainingMs(state, now)
-      : undefined
-  if (level === undefined) return avond
-  if (avond === undefined) return level
-  return Math.min(level, avond)
+export function levelAftelMs(state: Tournament, now: number): number | undefined {
+  if (!advancesOnTime(state.settings.trigger)) return undefined
+  if (isLastLevel(state)) return undefined
+  return remainingMs(state, now)
 }
 
 /**
@@ -384,7 +381,7 @@ export function reduce(state: Tournament, action: Action): Tournament {
       // het einde in, en verkort een eliminatie die een level opschuift de
       // avond niet. `=== 0` dekt ook "geen afgesproken duur": dan is dit
       // `undefined` en eindigt er niets op de klok.
-      if (resterendeSpeelduurMs(state, action.now) === 0) {
+      if (avondAftelMs(state, action.now) === 0) {
         return withHistory(state, klaar(core(state), action.now, 0), action.now)
       }
 

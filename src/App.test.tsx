@@ -8,6 +8,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { KlassementScreen } from './screens/KlassementScreen'
+import { StructuurTabel } from './components/StructuurTabel'
 import { createTournament, type Settings } from './domain/tournament'
 import { STANDARD_500, TOERNOOI_DOOS } from './domain/chipset'
 import { prepareSetup } from './domain/setup'
@@ -234,6 +235,24 @@ describe('tafelscherm', () => {
     // Anders staat er een teller die optelt en nergens aankomt: dat was de bug.
     const klok = tafel({ trigger: 'elimination' })
     expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>180:00<')
+  })
+
+  it('toont de levelklok en de avondklok naast elkaar', () => {
+    // Twee verschillende vragen: wanneer gaan de blinds omhoog, en wanneer is
+    // de avond om. Eén getal dat van betekenis wisselt is niet uit te leggen.
+    const html = tafel({ trigger: 'both' })
+    expect(html.slice(html.indexOf('tafel__klok'))).toContain('>15:00<')
+    expect(html.slice(html.indexOf('tafel__avondklok'))).toContain('180:00')
+  })
+
+  it('laat de avondklok weg bij last man standing', () => {
+    expect(tafel({ durationMinutes: undefined })).not.toContain('tafel__avondklok')
+  })
+
+  it('laat de avondklok weg als die zelf al de grote klok is', () => {
+    // Bij blinds op eliminatie loopt er geen levelklok, dus staat de avondklok
+    // groot. Hem er dan nog een keer onder zetten is dubbelop.
+    expect(tafel({ trigger: 'elimination' })).not.toContain('tafel__avondklok')
   })
 
   it('telt op bij last man standing, want daar loopt niets af', () => {
@@ -609,5 +628,31 @@ describe('eindscherm zonder winnaar', () => {
     )
     expect(html).toContain('De speelduur is om')
     expect(html).toContain('telt niet mee voor het klassement')
+  })
+})
+
+describe('de blindstructuurtabel', () => {
+  const levels = Array.from({ length: 4 }, (_, i) => ({
+    index: i,
+    smallBlind: 2 ** i,
+    bigBlind: 2 ** (i + 1),
+  }))
+
+  const tabel = () =>
+    renderToStaticMarkup(
+      <StructuurTabel levels={levels} levelMinutes={15} geplandeLevels={2} />,
+    )
+
+  it('toont een starttijd voor de geplande levels', () => {
+    expect(tabel()).toContain('<td>0 min</td>')
+    expect(tabel()).toContain('<td>15 min</td>')
+  })
+
+  it('laat de starttijd weg voor levels voorbij de geplande avond', () => {
+    // Die rijen bereik je alleen doordat er iemand uitvalt, dus een geplande
+    // starttijd bestaat er niet voor. Een tijd tonen zou hem verzinnen.
+    const html = tabel()
+    expect(html).not.toContain('<td>30 min</td>')
+    expect(html).not.toContain('<td>45 min</td>')
   })
 })

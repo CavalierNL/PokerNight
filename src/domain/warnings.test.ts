@@ -8,7 +8,10 @@ const settings: Settings = {
   playerNames: ['Sam', 'Ilse', 'Joost', 'Max'],
   startingStack: 100,
   levelMinutes: 15,
-  durationMinutes: 120,
+  // Vier levels gepland, net als `rustigeStructuur`: de waarschuwing hieronder
+  // meet tegen het plan, dus een plan dat niet bij de structuur past zou de
+  // tests iets anders laten toetsen dan ze zeggen.
+  durationMinutes: 60,
   structure: 'doubling',
   trigger: 'both',
   colorUp: true,
@@ -106,6 +109,23 @@ describe('waarschuwing over hard oplopende blinds', () => {
   it('zwijgt als de blinds pas laat de stack voorbijgaan', () => {
     const w = setupWarnings(settings, rustigeStructuur, goedeVerdeling)
     expect(w).toEqual([])
+  })
+
+  it('meet tegen het geplande aantal levels, niet tegen de lengte van de reeks', () => {
+    // De reeks loopt door voorbij de geplande avond, zodat de blinds kunnen
+    // blijven klimmen als eliminaties de levels opschuiven. Zijn lengte zegt
+    // daarmee niets meer over hoe vroeg het toernooi beslist is.
+    const lang: Structure = {
+      levels: Array.from({ length: 20 }, (_, i) => ({
+        index: i,
+        smallBlind: 2 ** i,
+        bigBlind: 2 ** (i + 1),
+      })),
+      colorUps: [],
+      startDenomination: 1,
+    }
+    const w = setupWarnings(settings, lang, goedeVerdeling)
+    expect(w.some((x) => x.message.includes('lopen hard op'))).toBe(false)
   })
 
   it('waarschuwt als het toernooi al in de eerste helft beslist is', () => {
