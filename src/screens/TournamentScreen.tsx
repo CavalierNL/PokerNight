@@ -19,6 +19,7 @@ import type { Chipset } from '../domain/chipset'
 import {
   afgevallen,
   avondAftelMs,
+  avondklokInSeconden,
   averageStack,
   averageStackInBigBlinds,
   colorUpAt,
@@ -27,7 +28,6 @@ import {
   isAfgelopen,
   laatkomerStack,
   levelAftelMs,
-  opDeSlagVan,
   nextLevel,
   nogInHetSpel,
   playersLeft,
@@ -43,6 +43,16 @@ function formatteerTijd(ms: number): string {
   const totaal = Math.max(0, Math.ceil(ms / 1000))
   const minuten = Math.floor(totaal / 60)
   return `${minuten}:${String(totaal % 60).padStart(2, '0')}`
+}
+
+/**
+ * De avondklok in hele minuten, naar boven afgerond: wie 19:01 over heeft ziet
+ * 20 min staan. De eenheid staat er los achter zodat het getal de grote maat
+ * houdt en "min" klein blijft — anders loopt de klok op een telefoon van het
+ * scherm af.
+ */
+function heleMinuten(ms: number): string {
+  return String(Math.ceil(ms / 60_000))
 }
 
 function klokTijd(ms: number): string {
@@ -130,11 +140,11 @@ export function TournamentScreen() {
       : 'Gespeeld'
   // Alleen eronder als hij niet zelf al de grote klok is.
   const levelEronder = groteIsAvond ? levelAf : undefined
-  // Staan ze onder elkaar, dan slaan ze samen om. De levelklok houdt zijn eigen
-  // slag: daar hangt het geluid aan het eind van een level aan, en die telt naar
-  // een moment waarop er echt iets gebeurt.
-  const groteGetoond =
-    levelEronder === undefined ? groteKlok : opDeSlagVan(groteKlok, levelEronder)
+  // De avondklok staat op hele minuten zolang er nog een level na dit komt:
+  // twee klokken die allebei per seconde verspringen is aan tafel te onrustig,
+  // en zolang de avond nog uren duurt zegt die seconde ook niets. In het
+  // laatste level valt de levelklok weg, en dan mag deze de seconden hebben.
+  const groteInMinuten = groteIsAvond && !avondklokInSeconden(tournament, now)
 
   return (
     <>
@@ -198,7 +208,14 @@ export function TournamentScreen() {
           <div
             className={`tafel__klok${!groteIsAvond && bijnaOm ? ' tafel__klok--bijna' : ''}`}
           >
-            {formatteerTijd(groteGetoond)}
+            {groteInMinuten ? (
+              <>
+                {heleMinuten(groteKlok)}
+                <span className="tafel__klokeenheid">{' min'}</span>
+              </>
+            ) : (
+              formatteerTijd(groteKlok)
+            )}
           </div>
           {levelEronder !== undefined && (
             <div className="tafel__levelklok">

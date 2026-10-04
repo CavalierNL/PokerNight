@@ -233,15 +233,16 @@ describe('tafelscherm', () => {
 
   it('telt af naar het einde van de avond als alleen eliminaties de blinds verhogen', () => {
     // Anders staat er een teller die optelt en nergens aankomt: dat was de bug.
+    // Drie uur voor de boeg, dus in hele minuten.
     const klok = tafel({ trigger: 'elimination' })
-    expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>180:00<')
+    expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>180<')
   })
 
   it('zet de avondklok bovenaan en de levelklok eronder', () => {
     // Twee verschillende vragen: hoe lang duurt de avond nog, en wanneer gaan
     // de blinds omhoog. De eerste is de kop van het scherm.
     const html = tafel({ trigger: 'both' })
-    const avond = html.indexOf('>180:00<')
+    const avond = html.indexOf('>180<')
     const level = html.indexOf('>15:00<')
     expect(avond).toBeGreaterThan(-1)
     expect(level).toBeGreaterThan(avond)
@@ -262,6 +263,23 @@ describe('tafelscherm', () => {
   it('telt op bij last man standing, want daar loopt niets af', () => {
     const klok = tafel({ trigger: 'elimination', durationMinutes: undefined })
     expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>0:00<')
+  })
+
+  it('laat de avondklok in hele minuten lopen', () => {
+    // Twee klokken die allebei per seconde verspringen is aan tafel te
+    // onrustig, en zolang de avond nog uren duurt zegt die seconde niets.
+    const grote = tafel({ trigger: 'both' })
+    expect(grote.slice(grote.indexOf('tafel__klok'))).toContain('>180<')
+    expect(grote).toContain('> min<')
+  })
+
+  it('zet de avondklok op seconden in het laatste level', () => {
+    // Een level van een kwartier op een avond van tien minuten: deze blinds
+    // gaan niet meer omhoog, dus de avondklok is de enige die nog tikt en mag
+    // de seconden hebben.
+    const html = tafel({ durationMinutes: 10, levelMinutes: 15 })
+    expect(html.slice(html.indexOf('tafel__klok'))).toContain('>10:00<')
+    expect(html).not.toContain('tafel__levelklok')
   })
 })
 

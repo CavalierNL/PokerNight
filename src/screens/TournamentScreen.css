@@ -264,6 +264,17 @@
 
 /* De laatste minuut van een level: dezelfde kleur als de blinds, zodat de tafel
    ziet dat dit de laatste hand is zonder dat er iets bij hoeft te staan. */
+/*
+  De eenheid achter de avondklok. Klein en zonder de negatieve letterafstand
+  van het getal, zodat "180 min" niet breder uitvalt dan "180:00" deed.
+*/
+.tafel__klokeenheid {
+  font-size: 0.3em;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 0.05em;
+}
+
 .tafel__klok--bijna {
   color: var(--goud);
 }

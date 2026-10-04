@@ -334,37 +334,65 @@ export function avondAftelMs(state: Tournament, now: number): number | undefined
   return Math.max(0, duur * 60_000 - speelduurMs(state, now))
 }
 
+/** De grens waaronder de avondklok seconden toont als er geen levelklok is. */
+const SECONDEN_ZONDER_LEVELKLOK_MS = 10 * 60_000
+
+/**
+ * Of de avond in dit level ophoudt: er volgt geen levelwissel meer voor het
+ * einde, omdat dit level net zo lang of langer duurt dan wat er van de avond
+ * over is.
+ *
+ * Dit kan alleen op een levelgrens omslaan. Binnen een level lopen beide klokken
+ * even snel, dus hun verschil staat vast; alleen bij nieuwe blinds springt de
+ * levelklok terug naar vol, en vol is daarna altijd langer dan de rest van de
+ * avond. Eenmaal waar blijft het dus waar, ook als een eliminatie er nog een
+ * level bij schuift — anders ging de klok op het eind heen en weer tussen
+ * minuten en seconden.
+ */
+function avondEindigtInDitLevel(state: Tournament, now: number): boolean {
+  const avond = avondAftelMs(state, now)
+  if (avond === undefined) return false
+  if (!advancesOnTime(state.settings.trigger)) return false
+  if (isLastLevel(state)) return false
+  return remainingMs(state, now) >= avond
+}
+
 /**
  * Wat er van dit level nog over is, of `undefined` als er geen levelklok loopt.
  *
  * Dat laatste bij blinds die alleen op eliminaties omhoog gaan — er is dan geen
- * levelklok — en op het laatste level, waar er niets meer volgt. Een klok die
- * naar nul loopt en daar blijft staan telt nergens naartoe.
+ * levelklok — en op het laatste level van een eigen lijst, waar er niets meer
+ * volgt. Een klok die naar nul loopt en daar blijft staan telt nergens naartoe.
+ *
+ * En in het laatste level van de avond: de blinds gaan daar niet meer omhoog,
+ * want de avond is eerder om. Dan telt deze klok naar iets wat niet gebeurt, en
+ * staat de avondklok in seconden — die neemt het tikken over.
  */
 export function levelAftelMs(state: Tournament, now: number): number | undefined {
   if (!advancesOnTime(state.settings.trigger)) return undefined
   if (isLastLevel(state)) return undefined
+  if (avondEindigtInDitLevel(state, now)) return undefined
   return remainingMs(state, now)
 }
 
 /**
- * Dezelfde tijd, maar op de secondeslag van een andere klok.
+ * Of de avondklok seconden toont in plaats van hele minuten.
  *
- * Twee klokken onder elkaar verspringen alleen samen als hun eindmomenten een
- * heel aantal seconden uit elkaar liggen, en dat zijn ze niet. De levelklok
- * wordt opnieuw verankerd op het moment dat de nieuwe blinds bevestigd worden,
- * en dat valt zelden op een hele seconde gespeelde tijd — alleen bij de
- * allereerste bevestiging, want dan is die tijd precies nul. In de browser
- * gemeten liepen ze na een levelwissel 750 ms uit de pas, en twee grote getallen
- * die net na elkaar omslaan leidt af van waar je naar kijkt.
+ * Twee klokken die allebei per seconde verspringen is aan tafel te onrustig, en
+ * zolang de avond nog uren duurt zegt die seconde ook niets. Hij wordt fijn
+ * zodra het laatste level begonnen is: dan valt de levelklok weg en is dit de
+ * enige die nog tikt.
  *
- * Gelijkzetten kost onvermijdelijk een fractie aan een van de twee. Het verschil
- * gaat er daarom altijd af en nooit bij: een klok mag best een fractie te weinig
- * tonen, maar nooit meer tijd beloven dan er is.
+ * Is er geen levelklok om dat aan af te lezen — blinds op eliminaties, of een
+ * eigen lijst die op is — dan valt er geen laatste level aan te wijzen, en zou
+ * de klok de hele avond op seconden staan. Daar geldt een vaste grens.
  */
-export function opDeSlagVan(ms: number, ander: number): number {
-  const verschil = (((ms - ander) % 1000) + 1000) % 1000
-  return Math.max(0, ms - verschil)
+export function avondklokInSeconden(state: Tournament, now: number): boolean {
+  const avond = avondAftelMs(state, now)
+  if (avond === undefined) return false
+  if (avondEindigtInDitLevel(state, now)) return true
+  if (levelAftelMs(state, now) !== undefined) return false
+  return avond <= SECONDEN_ZONDER_LEVELKLOK_MS
 }
 
 /**

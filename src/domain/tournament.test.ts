@@ -8,8 +8,8 @@ import {
   expectedEndAt,
   isAfgelopen,
   isLastLevel,
+  avondklokInSeconden,
   levelAftelMs,
-  opDeSlagVan,
   nextLevel,
   nogInHetSpel,
   playersLeft,
@@ -716,6 +716,94 @@ describe('de twee klokken', () => {
   })
 })
 
+describe('de avondklok wordt pas op het eind fijn', () => {
+  /**
+   * Vier minuten in twee levels van twee. Het tweede level duurt precies zo
+   * lang als wat er dan van de avond over is, dus dat is het laatste.
+   */
+  const kort = () => maak({ durationMinutes: 4, levelMinutes: 2, trigger: 'time' })
+
+  /** Schuift een level op en bevestigt de nieuwe blinds, zoals aan tafel. */
+  function volgendLevel(t: Tournament, now: number): Tournament {
+    return reduce(reduce(t, { type: 'advanceLevel', now }), { type: 'bevestigLevel', now })
+  }
+
+  it('staat op minuten zolang er nog een level na dit komt', () => {
+    // Twee klokken die allebei per seconde verspringen is te onrustig, en zo
+    // lang de avond nog uren duurt zegt die seconde ook niets.
+    expect(avondklokInSeconden(kort(), T0)).toBe(false)
+  })
+
+  it('gaat op seconden zodra het laatste level begonnen is', () => {
+    const t = volgendLevel(kort(), T0 + 2 * MINUUT)
+    expect(avondklokInSeconden(t, T0 + 2 * MINUUT)).toBe(true)
+  })
+
+  it('rekent een level dat precies zo lang duurt als de rest van de avond mee', () => {
+    // De grens hoort erbij: duurt dit level even lang, dan komt er geen meer.
+    const t = volgendLevel(kort(), T0 + 2 * MINUUT)
+    expect(levelAftelMs(t, T0 + 2 * MINUUT)).toBeUndefined()
+    expect(avondAftelMs(t, T0 + 2 * MINUUT)).toBe(2 * MINUUT)
+  })
+
+  it('klapt niet terug naar minuten als een eliminatie het level opschuift', () => {
+    // Een eliminatie zet de levelklok terug op vol, en vol is nog steeds langer
+    // dan wat er van de avond over is. Anders ging de klok op het eind heen en
+    // weer tussen minuten en seconden.
+    const laatste = volgendLevel(kort(), T0 + 2 * MINUUT)
+    const naEliminatie = volgendLevel(laatste, T0 + 3 * MINUUT)
+    expect(avondklokInSeconden(naEliminatie, T0 + 3 * MINUUT)).toBe(true)
+  })
+
+  it('laat de levelklok wegvallen in het laatste level', () => {
+    // Die telt naar blinds die niet meer omhoog gaan: de avond is eerder om.
+    const t = volgendLevel(kort(), T0 + 2 * MINUUT)
+    expect(levelAftelMs(t, T0 + 2 * MINUUT)).toBeUndefined()
+  })
+
+  it('houdt de levelklok zolang dat level nog echt afloopt', () => {
+    expect(levelAftelMs(kort(), T0)).toBe(2 * MINUUT)
+  })
+
+  it('blijft op minuten bij een avond die nog lang duurt', () => {
+    expect(avondklokInSeconden(maak({ durationMinutes: 120, levelMinutes: 15 }), T0)).toBe(false)
+  })
+
+  describe('zonder levelklok', () => {
+    /** Blinds alleen op eliminaties: er is geen level om tegen af te zetten. */
+    const opEliminatie = () => maak({ trigger: 'elimination', durationMinutes: 30 })
+
+    it('staat op minuten zolang er meer dan tien minuten over zijn', () => {
+      expect(avondklokInSeconden(opEliminatie(), T0 + 19 * MINUUT)).toBe(false)
+    })
+
+    it('gaat op seconden bij tien minuten', () => {
+      expect(avondklokInSeconden(opEliminatie(), T0 + 20 * MINUUT)).toBe(true)
+    })
+
+    it('blijft daaronder op seconden', () => {
+      expect(avondklokInSeconden(opEliminatie(), T0 + 25 * MINUUT)).toBe(true)
+    })
+  })
+
+  it('gebruikt de tienminutengrens ook als een eigen lijst met bedragen op is', () => {
+    // Daar komen geen blinds meer bij, dus er valt geen laatste level aan te
+    // wijzen - anders stond de klok de hele avond op seconden.
+    // Met bevestiging erachter, anders staat de klok nog stil op het
+    // levelscherm en loopt de avond helemaal niet.
+    const t = reduce(
+      naarLaatsteLevel(maak({ structure: 'manual', manualBigBlinds: [2, 4], durationMinutes: 30 })),
+      { type: 'bevestigLevel', now: T0 },
+    )
+    expect(avondklokInSeconden(t, T0 + 19 * MINUUT)).toBe(false)
+    expect(avondklokInSeconden(t, T0 + 20 * MINUUT)).toBe(true)
+  })
+
+  it('heeft niets fijn te maken bij last man standing', () => {
+    expect(avondklokInSeconden(maak({ durationMinutes: undefined }), T0 + 99 * MINUUT)).toBe(false)
+  })
+})
+
 describe('een eliminatie verkort de avond niet', () => {
   /** Vier minuten in twee levels van twee, met de huisregel-trigger. */
   const avond = () => maak({ durationMinutes: 4, levelMinutes: 2 })
@@ -740,33 +828,6 @@ describe('een eliminatie verkort de avond niet', () => {
     const t = naDeEersteUitvaller()
     const na = reduce(t, { type: 'tick', now: T0 + 2 * MINUUT + 5_000 })
     expect(na.levelIndex).toBe(2)
-  })
-})
-
-describe('opDeSlagVan', () => {
-  it('legt de ene klok op de secondeslag van de andere', () => {
-    // Gemeten in de browser: na een levelwissel versprongen de twee klokken
-    // 750 ms na elkaar, omdat de levelklok opnieuw verankerd wordt op het
-    // moment van bevestigen en dat zelden een hele seconde gespeelde tijd is.
-    expect(opDeSlagVan(90_000, 14_250) % 1000).toBe(250)
-    expect(opDeSlagVan(5_400_000, 899_123) % 1000).toBe(123)
-  })
-
-  it('haalt het verschil eraf en nooit erbij', () => {
-    // Een fractie te weinig tonen mag; meer tijd beloven dan er is niet.
-    for (const ms of [90_000, 12_345, 1_000_000]) {
-      expect(opDeSlagVan(ms, 7_777)).toBeLessThanOrEqual(ms)
-      expect(ms - opDeSlagVan(ms, 7_777)).toBeLessThan(1000)
-    }
-  })
-
-  it('laat een klok die al gelijk loopt met rust', () => {
-    expect(opDeSlagVan(90_250, 14_250)).toBe(90_250)
-  })
-
-  it('zakt niet door nul heen', () => {
-    // Aan het eind van de avond staat er anders een negatieve tijd.
-    expect(opDeSlagVan(100, 999)).toBe(0)
   })
 })
 
