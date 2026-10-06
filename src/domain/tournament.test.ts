@@ -57,7 +57,11 @@ const nieuw = (overrides: Partial<Settings> = {}) =>
 const maak = (overrides: Partial<Settings> = {}) =>
   reduce(nieuw(overrides), { type: 'bevestigLevel', now: T0 })
 
-/** Zet het toernooi op het laatste level. */
+/**
+ * Zet het toernooi op het laatste gegenereerde level. Dat is iets anders dan het
+ * laatste level: voorbij deze rij maakt de reducer er gewoon een bij, en
+ * `isLastLevel` is hier dan ook onwaar.
+ */
 function naarLaatsteLevel(t: Tournament, now = T0): Tournament {
   while (t.levelIndex < t.levels.length - 1) t = reduce(t, { type: 'advanceLevel', now })
   return t
@@ -830,10 +834,10 @@ describe('de avondklok wordt pas op het eind fijn', () => {
 })
 
 describe('een eliminatie verkort de avond niet', () => {
-  /** Vier minuten in twee levels van twee, met de huisregel-trigger. */
+  /** Vier minuten in twee levels van twee, met blinds op klok en eliminatie. */
   const avond = () => maak({ durationMinutes: 4, levelMinutes: 2 })
 
-  /** Iemand valt meteen uit, dus het laatste level begint na vijf seconden. */
+  /** Iemand valt meteen uit, dus de laatste gegenereerde rij begint na vijf seconden. */
   function naDeEersteUitvaller(): Tournament {
     const t = reduce(avond(), { type: 'playerOut', index: 0, now: T0 + 5_000 })
     return reduce(t, { type: 'bevestigLevel', now: T0 + 5_000 })

@@ -49,8 +49,13 @@ export type Structure = {
 
 /**
  * Een ruime bovengrens voor de lengte van de reeks. Hij stopt daar niet op: hij
- * stopt op een blindwaarde en niet op een aantal. Dit is alleen een vangnet
- * tegen een oneindige lus.
+ * stopt op een blindwaarde en niet op een aantal, dus in de praktijk is dit een
+ * vangnet tegen een oneindige lus.
+ *
+ * Niet alleen dat, let op: zonder afgesproken duur is dit ook het geplande
+ * aantal (`levelCount`), en dat getal stuurt de curve van Berekend. Dit
+ * verzetten verandert dus stilletjes de blinds van elk last-man-standing
+ * toernooi.
  */
 export const MAX_LEVELS = 40
 
@@ -87,7 +92,7 @@ export function geplandeLevels(
 /**
  * De levellengtes die een duur precies vullen, als "N levels van M minuten".
  *
- * Een levellengte die niet in de duur past betekent dat het laatste level halверwege
+ * Een levellengte die niet in de duur past betekent dat het laatste level halverwege
  * afgekapt wordt — dan klopt de opgegeven duur niet met wat je speelt. Door alleen
  * de delers aan te bieden is de keuze in feite hoeveel levels je wilt, en volgt
  * hun lengte daaruit.
@@ -132,11 +137,11 @@ export function targetEndBigBlind(players: number, startingStack: number): numbe
 }
 
 /**
- * Waar de reeks ophoudt als er geen eindtijd is.
+ * Waar de reeks ophoudt voor alles behalve Berekend — met of zonder eindtijd.
  *
  * `targetEndBigBlind` markeert het punt waarop een toernooi feitelijk beslist is
- * — een zinnige grens als je op een afgesproken tijd stopt, maar bij last man
- * standing speel je juist dóór na dat punt en is de structuur dan op. Hier telt
+ * — een zinnige grens voor Berekend, dat zich aan zijn eigen belofte houdt, maar
+ * je speelt juist dóór na dat punt en dan is de structuur op. Hier telt
  * pas het echte einde: alle chips bij twee spelers, elk nog een big blind of
  * twee, en de volgende hand beslist het. Dat is de big blind op een kwart van
  * wat er in het spel is.
@@ -291,14 +296,21 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
     // terwijl een eliminatie de levels ook opschuift: wie snel speelde raakte
     // halverwege de avond door zijn blinds heen.
     //
+    // Dit is wel het einde van de gegenereerde lijst en niet van de reeks. Loopt
+    // het spel er alsnog voorbij — door eliminaties, of gewoon doordat de klok
+    // sneller is dan deze grens — dan maakt de reducer er een bij door het
+    // vorige bedrag te verdubbelen. Zie `metLevelTot` in tournament.ts.
+    //
     // Berekend houdt zich aan zijn eigen belofte en stopt op het doel. Bij een
     // kleine startstack nadert de groeifactor 1, en dan duwt de afronding elke
     // keer een volle stap omhoog — zonder afkappen schiet de reeks het doel met
     // een veelvoud voorbij. De rest loopt door tot waar er niets meer te spelen
     // valt: alle chips bij twee spelers.
     //
-    // Handmatig kapt nergens op af. Dat is precies de lijst die is opgegeven, en
-    // is hij op, dan blijven de blinds op het laatste bedrag staan.
+    // Een eigen lijst met bedragen kapt nergens op af. Dat is precies de lijst
+    // die is opgegeven, en is hij op, dan blijven de blinds op het laatste
+    // bedrag staan. Een lege lijst telt niet mee — die valt terug op verdubbelen
+    // en wordt dus wel afgekapt, en groeit daarna ook gewoon mee.
     const stoptBijEinde = handmatigeBedragen(input) === undefined
     const grens =
       input.kind === 'calculated'

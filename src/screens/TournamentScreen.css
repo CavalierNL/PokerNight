@@ -47,10 +47,6 @@
 }
 
 /*
- * Small en big staan als twee benoemde bedragen naast elkaar, niet als "25 / 50".
- * Aan tafel wordt er naar dit scherm gewezen; dan moet er staan wat het is.
- */
-/*
  * De levelklok onder de avondklok: dezelfde vorm, kleiner. Twee klokken op
  * elkaar hebben allebei een woord nodig dat zegt wat ze zijn, anders is het
  * verschil alleen de maat — en dat is aan tafel te weinig.
@@ -73,6 +69,10 @@
   color: var(--goud);
 }
 
+/*
+ * Small en big staan als twee benoemde bedragen naast elkaar, niet als "25 / 50".
+ * Aan tafel wordt er naar dit scherm gewezen; dan moet er staan wat het is.
+ */
 .tafel__blinds {
   display: flex;
   align-items: baseline;
@@ -262,8 +262,6 @@
   justify-content: center;
 }
 
-/* De laatste minuut van een level: dezelfde kleur als de blinds, zodat de tafel
-   ziet dat dit de laatste hand is zonder dat er iets bij hoeft te staan. */
 /*
   De eenheid achter de avondklok. Klein en zonder de negatieve letterafstand
   van het getal, zodat "180 min" niet breder uitvalt dan "180:00" deed.
@@ -275,6 +273,9 @@
   margin-left: 0.05em;
 }
 
+/* De laatste minuut van wat er afloopt: dezelfde kleur als de blinds, zodat de
+   tafel ziet dat dit de laatste hand is zonder dat er iets bij hoeft te staan.
+   In het laatste level is dat de avondklok, daarbuiten de levelklok. */
 .tafel__klok--bijna {
   color: var(--goud);
 }

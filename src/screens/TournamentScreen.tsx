@@ -145,6 +145,8 @@ export function TournamentScreen() {
   // twee klokken die allebei per seconde verspringen is aan tafel te onrustig,
   // en zolang de avond nog uren duurt zegt die seconde ook niets. In het
   // laatste level valt de levelklok weg, en dan mag deze de seconden hebben.
+  // Is er helemaal geen levelklok - blinds op eliminaties - dan valt er geen
+  // laatste level aan te wijzen en ligt de grens op tien minuten.
   const groteInMinuten = groteIsAvond && !avondklokInSeconden(tournament, now)
   // Het goud hoort bij de klok die afloopt. Staat de levelklok eronder, dan is
   // dat die; is er geen levelklok meer, dan is de grote klok zelf aan de beurt.

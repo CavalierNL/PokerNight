@@ -248,7 +248,8 @@ export function isLastLevel(state: Tournament): boolean {
 /**
  * Wanneer het toernooi naar verwachting klaar is, als er vanaf nu onafgebroken
  * doorgespeeld wordt. Omdat er vanaf `now` gerekend wordt, schuift de schatting
- * vanzelf op met elke pauze. Alleen zinvol als de tijd de levels opschuift.
+ * vanzelf op met elke pauze. Bestaat alleen als er een speelduur is
+ * afgesproken: de trigger van de blinds doet er niet toe.
  */
 export function expectedEndAt(state: Tournament, now: number): number | undefined {
   // De avond eindigt als de afgesproken speelduur om is. De levels zeggen daar
@@ -329,10 +330,11 @@ export function speelduurMs(state: Tournament, now: number): number {
  * Wat er van de afgesproken speelduur over is, of `undefined` als er geen duur
  * is afgesproken en er dus tot de laatste man gespeeld wordt.
  *
- * De tegenhanger van `levelAftelMs`. Ze staan naast elkaar en worden naast
- * elkaar getoond: het zijn twee verschillende vragen — wanneer gaan de blinds
- * omhoog, en wanneer houdt de avond op — en één getal dat van betekenis wisselt
- * is aan tafel niet uit te leggen.
+ * De tegenhanger van `levelAftelMs`. Het zijn twee verschillende vragen —
+ * wanneer gaan de blinds omhoog, en wanneer houdt de avond op — en één getal dat
+ * van betekenis wisselt is aan tafel niet uit te leggen. Deze staat groot
+ * bovenaan; de levelklok staat er klein onder, en in het laatste level helemaal
+ * niet meer.
  */
 export function avondAftelMs(state: Tournament, now: number): number | undefined {
   const duur = state.settings.durationMinutes
@@ -544,10 +546,10 @@ export function reduce(state: Tournament, action: Action): Tournament {
       if (!advancesOnTime(state.settings.trigger)) return state
       if (remainingMs(state, action.now) > 0) return state
 
-      // Zijn de levels op maar de avond nog niet, dan blijven de blinds staan
-      // waar ze staan en wordt er doorgespeeld — net als zonder afgesproken
-      // duur. Geen geschiedenisstap, anders staat die na vijf seconden tikken
-      // vol met niets.
+      // Is de gegenereerde reeks op maar de avond nog niet, dan komt er een
+      // level bij: het vorige bedrag verdubbeld. Alleen een eigen lijst met
+      // bedragen houdt op, en daar levert dit niets op — geen geschiedenisstap
+      // dan, anders staat die na vijf seconden tikken vol met niets.
       const volgende = goToNextLevel(core(state), action.now)
       return volgende ? withHistory(state, volgende, action.now) : state
     }

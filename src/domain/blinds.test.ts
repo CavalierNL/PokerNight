@@ -393,7 +393,12 @@ describe('color-up is een keuze per toernooi', () => {
   })
 })
 
-describe('een toernooi zonder eindtijd', () => {
+// Nagemeten: voor de ladder maakt een afgesproken duur geen verschil meer voor
+// de bedragen - met en zonder duur komt er 2,4,10,20,50,100,250 uit. De grens is
+// de blindwaarde, en die hangt niet aan de klok. De `durationMinutes: undefined`
+// hieronder zegt dus niets meer over het gedrag; het blijft een toernooi zonder
+// eindtijd omdat dat de situatie is waar deze grens voor bedacht is.
+describe('de grens waar de reeks ophoudt', () => {
   it('loopt door tot alle chips bij twee spelers passen', () => {
     const spelers = 8
     const stack = 200

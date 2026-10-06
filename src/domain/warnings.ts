@@ -83,7 +83,7 @@ export function setupWarnings(
   // veel eerder beslist dan de opgegeven duur suggereert.
   const gemiddeldeStackBijDrie = (spelers * settings.startingStack) / 3
   const drempel = gemiddeldeStackBijDrie / 10
-  //
+
   // Gemeten tegen het geplande aantal levels en niet tegen de lengte van de
   // reeks: die loopt door voorbij de geplande avond, zodat de blinds kunnen
   // blijven klimmen als eliminaties de levels opschuiven. Zonder afgesproken
