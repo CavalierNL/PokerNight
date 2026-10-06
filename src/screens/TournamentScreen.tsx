@@ -19,6 +19,7 @@ import type { Chipset } from '../domain/chipset'
 import {
   afgevallen,
   avondAftelMs,
+  aftelMs,
   avondklokInSeconden,
   averageStack,
   averageStackInBigBlinds,
@@ -31,7 +32,6 @@ import {
   nextLevel,
   nogInHetSpel,
   playersLeft,
-  remainingMs,
   speelduurMs,
   uitslag,
   winnaar,
@@ -96,15 +96,16 @@ export function TournamentScreen() {
   const eersteScherm = tournament?.levelIndex === 0
   useLevelSound(wachtOpLevel && !eersteScherm, preferences.sound && !stil)
 
-  // Alleen zinvol als de klok afloopt: bij "alleen eliminatie" telt hij op en is
-  // er geen minuut om te waarschuwen.
-  const telAfOpTijd = tournament !== null && tournament.settings.trigger !== 'elimination'
-  const resterend = tournament ? remainingMs(tournament, now) : 0
+  // Waarschuwen hoort bij wat er werkelijk afloopt, en dat is niet altijd het
+  // level: in het laatste level is de levelklok weg en telt de avond naar het
+  // enige wat er nog komt. Loopt er niets af - last man standing zonder duur -
+  // dan valt er niets te waarschuwen.
+  const aftellend = tournament ? aftelMs(tournament, now) : undefined
   const waarschuwingsGrens = waarschuwingsGrensMs(tournament?.settings.levelMinutes ?? 15)
   useEindeWaarschuwing(
-    resterend,
+    aftellend ?? Infinity,
     waarschuwingsGrens,
-    preferences.sound && telAfOpTijd && tournament?.clock.state === 'running',
+    preferences.sound && aftellend !== undefined && tournament?.clock.state === 'running',
     tournament?.levelIndex ?? 0,
   )
 
@@ -123,7 +124,7 @@ export function TournamentScreen() {
   const { laatkomers } = tournament.settings
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
   const eindtijd = expectedEndAt(tournament, now)
-  const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
+  const bijnaOm = aftellend !== undefined && aftellend <= waarschuwingsGrens
 
   // Twee klokken met elk hun eigen vraag, de avond bovenaan: hoe lang duurt
   // het nog is waar je mee naar het scherm kijkt, wanneer de blinds omhoog gaan
@@ -145,6 +146,9 @@ export function TournamentScreen() {
   // en zolang de avond nog uren duurt zegt die seconde ook niets. In het
   // laatste level valt de levelklok weg, en dan mag deze de seconden hebben.
   const groteInMinuten = groteIsAvond && !avondklokInSeconden(tournament, now)
+  // Het goud hoort bij de klok die afloopt. Staat de levelklok eronder, dan is
+  // dat die; is er geen levelklok meer, dan is de grote klok zelf aan de beurt.
+  const groteTeltAf = levelAf === undefined || !groteIsAvond
 
   return (
     <>
@@ -206,7 +210,7 @@ export function TournamentScreen() {
           <span className="tafel__kloklabel">{groteLabel}</span>
           {/* De gouden waarschuwing hoort bij de levelklok, waar hij ook staat. */}
           <div
-            className={`tafel__klok${!groteIsAvond && bijnaOm ? ' tafel__klok--bijna' : ''}`}
+            className={`tafel__klok${groteTeltAf && bijnaOm ? ' tafel__klok--bijna' : ''}`}
           >
             {groteInMinuten ? (
               <>

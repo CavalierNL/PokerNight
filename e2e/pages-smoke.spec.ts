@@ -183,18 +183,21 @@ test.describe.serial('de gepubliceerde site', () => {
 
     await duur.fill('120')
     await expect(duur).toHaveValue('120')
-    // De blindstructuur rekent mee: acht levels van 15 minuten.
-    await expect(page.locator('tbody tr')).toHaveCount(8)
+    // De blindstructuur rekent mee. Het geplande aantal stuurt alleen de curve;
+    // de reeks loopt door tot de blinds het toernooi beslissen, dus er staan er
+    // meer dan de acht geplande. Alleen de geplande rijen krijgen een starttijd.
+    await expect(page.locator('tbody tr')).toHaveCount(11)
   })
 
   test('laat de duur het aantal levels en de stack bepalen', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
 
-    // Zes levels van vijftien minuten, en een stack die dat ook echt haalt.
+    // Zes geplande levels van vijftien minuten, en een stack die dat ook echt
+    // haalt. De reeks zelf loopt door voorbij het plan.
     await expect(page.getByLabel('Aantal levels')).toHaveValue('15')
     await expect(page.getByLabel('Startstack (chips)')).toHaveValue('12500')
-    await expect(page.locator('tbody tr')).toHaveCount(6)
+    await expect(page.locator('tbody tr')).toHaveCount(10)
 
     // Langer spelen vraagt een diepere stack, met dezelfde beginblinds.
     // Acht levels die elk verdubbelen: 25.000 diep.
@@ -244,14 +247,17 @@ test.describe.serial('de gepubliceerde site', () => {
     await page.getByRole('button', { name: 'Speler 1' }).click()
     await expect(page.getByText('Level 2', { exact: true })).toBeVisible()
 
-    // De klok staat stil op de volle levellengte tot er bevestigd is.
-    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+    // De klok staat stil op de volle levellengte tot er bevestigd is. De
+    // levelklok staat onder de avondklok: die laatste loopt in hele minuten en
+    // zou hier niet eens verspringen, dus hij zegt niets over stilstaan.
+    const levelklok = page.locator('.tafel__levelklok-waarde')
+    await expect(levelklok).toHaveText('15:00')
     await page.waitForTimeout(1200)
-    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+    await expect(levelklok).toHaveText('15:00')
 
     await page.getByRole('button', { name: 'Start', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveCount(0)
-    await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
+    await expect(levelklok).not.toHaveText('15:00')
   })
 
   test('hervat een pauze door op het scherm te tikken', async ({ page }) => {
@@ -296,7 +302,10 @@ test.describe.serial('de gepubliceerde site', () => {
     // Het toernooischerm is een tweede laadpad met een eigen render en een
     // schrijfactie naar localStorage, die geen van beide in het setupscherm
     // langskomen. De klok telt af, dus alleen de vorm is te vastleggen.
-    await expect(page.locator('.tafel__klok')).toHaveText(/^\d+:\d{2}$/)
+    // De grote klok is de avondklok en loopt in hele minuten; de levelklok
+    // eronder houdt de seconden.
+    await expect(page.locator('.tafel__klok')).toHaveText(/^\d+\s*min$/)
+    await expect(page.locator('.tafel__levelklok-waarde')).toHaveText(/^\d+:\d{2}$/)
     // Small en big staan als benoemde bedragen naast elkaar.
     await expect(page.locator('.tafel__blind').first()).toContainText(/Small\s*\d+/)
     await expect(page.locator('.tafel__blind').last()).toContainText(/Big\s*\d+/)
@@ -360,12 +369,13 @@ test.describe.serial('de gepubliceerde site', () => {
     // Acht plaatsen in een geloote volgorde, met plaats een als dealer.
     await expect(page.locator('.loting__plaatsen li')).toHaveCount(8)
     await expect(page.locator('.loting__eerste')).toHaveCount(1)
-    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+    const levelklok = page.locator('.tafel__levelklok-waarde')
+    await expect(levelklok).toHaveText('15:00')
     await page.waitForTimeout(1200)
-    await expect(page.locator('.tafel__klok')).toHaveText('15:00')
+    await expect(levelklok).toHaveText('15:00')
 
     await page.getByRole('button', { name: 'Start', exact: true }).click()
-    await expect(page.locator('.tafel__klok')).not.toHaveText('15:00')
+    await expect(levelklok).not.toHaveText('15:00')
   })
 
   test('zoekt de rangorde van de handen op', async ({ page }) => {

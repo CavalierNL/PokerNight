@@ -46,13 +46,21 @@ const settings: Settings = {
 }
 
 /** Zet een toernooi in de opslag, in dezelfde vorm als de app zelf schrijft. */
-function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = KLEINE_DOOS) {
+function bewaarToernooi(
+  overrides: Partial<Settings> = {},
+  chipset = KLEINE_DOOS,
+  /** Losse velden over de kern heen, om een toernooi midden op de avond te zetten. */
+  extra: Record<string, unknown> = {},
+) {
   const { history: _h, ...core } = createTournament(
     { ...settings, ...overrides },
     chipset,
     Date.now(),
   )
-  opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE, data: core }))
+  opslag.set(
+    'pokernight.tournament',
+    JSON.stringify({ version: OPSLAG_VERSIE, data: { ...core, ...extra } }),
+  )
 }
 
 function opgezetScherm() {
@@ -210,8 +218,8 @@ describe('tafelscherm', () => {
   })
 
   /** Het tafelscherm met een toernooi uit de opslag. */
-  function tafel(overrides: Partial<Settings> = {}): string {
-    bewaarToernooi(overrides)
+  function tafel(overrides: Partial<Settings> = {}, extra: Record<string, unknown> = {}): string {
+    bewaarToernooi(overrides, KLEINE_DOOS, extra)
     return renderToStaticMarkup(
       <AppStateProvider>
         <TournamentScreen />
@@ -261,8 +269,22 @@ describe('tafelscherm', () => {
   })
 
   it('telt op bij last man standing, want daar loopt niets af', () => {
-    const klok = tafel({ trigger: 'elimination', durationMinutes: undefined })
-    expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>0:00<')
+    // Met een vers toernooi staat de teller altijd op 0:00 en bewijst de test
+    // niets. Een kwartier gespeeld hoort 15:00 te geven - optellen dus, niet
+    // stilstaan.
+    const nu = Date.now()
+    const klok = tafel(
+      { trigger: 'elimination', durationMinutes: undefined },
+      {
+        startedAt: nu - 15 * 60_000,
+        wachtOpLevel: false,
+        clock: { state: 'running', endsAt: nu + 60_000 },
+      },
+    )
+    // Niet op de seconde pinnen: de teller rekent met Date.now() op het moment
+    // van renderen, dus een milliseconde drift maakt er 15:01 van. Waar het om
+    // gaat is dat hij rond het kwartier staat en niet op nul blijft hangen.
+    expect(klok.slice(klok.indexOf('tafel__kloklabel'))).toMatch(/>1[45]:\d{2}</)
   })
 
   it('laat de avondklok in hele minuten lopen', () => {
@@ -271,6 +293,17 @@ describe('tafelscherm', () => {
     const grote = tafel({ trigger: 'both' })
     expect(grote.slice(grote.indexOf('tafel__klok'))).toContain('>180<')
     expect(grote).toContain('> min<')
+  })
+
+  it('kleurt de avondklok goud als de avond bijna om is', () => {
+    // De waarschuwing hing aan de levelklok, en die is in het laatste level
+    // juist weg. De avond liep dan af zonder dat er iets verkleurde.
+    const nu = Date.now()
+    const html = tafel(
+      { trigger: 'both', durationMinutes: 10, levelMinutes: 15 },
+      { startedAt: nu - 9 * 60_000, wachtOpLevel: false, clock: { state: 'running', endsAt: nu + 6 * 60_000 } },
+    )
+    expect(html).toContain('tafel__klok--bijna')
   })
 
   it('zet de avondklok op seconden in het laatste level', () => {

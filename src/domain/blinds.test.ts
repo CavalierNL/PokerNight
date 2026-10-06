@@ -54,6 +54,26 @@ describe('de reeks stopt op een waarde, niet op het geplande aantal', () => {
     expect(structuur.levels.length).toBeLessThan(MAX_LEVELS)
   })
 
+  it('haalt zijn doeleind ook bij meer dan veertig geplande levels', () => {
+    // De factor rekent in `gepland` stappen naar het doel terwijl de ruwe lijst
+    // op MAX_LEVELS blijft staan, dus op papier kan de reeks stilvallen voor het
+    // doel bereikt is. Nagemeten gebeurt dat niet: afronden duwt elk bedrag naar
+    // boven, zodat de waardegrens ruim voor de veertigste rij valt. Deze test
+    // houdt dat vast, want aan afronden sleutelen zou het alsnog kunnen breken.
+    const lang: StructureInput = {
+      ...huisregel,
+      kind: 'calculated',
+      players: 8,
+      startingStack: 10000,
+      durationMinutes: 420,
+      levelMinutes: 10,
+    }
+    expect(levelCount(420, 10)).toBeGreaterThan(MAX_LEVELS)
+    const structuur = buildStructure(lang, STANDARD_500)
+    const laatste = structuur.levels[structuur.levels.length - 1]
+    expect(laatste.bigBlind).toBeGreaterThanOrEqual(targetEndBigBlind(8, 10000))
+  })
+
   it('kapt ook de ladder af, nu die geen duur meer hoeft te vullen', () => {
     const structuur = buildStructure({ ...kort, kind: 'ladder' }, STANDARD_500)
     const laatste = structuur.levels[structuur.levels.length - 1]
@@ -235,11 +255,22 @@ describe('buildStructure — handmatig', () => {
   })
 
   it('valt terug op verdubbelen bij een lege lijst', () => {
+    // `levels.length > 1` zei hier niets: dat is waar voor elke structuur die
+    // buildStructure oplevert. Waar het om gaat is dat het ook echt verdubbelt,
+    // want dit is de plek waar `handmatigeBedragen` en `magGroeien` het eens
+    // moeten zijn - lopen ze uit elkaar, dan groeit een lege lijst alsnog niet.
     const structuur = buildStructure(
       { ...huisregel, kind: 'manual', manualBigBlinds: [] },
       KLEINE_DOOS,
     )
-    expect(structuur.levels.length).toBeGreaterThan(1)
+    const bedragen = structuur.levels.map((l) => l.bigBlind)
+    expect(bedragen.length).toBeGreaterThan(2)
+    for (let i = 1; i < bedragen.length; i += 1) {
+      // Verdubbelen, op de afronding naar betaalbare bedragen na - die duwt
+      // alleen omhoog, dus het laatste bedrag is 130 en niet 128.
+      expect(bedragen[i]).toBeGreaterThanOrEqual(bedragen[i - 1] * 2)
+      expect(bedragen[i]).toBeLessThan(bedragen[i - 1] * 2.5)
+    }
   })
 })
 
