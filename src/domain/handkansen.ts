@@ -60,7 +60,8 @@ export function formatteerKans(aantal: number, totaal: number): string {
  * waar de situatie niets anders zegt, zodat geen van beiden een flush cadeau
  * krijgt of juist kwijt is.
  *
- * Geteld, niet overgenomen: de test deelt alle boards opnieuw uit.
+ * Geteld, niet overgenomen: de test deelt alle boards opnieuw uit met
+ * `handwaarde`, en die wordt op haar beurt naast een tweede waardering gelegd.
  */
 export const MATCHUPS = [
   {
@@ -123,7 +124,7 @@ export const BOARDS_PER_MATCHUP = 1_712_304
  * telt voor beide spelers half mee: het is het deel van de pot dat je op de
  * lange duur terugkrijgt, niet hoe vaak je hem helemaal wint. De tweede is de
  * rest van honderd in plaats van zelf afgerond, anders staat er bij een
- * uitkomst precies op de helft 51 – 50.
+ * uitkomst precies op een half procent, 50,5 tegen 49,5, ineens 51 – 50.
  */
 export function matchupProcenten(matchup: { wint: number; deelt: number }): [number, number] {
   const hand = Math.round(((matchup.wint + matchup.deelt / 2) / BOARDS_PER_MATCHUP) * 100)
@@ -131,14 +132,15 @@ export function matchupProcenten(matchup: { wint: number; deelt: number }): [num
 }
 
 /**
- * De draws die je op de flop het vaakst hebt, met het aantal outs: de kaarten
- * die de hand afmaken. `hand` en `flop` zijn een voorbeeld waarin precies die
- * draw zit en niets anders, zodat de test de outs kan natellen.
+ * Vier bekende draws op de flop, met het aantal outs: de kaarten die de hand
+ * afmaken. `hand` en `flop` zijn een voorbeeld waarin geen andere weg naar het
+ * doel zit dan die draw, zodat de test de outs kan natellen.
  *
  * `erbijOpRiver` zijn de outs die er na een gemiste turn bij komen. Alleen bij
  * de set is dat geen nul: de turnkaart die niet hielp ligt er dan wel, en een
  * tweede van die rang op de river maakt alsnog het full house. Zeven outs
- * worden er zo tien, en dat scheelt over twee kaarten vijf procentpunt.
+ * worden er zo tien, en dat scheelt over twee kaarten ruim vijf procentpunt
+ * (28% tegen 33%).
  */
 export const DRAWS = [
   { naam: 'Flush draw', hand: 'A♦ J♦', flop: '8♦ 5♦ K♠', outs: 9, erbijOpRiver: 0 },

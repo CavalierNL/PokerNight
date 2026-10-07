@@ -72,8 +72,8 @@ describe('MATCHUPS', () => {
     }
   })
 
-  // Zes keer 1,7 miljoen boards: een paar seconden, en op een trage machine
-  // meer dan de vijf die een test standaard krijgt.
+  // Elke matchup is 1,7 miljoen boards: samen een paar seconden, en op een
+  // trage machine meer dan de vijf die een test standaard krijgt.
   it('klopt met wat je krijgt als je elk board uitdeelt', { timeout: 60_000 }, () => {
     for (const matchup of MATCHUPS) {
       const hand = leesKaarten(matchup.hand)
@@ -113,6 +113,18 @@ describe('MATCHUPS', () => {
       expect(new Set(kaarten).size, matchup.situatie).toBe(4)
     }
   })
+
+  it('geeft elke kaart een eigen kleur, behalve waar de situatie suited zegt', () => {
+    // Een gedeelde kleur verschuift de uitkomst een paar procent. Het voorbeeld
+    // moet dus het geval zijn dat de naam belooft, anders klopt het getal wel
+    // maar staat het bij de verkeerde situatie.
+    const kleuren = (kaarten: string) => new Set(leesKaarten(kaarten).map((kaart) => kaart % 4)).size
+    for (const matchup of MATCHUPS) {
+      const suited = matchup.situatie.startsWith('Suited')
+      expect(kleuren(matchup.hand), matchup.situatie).toBe(suited ? 1 : 2)
+      expect(kleuren(`${matchup.hand} ${matchup.tegen}`), matchup.situatie).toBe(suited ? 3 : 4)
+    }
+  })
 })
 
 describe('matchupProcenten', () => {
@@ -134,9 +146,9 @@ describe('matchupProcenten', () => {
   })
 
   it('komt samen altijd op honderd, ook precies op de helft van een procent', () => {
-    // 50,5 tegen 49,5: los afgerond zou dat 51 – 50 worden.
-    const [hand, tegen] = matchupProcenten({ wint: BOARDS_PER_MATCHUP * 0.505, deelt: 0 })
-    expect(hand + tegen).toBe(100)
+    // 50,5 tegen 49,5: los afgerond zou dat 51 – 50 worden. De eerste hand
+    // krijgt de afronding, de tweede wat overblijft.
+    expect(matchupProcenten({ wint: BOARDS_PER_MATCHUP * 0.505, deelt: 0 })).toStrictEqual([51, 49])
   })
 })
 

@@ -180,8 +180,8 @@ type Tabblad = (typeof TABBLADEN)[number]['id']
 /**
  * Wat je over de handen opzoekt tijdens het spelen: de rangorde, en op een
  * tweede tabblad de kansen bij een all-in en een draw. Staat los van het schema
- * en aan de andere kant van het scherm: het zijn twee dingen die je om heel
- * verschillende redenen opzoekt, en naast elkaar tik je de verkeerde.
+ * en aan de andere kant van het scherm: handen en blinds zoek je om heel
+ * verschillende redenen op, en naast elkaar tik je de verkeerde.
  *
  * Het venster opent altijd op de rangorde. De link ernaartoe heet "Wat wint?",
  * en wie daarop tikt wil dat antwoord zonder eerst te kijken waar hij de vorige
@@ -189,6 +189,17 @@ type Tabblad = (typeof TABBLADEN)[number]['id']
  */
 export function HandenVenster({ onSluiten }: { onSluiten: () => void }) {
   const [tabblad, setTabblad] = useState<Tabblad>('rangorde')
+
+  /**
+   * De pijltjes wisselen van tabblad, zoals een schermlezer belooft zodra hij
+   * "tabblad" zegt. Met twee tabbladen is links hetzelfde als rechts: de andere.
+   */
+  function wisselMetPijl(toets: string) {
+    if (toets !== 'ArrowLeft' && toets !== 'ArrowRight') return
+    const ander = tabblad === 'rangorde' ? 'kansen' : 'rangorde'
+    setTabblad(ander)
+    document.getElementById(`handen-tab-${ander}`)?.focus()
+  }
 
   return (
     <div className="levelscherm">
@@ -199,7 +210,12 @@ export function HandenVenster({ onSluiten }: { onSluiten: () => void }) {
         onClick={onSluiten}
       />
       <div className="levelscherm__kaart schema">
-        <div className="tabbladen" role="tablist">
+        <div
+          className="tabbladen"
+          role="tablist"
+          aria-label="Handen"
+          onKeyDown={(event) => wisselMetPijl(event.key)}
+        >
           {TABBLADEN.map(({ id, naam }) => (
             <button
               key={id}
@@ -208,6 +224,9 @@ export function HandenVenster({ onSluiten }: { onSluiten: () => void }) {
               id={`handen-tab-${id}`}
               aria-selected={tabblad === id}
               aria-controls="handen-paneel"
+              // Alleen het gekozen tabblad zit in de tabvolgorde; bij het andere
+              // kom je met de pijltjes.
+              tabIndex={tabblad === id ? 0 : -1}
               className="tabbladen__tab"
               onClick={() => setTabblad(id)}
             >

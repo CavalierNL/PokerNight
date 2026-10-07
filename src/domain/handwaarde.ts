@@ -1,10 +1,12 @@
 /**
- * De waarde van een pokerhand, om de tabellen in `handkansen.ts` na te rekenen.
+ * De waarde van een pokerhand, om de getallen in `handkansen.ts` na te tellen:
+ * de matchups, de outs en de flop-kolom van `HAND_KANSEN`. De river-kolom is
+ * met 134 miljoen grepen te groot om in een test uit te delen.
  *
  * De app zelf deelt geen kaarten en roept dit nergens aan: de kansen die hij
  * toont zijn vaste getallen. Maar vaste getallen zijn alleen te vertrouwen als
- * iets ze kan natellen, en dat is dit. Wordt alleen door tests gebruikt en zit
- * dus niet in de bundel.
+ * iets ze kan natellen, en dat is dit. Bedoeld voor tests alleen: importeer het
+ * niet vanuit de app, dan blijft het buiten de bundel.
  *
  * Een kaart is een getal van 0 tot en met 51: de rang (0 voor de twee, 12 voor
  * de aas) maal vier, plus de kleur.

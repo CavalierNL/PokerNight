@@ -567,8 +567,9 @@
 
 /*
  * De tabbladen staan waar bij de andere vensters de kop staat, en zien er ook
- * zo uit: het gekozen tabblad ís de kop. Het andere is dezelfde tekst, gedimd,
- * met een streep eronder als enige hint dat je erop kunt tikken.
+ * zo uit: het gekozen tabblad ís de kop, met een streep eronder. Het andere is
+ * dezelfde tekst, gedimd; dat er naast de kop nog een woord staat is de hint
+ * dat je erop kunt tikken.
  */
 .tabbladen {
   display: flex;
@@ -578,8 +579,8 @@
 .tabbladen__tab {
   background: none;
   border: 0;
-  /* Hoger dan de tekst: het is het enige tikdoel in dit venster dat geen knop
-     is, en het zit vlak onder de rand van het scherm. */
+  /* Hoger dan de tekst: het is het enige tikdoel in dit venster dat er niet
+     als knop uitziet, en het zit vlak onder de rand van het scherm. */
   padding: 0.35rem 0.1rem;
   font: inherit;
   font-size: clamp(0.85rem, 2.5vw, 1.1rem);
