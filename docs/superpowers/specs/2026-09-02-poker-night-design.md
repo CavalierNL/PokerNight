@@ -199,6 +199,17 @@ kaarten zeggen in die tijd meer dan een zin. De link staat in de balk bovenaan,
 aan de andere kant van het scherm dan het schema — het zijn twee dingen die je om
 heel verschillende redenen opzoekt, en naast elkaar tik je de verkeerde.
 
+Hetzelfde venster heeft een tweede tabblad, **Kansen**, voor de twee vragen die
+daarna komen. *All-in voor de flop*: zes typische matchups, elk met twee
+voorbeeldhanden en onder elke hand het deel van de pot dat hij op den duur wint.
+*Outs op de flop*: vier draws met het aantal outs en de exacte kans dat er een
+komt, op de turn en over turn en river samen. De vuistregel (outs × 2 + 1 en
+outs × 4 − 1) staat erbij als ezelsbruggetje, niet als bron van de getallen.
+
+De matchups zijn geteld over alle 1.712.304 boards en niet overgenomen; de test
+deelt ze opnieuw uit. Ze hangen aan de precieze kaarten, dus elk voorbeeld is het
+kale geval: vier verschillende kleuren, tenzij de situatie *suited* zegt.
+
 De geschatte eindtijd die de setup toont is daarmee een schatting bij ononderbroken
 spel; elke pauze schuift die op. Het tafelscherm rekent de verwachte eindtijd
 tijdens het spelen mee met de tijd die je gepauzeerd hebt.

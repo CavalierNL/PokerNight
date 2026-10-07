@@ -48,3 +48,135 @@ export function formatteerKans(aantal: number, totaal: number): string {
   const decimalen = Math.max(0, 1 - Math.floor(Math.log10(procent)))
   return `${procent.toFixed(decimalen).replace('.', ',')}%`
 }
+
+/**
+ * Twee starthanden tegen elkaar, all-in voor de flop. De drie getallen tellen
+ * de boards waarop `hand` wint, de pot deelt of verliest van `tegen`.
+ *
+ * De kaarten staan hier bij de getallen en niet bij het plaatje, anders dan bij
+ * `HAND_KANSEN`: de uitkomst hangt aan de precieze kaarten. Aas-koning van één
+ * kleur wint drie procentpunt vaker van een laag paar dan aas-koning van twee
+ * kleuren. Elk voorbeeld is daarom het kale geval -- vier verschillende kleuren
+ * waar de situatie niets anders zegt, zodat geen van beiden een flush cadeau
+ * krijgt of juist kwijt is.
+ *
+ * Geteld, niet overgenomen: de test deelt alle boards opnieuw uit.
+ */
+export const MATCHUPS = [
+  {
+    situatie: 'Hoog paar tegen twee lagere kaarten',
+    hand: 'A♠ A♥',
+    tegen: 'K♦ Q♣',
+    wint: 1_475_740,
+    deelt: 5_605,
+    verliest: 230_959,
+  },
+  {
+    situatie: 'Hoog paar tegen laag paar',
+    hand: 'K♠ K♥',
+    tegen: '2♦ 2♣',
+    wint: 1_385_272,
+    deelt: 8_592,
+    verliest: 318_440,
+  },
+  {
+    situatie: 'Twee hoge kaarten tegen laag paar',
+    hand: 'A♠ K♥',
+    tegen: '2♦ 2♣',
+    wint: 799_119,
+    deelt: 9_946,
+    verliest: 903_239,
+  },
+  {
+    situatie: 'Gedomineerde hand',
+    hand: 'A♠ K♥',
+    tegen: 'A♦ Q♣',
+    wint: 1_228_082,
+    deelt: 78_598,
+    verliest: 405_624,
+  },
+  {
+    situatie: 'Twee hoge tegen twee lage kaarten',
+    hand: 'A♠ K♥',
+    tegen: '7♦ 2♣',
+    wint: 1_143_573,
+    deelt: 7_419,
+    verliest: 561_312,
+  },
+  {
+    situatie: 'Suited connectors tegen hoog paar',
+    hand: '9♦ 8♦',
+    tegen: 'A♠ A♥',
+    wint: 384_768,
+    deelt: 5_215,
+    verliest: 1_322_321,
+  },
+] as const
+
+export type Matchup = (typeof MATCHUPS)[number]
+
+/** Vijf kaarten uit de achtenveertig die de twee handen overlaten: C(48,5). */
+export const BOARDS_PER_MATCHUP = 1_712_304
+
+/**
+ * Een matchup als twee hele procenten die samen honderd zijn. Een gedeelde pot
+ * telt voor beide spelers half mee: het is het deel van de pot dat je op de
+ * lange duur terugkrijgt, niet hoe vaak je hem helemaal wint. De tweede is de
+ * rest van honderd in plaats van zelf afgerond, anders staat er bij een
+ * uitkomst precies op de helft 51 – 50.
+ */
+export function matchupProcenten(matchup: { wint: number; deelt: number }): [number, number] {
+  const hand = Math.round(((matchup.wint + matchup.deelt / 2) / BOARDS_PER_MATCHUP) * 100)
+  return [hand, 100 - hand]
+}
+
+/**
+ * De draws die je op de flop het vaakst hebt, met het aantal outs: de kaarten
+ * die de hand afmaken. `hand` en `flop` zijn een voorbeeld waarin precies die
+ * draw zit en niets anders, zodat de test de outs kan natellen.
+ *
+ * `erbijOpRiver` zijn de outs die er na een gemiste turn bij komen. Alleen bij
+ * de set is dat geen nul: de turnkaart die niet hielp ligt er dan wel, en een
+ * tweede van die rang op de river maakt alsnog het full house. Zeven outs
+ * worden er zo tien, en dat scheelt over twee kaarten vijf procentpunt.
+ */
+export const DRAWS = [
+  { naam: 'Flush draw', hand: 'A♦ J♦', flop: '8♦ 5♦ K♠', outs: 9, erbijOpRiver: 0 },
+  {
+    naam: 'Straat, open aan twee kanten',
+    hand: '9♥ 8♠',
+    flop: '7♦ 6♣ K♥',
+    outs: 8,
+    erbijOpRiver: 0,
+  },
+  {
+    naam: 'Set naar full house of four of a kind',
+    hand: '7♠ 7♥',
+    flop: '7♦ K♣ 2♥',
+    outs: 7,
+    erbijOpRiver: 3,
+  },
+  { naam: 'Straat, gat in het midden', hand: '9♥ 8♠', flop: '6♦ 5♣ K♥', outs: 4, erbijOpRiver: 0 },
+] as const
+
+export type Draw = (typeof DRAWS)[number]
+
+/** Wat je op de flop niet ziet: tweeenvijftig min je twee en de drie op tafel. */
+export const KAARTEN_NA_FLOP = 47
+
+/** Elke turn met elke river erna, in die volgorde. */
+export const VOLGORDES_TURN_EN_RIVER = KAARTEN_NA_FLOP * (KAARTEN_NA_FLOP - 1)
+
+/**
+ * In hoeveel van de volgordes van turn en river de draw aankomt. Geteld via de
+ * missers, want dat is één vermenigvuldiging: de turn mist, en daarna mist de
+ * river ook. De rest is raak, op de turn of op de river of allebei.
+ *
+ * De kans op de turn alleen heeft geen functie nodig: dat zijn de outs zelf,
+ * op `KAARTEN_NA_FLOP`.
+ */
+export function raakOpTurnOfRiver(draw: { outs: number; erbijOpRiver: number }): number {
+  const misOpTurn = KAARTEN_NA_FLOP - draw.outs
+  const misOpRiver = KAARTEN_NA_FLOP - 1 - draw.outs - draw.erbijOpRiver
+  return VOLGORDES_TURN_EN_RIVER - misOpTurn * misOpRiver
+}

@@ -396,6 +396,45 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.handen')).toHaveCount(0)
   })
 
+  test('zoekt matchups en outs op, ook op een smalle telefoon', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 })
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Wat wint?' }).click()
+    await page.getByRole('tab', { name: 'Kansen' }).click()
+    await expect(page.getByRole('tab', { name: 'Kansen' })).toHaveAttribute('aria-selected', 'true')
+
+    // Zes matchups en vier draws, met de getallen uit de rekenkern.
+    const regels = page.locator('.handen__regel')
+    await expect(regels).toHaveCount(10)
+    await expect(regels.first()).toContainText('Hoog paar tegen twee lagere kaarten')
+    await expect(regels.first()).toContainText('86%')
+    await expect(regels.first()).toContainText('14%')
+    await expect(regels.nth(6)).toContainText('Flush draw')
+    await expect(regels.nth(6)).toContainText('9 outs19%→35%')
+
+    // Niets steekt opzij uit: het venster past in beeld, en de lijst erin
+    // scrollt alleen van boven naar beneden. Het venster zelf knipt af wat te
+    // breed is, dus daar is meten de enige manier om het te zien.
+    const venster = page.locator('.schema')
+    const rand = await venster.boundingBox()
+    expect(rand!.x).toBeGreaterThanOrEqual(0)
+    expect(rand!.x + rand!.width).toBeLessThanOrEqual(320)
+    for (const vak of [venster, page.locator('.schema__lijst')]) {
+      expect(await vak.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0)
+    }
+
+    // Terug naar de rangorde, en het venster opent daar ook altijd op.
+    await page.getByRole('tab', { name: 'Wat wint' }).click()
+    await expect(regels.first()).toContainText('Royal flush')
+    await page.getByRole('tab', { name: 'Kansen' }).click()
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await page.getByRole('button', { name: 'Wat wint?' }).click()
+    await expect(regels.first()).toContainText('Royal flush')
+  })
+
   test('telt afgeronde avonden op in het klassement', async ({ page }) => {
     async function speelAvond(winnaar: string, verliezer: string) {
       await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
