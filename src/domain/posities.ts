@@ -1,12 +1,12 @@
 /**
- * De plaatsen aan tafel die een eigen naam hebben. Alleen deze vijf: het zijn de
+ * De plaatsen aan tafel die een eigen naam hebben. Alleen deze: het zijn de
  * namen die in een regel voorkomen ("de eerste speler links van de button") of
  * die aan een thuistafel ook echt gezegd worden. Wat daartussen zit heet per
  * boek anders en blijft hier naamloos.
  */
 export type PositieNaam = 'Button' | 'Small blind' | 'Big blind' | 'Under the gun' | 'Cut-off'
 
-export interface Positie {
+export type Positie = {
   /** Hoeveel plaatsen links van de button; de button zelf is 0. */
   plaats: number
   /** Meestal één naam. Twee als dezelfde stoel beide rollen heeft. */
@@ -20,9 +20,10 @@ export interface Positie {
  * Under the gun en cut-off zijn namen voor stoelen die geen button en geen blind
  * zijn. Met drie spelers is er zo'n stoel niet, dus dan vallen beide weg; met
  * vier is er precies één en die draagt ze allebei. Heads-up is de button zelf de
- * small blind — dat is geen keuze maar de regel (TDA 36-C).
+ * small blind — dat is geen keuze maar de regel.
  *
- * Onder de twee spelers valt er niets te verdelen en is de lijst leeg.
+ * Onder de twee spelers valt er niets te verdelen en is de lijst leeg, net als
+ * bij een aantal dat geen geheel getal is.
  */
 export function positiesBij(aantalSpelers: number): Positie[] {
   if (!Number.isInteger(aantalSpelers) || aantalSpelers < 2) return []

@@ -406,12 +406,14 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.posities__naam')).toHaveText(['Button', 'Small blind', 'Big blind'])
     await expect(page.locator('.procedure__kop').first()).toHaveText('Minimum raise')
     await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await expect(page.locator('.regels')).toHaveCount(0)
 
     // Met een afvaller schuiven de namen op: heads-up is de button de small
     // blind. Dat het venster dit uit het lopende toernooi haalt en niet uit de
     // opzet is alleen met een klik te zien.
     await page.getByRole('button', { name: 'Cas' }).click()
-    // Een afvaller zet de blinds omhoog, en dat levelscherm staat over de balk.
+    // In deze opzet zet een afvaller de blinds omhoog, en dat levelscherm staat
+    // over de balk.
     await page.getByRole('button', { name: 'Start', exact: true }).click()
     await page.getByRole('button', { name: 'Regels' }).click()
     await expect(page.locator('.posities__naam')).toHaveText(['Button / Small blind', 'Big blind'])

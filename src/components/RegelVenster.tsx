@@ -4,7 +4,8 @@ import { Button } from './Button'
 /**
  * Wat een plaats doet, in een paar woorden. Geen uitleg van waar hij zit: dat
  * zegt de volgorde van de lijst al, en heads-up zou "links van de button" bij de
- * small blind gewoon niet kloppen.
+ * small blind gewoon niet kloppen. De cut-off is de uitzondering: die heeft geen
+ * eigen taak, en vanaf zes spelers slaat de lijst de stoelen ervoor over.
  */
 const ROL: Record<PositieNaam, string> = {
   Button: 'deelt, na de flop als laatste aan de beurt',
@@ -16,9 +17,10 @@ const ROL: Record<PositieNaam, string> = {
 
 /**
  * De procedure zoals de toernooiregels van de TDA (versie 2026) hem kennen; het
- * nummer achter elk punt is de regel waar het uit komt. Eén punt per discussie
- * die aan tafel gevoerd wordt, in de woorden van de tafel en niet van het
- * reglement.
+ * nummer in het commentaar boven elk punt is de regel waar het uit komt. Die
+ * nummers verschuiven per uitgave, dus leg ze naast die van 2026 en niet naast
+ * een nieuwere. Eén punt per discussie die aan tafel gevoerd wordt, in de
+ * woorden van de tafel en niet van het reglement.
  *
  * Dat de eerste inzet minstens de big blind is staat niet letterlijk in de TDA:
  * die laat het minimum aan de structuur van het toernooi, en dat is hier de big
@@ -59,14 +61,18 @@ const PROCEDURE: { kop: string; tekst: string }[] = [
   {
     // TDA 40
     kop: 'Burn-kaart',
-    tekst: 'Voor de flop, de turn en de river gaat er één kaart dicht weg. Altijd één.',
+    // "Vóór het delen van": elders in dit venster betekent "voor de flop" de
+    // eerste biedronde, en dat is hier niet bedoeld.
+    tekst:
+      'Vóór het delen van de flop, de turn en de river gaat er één kaart dicht weg. ' +
+      'Altijd één.',
   },
   {
     // TDA 21
     kop: 'Split pot',
     tekst:
-      'Wissel de rest eerst naar de kleinste chip aan tafel. Blijft er dan één over, dan ' +
-      'gaat die naar de winnaar die het eerst links van de button zit.',
+      'Wissel de rest eerst naar de kleinste chip aan tafel. Wat er dan overblijft gaat ' +
+      'per chip naar de winnaars, te beginnen bij wie het eerst links van de button zit.',
   },
   {
     // TDA 23
@@ -108,9 +114,9 @@ export function RegelVenster({
               dan blijft alleen de procedure staan. */}
           {posities.length > 0 && (
             <section className="regels__deel">
-              <h3 className="regels__kop">
+              <h2 className="regels__kop">
                 Posities met {aantalSpelers} spelers, met de klok mee
-              </h3>
+              </h2>
               <ol className="posities">
                 {posities.map((positie) => (
                   <li key={positie.plaats} className="posities__regel">
@@ -131,7 +137,7 @@ export function RegelVenster({
             </section>
           )}
           <section className="regels__deel">
-            <h3 className="regels__kop">Procedure</h3>
+            <h2 className="regels__kop">Procedure</h2>
             <dl className="procedure">
               {PROCEDURE.map((punt) => (
                 <div key={punt.kop} className="procedure__punt">

@@ -15,7 +15,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* Level, spelers en drie links passen op een telefoon niet naast elkaar. Dan
+  /* Level, spelers en de links passen op een telefoon niet naast elkaar. Dan
      zakken de links als groep naar een eigen regel, in plaats van dat elk
      woord in zijn eigen vakje afbreekt. */
   flex-wrap: wrap;
@@ -488,15 +488,16 @@
   justify-content: center;
 }
 
-/* De link in de balk. Zelfde gewicht als de tekst ernaast: het is een verwijzing
-   en geen knop die iets aan het toernooi verandert. */
+/* De links als één groep, zodat ze samen naar de volgende regel zakken. Zonder
+   eigen marge: een `margin-left: auto` zet ze daar wel rechts, maar slokt op een
+   breed scherm ook de ruimte op die het spelersaantal in het midden houdt. */
 .tafel__balklinks {
   display: flex;
   gap: 1.1rem;
-  /* Rechts, ook als de groep alleen op de tweede regel staat. */
-  margin-left: auto;
 }
 
+/* De link in de balk. Zelfde gewicht als de tekst ernaast: het is een verwijzing
+   en geen knop die iets aan het toernooi verandert. */
 .tafel__balklink {
   background: none;
   border: 0;
@@ -744,8 +745,8 @@
 
 /*
  * De regels. Links uitgelijnd, anders dan de rest van de kaart: dit is het enige
- * venster met lopende tekst, en gecentreerde zinnen van drie regels lees je aan
- * tafel niet in één blik.
+ * venster dat vooral uit lopende tekst bestaat, en gecentreerde zinnen van drie
+ * regels lees je aan tafel niet in één blik.
  */
 .regels {
   display: flex;
@@ -766,9 +767,6 @@
   color: var(--goud-donker);
 }
 
-/* Naam boven rol en niet ernaast: "Under the gun / Cut-off" met zijn twee
-   rollen past op een telefoon niet op één regel, en dan breekt de ene positie
-   anders af dan de andere. */
 .posities {
   margin: 0;
   padding: 0;
@@ -777,6 +775,9 @@
   gap: 0.4rem;
 }
 
+/* Naam boven rol en niet ernaast: "Under the gun / Cut-off" met zijn twee
+   rollen past op een telefoon niet op één regel, en dan breekt de ene positie
+   anders af dan de andere. */
 .posities__regel {
   display: flex;
   flex-direction: column;
@@ -801,6 +802,4 @@
   margin: 0;
   color: var(--creme-zacht);
   line-height: 1.4;
-  /* Een lang woord breekt liever af dan dat de regel opzij gaat scrollen. */
-  overflow-wrap: anywhere;
 }

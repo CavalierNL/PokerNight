@@ -761,6 +761,16 @@ describe('het regelvenster', () => {
     expect(html).toContain('>Big blind</span>')
     expect(html).not.toContain('Under the gun')
     expect(html).not.toContain('Cut-off')
+    // De stoel met twee namen doet ook het werk van allebei.
+    expect(html).toContain(
+      '>deelt, na de flop als laatste aan de beurt · legt de small blind</span>',
+    )
+  })
+
+  it('geeft met vier spelers één stoel twee namen', () => {
+    const html = venster(4)
+    expect(html).toContain('>Under the gun / Cut-off</span>')
+    expect(html).not.toContain('zonder vaste naam')
   })
 
   it('zegt hoeveel spelers er tussenin geen naam hebben', () => {

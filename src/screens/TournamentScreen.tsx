@@ -192,14 +192,14 @@ export function TournamentScreen() {
           <span>{playersLeft(tournament)} spelers</span>
           {/*
             "Wat wint?", "Side pots" en "Regels" staan hier samen, en het schema
-            staat bewust ver weg onder de klok. De as is: deze drie gaan over de
+            staat bewust ver weg onder de klok. De as is: deze links gaan over de
             hand die nu op tafel ligt, het schema gaat over de avond. Ze naast
-            elkaar zetten scheelt zoeken op het moment dat een pot wordt
-            uitbetaald.
+            elkaar zetten scheelt zoeken midden in een hand.
 
             Dat botst niet met de reden dat het schema apart staat — daar zou een
             misgreep je uit de hand halen terwijl je moet uitbetalen. Hier openen
-            de knoppen alleen een leesvenster, dus een misgreep kost een tik.
+            de knoppen alleen een venster dat niets aan het toernooi verandert,
+            dus een misgreep kost een tik.
             Vergelijk de levelknoppen hierboven, die juist klein blijven omdat
             een misgreep dáár de blinds verzet.
           */}
