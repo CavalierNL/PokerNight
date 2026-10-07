@@ -14,9 +14,13 @@ import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
 import { prepareSetup } from '../domain/setup'
+import { geplandeLevels } from '../domain/blinds'
 import type { Chipset } from '../domain/chipset'
 import {
   afgevallen,
+  avondAftelMs,
+  aftelMs,
+  avondklokInSeconden,
   averageStack,
   averageStackInBigBlinds,
   colorUpAt,
@@ -24,10 +28,10 @@ import {
   expectedEndAt,
   isAfgelopen,
   laatkomerStack,
+  levelAftelMs,
   nextLevel,
   nogInHetSpel,
   playersLeft,
-  remainingMs,
   speelduurMs,
   uitslag,
   winnaar,
@@ -39,6 +43,16 @@ function formatteerTijd(ms: number): string {
   const totaal = Math.max(0, Math.ceil(ms / 1000))
   const minuten = Math.floor(totaal / 60)
   return `${minuten}:${String(totaal % 60).padStart(2, '0')}`
+}
+
+/**
+ * De avondklok in hele minuten, naar boven afgerond: wie 19:01 over heeft ziet
+ * 20 min staan. De eenheid staat er los achter zodat het getal de grote maat
+ * houdt en "min" klein blijft — anders loopt de klok op een telefoon van het
+ * scherm af.
+ */
+function heleMinuten(ms: number): string {
+  return String(Math.ceil(ms / 60_000))
 }
 
 function klokTijd(ms: number): string {
@@ -82,15 +96,16 @@ export function TournamentScreen() {
   const eersteScherm = tournament?.levelIndex === 0
   useLevelSound(wachtOpLevel && !eersteScherm, preferences.sound && !stil)
 
-  // Alleen zinvol als de klok afloopt: bij "alleen eliminatie" telt hij op en is
-  // er geen minuut om te waarschuwen.
-  const telAfOpTijd = tournament !== null && tournament.settings.trigger !== 'elimination'
-  const resterend = tournament ? remainingMs(tournament, now) : 0
+  // Waarschuwen hoort bij wat er werkelijk afloopt, en dat is niet altijd het
+  // level: in het laatste level is de levelklok weg en telt de avond naar het
+  // enige wat er nog komt. Loopt er niets af - last man standing zonder duur -
+  // dan valt er niets te waarschuwen.
+  const aftellend = tournament ? aftelMs(tournament, now) : undefined
   const waarschuwingsGrens = waarschuwingsGrensMs(tournament?.settings.levelMinutes ?? 15)
   useEindeWaarschuwing(
-    resterend,
+    aftellend ?? Infinity,
     waarschuwingsGrens,
-    preferences.sound && telAfOpTijd && tournament?.clock.state === 'running',
+    preferences.sound && aftellend !== undefined && tournament?.clock.state === 'running',
     tournament?.levelIndex ?? 0,
   )
 
@@ -109,13 +124,33 @@ export function TournamentScreen() {
   const { laatkomers } = tournament.settings
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
   const eindtijd = expectedEndAt(tournament, now)
-  const bijnaOm = telAfOpTijd && resterend <= waarschuwingsGrens
+  const bijnaOm = aftellend !== undefined && aftellend <= waarschuwingsGrens
 
-  // Bij de trigger "alleen eliminatie" gebeurt er niets als de tijd om is, dus
-  // toont de klok de verstreken toernooitijd in plaats van een aftelling.
-  // Tijdens een pauze staat hij stil.
-  const peilmoment = tournament.clock.state === 'paused' ? tournament.clock.pausedAt : now
-  const verstreken = peilmoment - tournament.startedAt - tournament.pausedMs
+  // Twee klokken met elk hun eigen vraag, de avond bovenaan: hoe lang duurt
+  // het nog is waar je mee naar het scherm kijkt, wanneer de blinds omhoog gaan
+  // is de vraag daaronder. Is er geen avondklok, dan neemt de levelklok de grote
+  // plek in; loopt er niets af, dan telt de grote klok de speeltijd op.
+  const levelAf = levelAftelMs(tournament, now)
+  const avondAf = avondAftelMs(tournament, now)
+  const groteKlok = avondAf ?? levelAf ?? speelduurMs(tournament, now)
+  const groteIsAvond = avondAf !== undefined
+  const groteLabel = groteIsAvond
+    ? 'Nog te spelen'
+    : levelAf !== undefined
+      ? 'Dit level'
+      : 'Gespeeld'
+  // Alleen eronder als hij niet zelf al de grote klok is.
+  const levelEronder = groteIsAvond ? levelAf : undefined
+  // De avondklok staat op hele minuten zolang er nog een level na dit komt:
+  // twee klokken die allebei per seconde verspringen is aan tafel te onrustig,
+  // en zolang de avond nog uren duurt zegt die seconde ook niets. In het
+  // laatste level valt de levelklok weg, en dan mag deze de seconden hebben.
+  // Is er helemaal geen levelklok - blinds op eliminaties - dan valt er geen
+  // laatste level aan te wijzen en ligt de grens op tien minuten.
+  const groteInMinuten = groteIsAvond && !avondklokInSeconden(tournament, now)
+  // Het goud hoort bij de klok die afloopt. Staat de levelklok eronder, dan is
+  // dat die; is er geen levelklok meer, dan is de grote klok zelf aan de beurt.
+  const groteTeltAf = levelAf === undefined || !groteIsAvond
 
   return (
     <>
@@ -174,9 +209,30 @@ export function TournamentScreen() {
         </div>
 
         <div className="tafel__midden">
-          <div className={`tafel__klok${bijnaOm ? ' tafel__klok--bijna' : ''}`}>
-            {formatteerTijd(telAfOpTijd ? resterend : verstreken)}
+          <span className="tafel__kloklabel">{groteLabel}</span>
+          {/* De gouden waarschuwing hoort bij de levelklok, waar hij ook staat. */}
+          <div
+            className={`tafel__klok${groteTeltAf && bijnaOm ? ' tafel__klok--bijna' : ''}`}
+          >
+            {groteInMinuten ? (
+              <>
+                {heleMinuten(groteKlok)}
+                <span className="tafel__klokeenheid">{' min'}</span>
+              </>
+            ) : (
+              formatteerTijd(groteKlok)
+            )}
           </div>
+          {levelEronder !== undefined && (
+            <div className="tafel__levelklok">
+              <span className="tafel__kloklabel">Dit level</span>
+              <span
+                className={`tafel__levelklok-waarde${bijnaOm ? ' tafel__levelklok--bijna' : ''}`}
+              >
+                {formatteerTijd(levelEronder)}
+              </span>
+            </div>
+          )}
           <div className="tafel__blinds">
             <span className="tafel__blind">
               <span className="tafel__blind-label">Small</span>
@@ -578,6 +634,10 @@ function SchemaVenster({
             levels={tournament.levels}
             levelMinutes={tournament.settings.levelMinutes}
             huidigLevel={tournament.levelIndex}
+            geplandeLevels={geplandeLevels(
+              tournament.settings.durationMinutes,
+              tournament.settings.levelMinutes,
+            )}
           />
           {tournament.colorUps.map((moment) => (
             <ColorUpRegel

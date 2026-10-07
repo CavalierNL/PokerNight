@@ -48,23 +48,51 @@ export type Structure = {
 }
 
 /**
- * Een ruime bovengrens voor een toernooi zonder eindtijd. De reeks stopt daar
- * niet op: hij stopt zodra het toernooi feitelijk beslist is. Dit is alleen een
+ * Een ruime bovengrens voor de lengte van de reeks. Hij stopt daar niet op: hij
+ * stopt op een blindwaarde en niet op een aantal, dus in de praktijk is dit een
  * vangnet tegen een oneindige lus.
+ *
+ * Niet alleen dat, let op: zonder afgesproken duur is dit ook het geplande
+ * aantal (`levelCount`), en dat getal stuurt de curve van Berekend. Dit
+ * verzetten verandert dus stilletjes de blinds van elk last-man-standing
+ * toernooi.
  */
-export const LEVELS_ZONDER_DUUR = 40
+export const MAX_LEVELS = 40
 
-/** Aantal levels dat in de geplande duur past, minimaal twee. */
+/**
+ * Het aantal levels dat in de geplande duur past, minimaal twee.
+ *
+ * Dat is een plan en geen grens. Het doet twee dingen: het stuurt de curve van
+ * een berekende reeks — hoe groot de stappen moeten zijn om het eindpunt aan het
+ * eind van de avond te halen — en het is de laatste rij waarvoor een starttijd
+ * te voorspellen valt. Waar de reeks ophoudt hangt van de blindwaarde af en niet
+ * hiervan: schuiven eliminaties de levels sneller op dan de klok, dan raken de
+ * levels anders halverwege de avond op.
+ */
 export function levelCount(durationMinutes: number | undefined, levelMinutes: number): number {
-  if (durationMinutes === undefined) return LEVELS_ZONDER_DUUR
+  if (durationMinutes === undefined) return MAX_LEVELS
   if (levelMinutes <= 0) return 2
   return Math.max(2, Math.floor(durationMinutes / levelMinutes))
 }
 
 /**
+ * Het aantal levels dat in de geplande avond past, of `undefined` als er geen
+ * duur is afgesproken en er dus niets te plannen valt.
+ *
+ * De vorm waarin de schermen het willen: zij vragen niet "hoeveel levels", maar
+ * "tot waar is dit nog een plan".
+ */
+export function geplandeLevels(
+  durationMinutes: number | undefined,
+  levelMinutes: number,
+): number | undefined {
+  return durationMinutes === undefined ? undefined : levelCount(durationMinutes, levelMinutes)
+}
+
+/**
  * De levellengtes die een duur precies vullen, als "N levels van M minuten".
  *
- * Een levellengte die niet in de duur past betekent dat het laatste level halверwege
+ * Een levellengte die niet in de duur past betekent dat het laatste level halverwege
  * afgekapt wordt — dan klopt de opgegeven duur niet met wat je speelt. Door alleen
  * de delers aan te bieden is de keuze in feite hoeveel levels je wilt, en volgt
  * hun lengte daaruit.
@@ -109,11 +137,11 @@ export function targetEndBigBlind(players: number, startingStack: number): numbe
 }
 
 /**
- * Waar de reeks ophoudt als er geen eindtijd is.
+ * Waar de reeks ophoudt voor alles behalve Berekend — met of zonder eindtijd.
  *
  * `targetEndBigBlind` markeert het punt waarop een toernooi feitelijk beslist is
- * — een zinnige grens als je op een afgesproken tijd stopt, maar bij last man
- * standing speel je juist dóór na dat punt en is de structuur dan op. Hier telt
+ * — een zinnige grens voor Berekend, dat zich aan zijn eigen belofte houdt, maar
+ * je speelt juist dóór na dat punt en dan is de structuur op. Hier telt
  * pas het echte einde: alle chips bij twee spelers, elk nog een big blind of
  * twee, en de volgende hand beslist het. Dat is de big blind op een kwart van
  * wat er in het spel is.
@@ -133,20 +161,38 @@ export function laatsteBigBlind(players: number, startingStack: number): number 
  * structuur uitkomt.
  */
 function rawBigBlinds(input: StructureInput, smallestDenomination: number): number[] {
-  const aantal = levelCount(input.durationMinutes, input.levelMinutes)
+  const gepland = levelCount(input.durationMinutes, input.levelMinutes)
   const start = smallestDenomination * 2
 
-  if (input.kind === 'manual' && input.manualBigBlinds && input.manualBigBlinds.length > 0) {
-    return input.manualBigBlinds
-  }
+  const eigenBedragen = handmatigeBedragen(input)
+  if (eigenBedragen) return eigenBedragen
 
   if (input.kind === 'calculated') {
     const eind = targetEndBigBlind(input.players, input.startingStack)
-    const factor = Math.pow(Math.max(eind, start * 2) / start, 1 / (aantal - 1))
-    return Array.from({ length: aantal }, (_, i) => start * factor ** i)
+    // De factor volgt het plan: in `gepland` stappen van de start naar het
+    // eindpunt. De lijst is langer, zodat de reeks doorloopt als eliminaties de
+    // levels sneller opschuiven dan de klok; `buildStructure` kapt hem op
+    // waarde af.
+    const factor = Math.pow(Math.max(eind, start * 2) / start, 1 / (gepland - 1))
+    return Array.from({ length: MAX_LEVELS }, (_, i) => start * factor ** i)
   }
 
-  return Array.from({ length: aantal }, (_, i) => start * 2 ** i)
+  return Array.from({ length: MAX_LEVELS }, (_, i) => start * 2 ** i)
+}
+
+/**
+ * De zelf opgegeven bedragen, of `undefined` als er niets bruikbaars staat — dan
+ * valt `manual` terug op verdubbelen, zodat er altijd een structuur uitkomt.
+ *
+ * Staat hier als eigen functie omdat twee plekken hem nodig hebben: welke reeks
+ * er gemaakt wordt, en of die reeks afgekapt mag worden. Uit elkaar lopen zou
+ * betekenen dat een lege handmatige lijst veertig verdubbelingen oplevert.
+ */
+function handmatigeBedragen(input: StructureInput): number[] | undefined {
+  if (input.kind !== 'manual') return undefined
+  return input.manualBigBlinds && input.manualBigBlinds.length > 0
+    ? input.manualBigBlinds
+    : undefined
 }
 
 /**
@@ -245,23 +291,31 @@ export function buildStructure(input: StructureInput, chipset: Chipset): Structu
       if (index === 0) startDenomination = denoms[denomIndex]
     }
 
-    // Een berekende structuur mikt op een eindpunt. Bij een kleine startstack
-    // nadert de groeifactor 1, en dan duwt de afronding elke keer een volle stap
-    // omhoog — waardoor de reeks het doel met een veelvoud voorbijschiet.
-    // Afkappen zodra het doel gehaald is houdt hem bij zijn eigen belofte.
+    // De reeks stopt op een blindwaarde en niet op een aantal levels. Dat
+    // laatste was ooit het geplande aantal, maar dat plan gaat over de klok
+    // terwijl een eliminatie de levels ook opschuift: wie snel speelde raakte
+    // halverwege de avond door zijn blinds heen.
     //
-    // De ladder kapt bewust níét af. Levels boven het beslispunt worden nooit
-    // bereikt, maar afkappen zou de reeks korter maken dan de opgegeven duur
-    // zonder dat er een instelling is die dat rechttrekt — en het zou de
-    // waarschuwing over hard oplopende blinds hieronder de mond snoeren, terwijl
-    // die precies het goede verhaal vertelt.
-    // Zonder eindtijd is dit het enige natuurlijke einde van de reeks, en ligt
-    // het verder dan waar een toernooi met een klok zou stoppen.
-    const stoptBijEinde = input.kind === 'calculated' || input.durationMinutes === undefined
+    // Dit is wel het einde van de gegenereerde lijst en niet van de reeks. Loopt
+    // het spel er alsnog voorbij — door eliminaties, of gewoon doordat de klok
+    // sneller is dan deze grens — dan maakt de reducer er een bij door het
+    // vorige bedrag te verdubbelen. Zie `metLevelTot` in tournament.ts.
+    //
+    // Berekend houdt zich aan zijn eigen belofte en stopt op het doel. Bij een
+    // kleine startstack nadert de groeifactor 1, en dan duwt de afronding elke
+    // keer een volle stap omhoog — zonder afkappen schiet de reeks het doel met
+    // een veelvoud voorbij. De rest loopt door tot waar er niets meer te spelen
+    // valt: alle chips bij twee spelers.
+    //
+    // Een eigen lijst met bedragen kapt nergens op af. Dat is precies de lijst
+    // die is opgegeven, en is hij op, dan blijven de blinds op het laatste
+    // bedrag staan. Een lege lijst telt niet mee — die valt terug op verdubbelen
+    // en wordt dus wel afgekapt, en groeit daarna ook gewoon mee.
+    const stoptBijEinde = handmatigeBedragen(input) === undefined
     const grens =
-      input.durationMinutes === undefined
-        ? laatsteBigBlind(input.players, input.startingStack)
-        : doelEind
+      input.kind === 'calculated'
+        ? doelEind
+        : laatsteBigBlind(input.players, input.startingStack)
     const genoegLevels = levels.length >= 2
     if (stoptBijEinde && genoegLevels && bigBlind >= grens) break
   }

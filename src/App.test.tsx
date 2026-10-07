@@ -8,6 +8,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { ChipsetScreen } from './screens/ChipsetScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { KlassementScreen } from './screens/KlassementScreen'
+import { StructuurTabel } from './components/StructuurTabel'
 import { createTournament, type Settings } from './domain/tournament'
 import { STANDARD_500, TOERNOOI_DOOS } from './domain/chipset'
 import { prepareSetup } from './domain/setup'
@@ -45,13 +46,21 @@ const settings: Settings = {
 }
 
 /** Zet een toernooi in de opslag, in dezelfde vorm als de app zelf schrijft. */
-function bewaarToernooi(overrides: Partial<Settings> = {}, chipset = KLEINE_DOOS) {
+function bewaarToernooi(
+  overrides: Partial<Settings> = {},
+  chipset = KLEINE_DOOS,
+  /** Losse velden over de kern heen, om een toernooi midden op de avond te zetten. */
+  extra: Record<string, unknown> = {},
+) {
   const { history: _h, ...core } = createTournament(
     { ...settings, ...overrides },
     chipset,
     Date.now(),
   )
-  opslag.set('pokernight.tournament', JSON.stringify({ version: OPSLAG_VERSIE, data: core }))
+  opslag.set(
+    'pokernight.tournament',
+    JSON.stringify({ version: OPSLAG_VERSIE, data: { ...core, ...extra } }),
+  )
 }
 
 function opgezetScherm() {
@@ -208,14 +217,102 @@ describe('tafelscherm', () => {
     expect(html).toContain('Klaar rond')
   })
 
-  it('laat de eindtijd weg als alleen eliminaties de blinds verhogen', () => {
-    bewaarToernooi({ trigger: 'elimination' })
-    const html = renderToStaticMarkup(
+  /** Het tafelscherm met een toernooi uit de opslag. */
+  function tafel(overrides: Partial<Settings> = {}, extra: Record<string, unknown> = {}): string {
+    bewaarToernooi(overrides, KLEINE_DOOS, extra)
+    return renderToStaticMarkup(
       <AppStateProvider>
         <TournamentScreen />
       </AppStateProvider>,
     )
-    expect(html).not.toContain('klaar rond')
+  }
+
+  it('toont de eindtijd ook als alleen eliminaties de blinds verhogen', () => {
+    // De blinds volgen dan de uitvallers, maar de avond is nog steeds om als de
+    // speelduur om is — en dat hoort te zien te zijn.
+    expect(tafel({ trigger: 'elimination' })).toContain('Klaar rond')
+  })
+
+  it('laat de eindtijd weg bij last man standing', () => {
+    expect(tafel({ trigger: 'elimination', durationMinutes: undefined })).not.toContain(
+      'Klaar rond',
+    )
+  })
+
+  it('telt af naar het einde van de avond als alleen eliminaties de blinds verhogen', () => {
+    // Anders staat er een teller die optelt en nergens aankomt: dat was de bug.
+    // Drie uur voor de boeg, dus in hele minuten.
+    const klok = tafel({ trigger: 'elimination' })
+    expect(klok.slice(klok.indexOf('tafel__klok'))).toContain('>180<')
+  })
+
+  it('zet de avondklok bovenaan en de levelklok eronder', () => {
+    // Twee verschillende vragen: hoe lang duurt de avond nog, en wanneer gaan
+    // de blinds omhoog. De eerste is de kop van het scherm.
+    const html = tafel({ trigger: 'both' })
+    const avond = html.indexOf('>180<')
+    const level = html.indexOf('>15:00<')
+    expect(avond).toBeGreaterThan(-1)
+    expect(level).toBeGreaterThan(avond)
+  })
+
+  it('laat de levelklok weg bij last man standing', () => {
+    // Dan is er geen avond om af te tellen en staat de levelklok zelf groot.
+    const html = tafel({ durationMinutes: undefined })
+    expect(html).not.toContain('tafel__levelklok')
+    expect(html).toContain('>15:00<')
+  })
+
+  it('laat de levelklok weg als de blinds alleen op eliminaties omhoog gaan', () => {
+    // Er loopt er dan geen, dus valt er niets te tonen.
+    expect(tafel({ trigger: 'elimination' })).not.toContain('tafel__levelklok')
+  })
+
+  it('telt op bij last man standing, want daar loopt niets af', () => {
+    // Met een vers toernooi staat de teller altijd op 0:00 en bewijst de test
+    // niets. Een kwartier gespeeld hoort 15:00 te geven - optellen dus, niet
+    // stilstaan.
+    const nu = Date.now()
+    const klok = tafel(
+      { trigger: 'elimination', durationMinutes: undefined },
+      {
+        startedAt: nu - 15 * 60_000,
+        wachtOpLevel: false,
+        clock: { state: 'running', endsAt: nu + 60_000 },
+      },
+    )
+    // Niet op de seconde pinnen: de teller rekent met Date.now() op het moment
+    // van renderen, dus een milliseconde drift maakt er 15:01 van. Waar het om
+    // gaat is dat hij rond het kwartier staat en niet op nul blijft hangen.
+    expect(klok.slice(klok.indexOf('tafel__kloklabel'))).toMatch(/>1[45]:\d{2}</)
+  })
+
+  it('laat de avondklok in hele minuten lopen', () => {
+    // Twee klokken die allebei per seconde verspringen is aan tafel te
+    // onrustig, en zolang de avond nog uren duurt zegt die seconde niets.
+    const grote = tafel({ trigger: 'both' })
+    expect(grote.slice(grote.indexOf('tafel__klok'))).toContain('>180<')
+    expect(grote).toContain('> min<')
+  })
+
+  it('kleurt de avondklok goud als de avond bijna om is', () => {
+    // De waarschuwing hing aan de levelklok, en die is in het laatste level
+    // juist weg. De avond liep dan af zonder dat er iets verkleurde.
+    const nu = Date.now()
+    const html = tafel(
+      { trigger: 'both', durationMinutes: 10, levelMinutes: 15 },
+      { startedAt: nu - 9 * 60_000, wachtOpLevel: false, clock: { state: 'running', endsAt: nu + 6 * 60_000 } },
+    )
+    expect(html).toContain('tafel__klok--bijna')
+  })
+
+  it('zet de avondklok op seconden in het laatste level', () => {
+    // Een level van een kwartier op een avond van tien minuten: deze blinds
+    // gaan niet meer omhoog, dus de avondklok is de enige die nog tikt en mag
+    // de seconden hebben.
+    const html = tafel({ durationMinutes: 10, levelMinutes: 15 })
+    expect(html.slice(html.indexOf('tafel__klok'))).toContain('>10:00<')
+    expect(html).not.toContain('tafel__levelklok')
   })
 })
 
@@ -605,5 +702,31 @@ describe('eindscherm zonder winnaar', () => {
     // verdwijnt zodra er een avond in staat — precies wanneer er iets te missen
     // valt.
     expect(eindscherm()).toContain('telt deze avond mee voor het klassement')
+  })
+})
+
+describe('de blindstructuurtabel', () => {
+  const levels = Array.from({ length: 4 }, (_, i) => ({
+    index: i,
+    smallBlind: 2 ** i,
+    bigBlind: 2 ** (i + 1),
+  }))
+
+  const tabel = () =>
+    renderToStaticMarkup(
+      <StructuurTabel levels={levels} levelMinutes={15} geplandeLevels={2} />,
+    )
+
+  it('toont een starttijd voor de geplande levels', () => {
+    expect(tabel()).toContain('<td>0 min</td>')
+    expect(tabel()).toContain('<td>15 min</td>')
+  })
+
+  it('laat de starttijd weg voor levels voorbij de geplande avond', () => {
+    // Die rijen bereik je alleen doordat er iemand uitvalt, dus een geplande
+    // starttijd bestaat er niet voor. Een tijd tonen zou hem verzinnen.
+    const html = tabel()
+    expect(html).not.toContain('<td>30 min</td>')
+    expect(html).not.toContain('<td>45 min</td>')
   })
 })
