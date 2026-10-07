@@ -9,6 +9,7 @@ import { ChipsetScreen } from './screens/ChipsetScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { KlassementScreen } from './screens/KlassementScreen'
 import { StructuurTabel } from './components/StructuurTabel'
+import { RegelVenster } from './components/RegelVenster'
 import { createTournament, type Settings } from './domain/tournament'
 import { STANDARD_500, TOERNOOI_DOOS } from './domain/chipset'
 import { prepareSetup } from './domain/setup'
@@ -728,5 +729,50 @@ describe('de blindstructuurtabel', () => {
     const html = tabel()
     expect(html).not.toContain('<td>30 min</td>')
     expect(html).not.toContain('<td>45 min</td>')
+  })
+})
+
+describe('het regelvenster', () => {
+  function venster(aantalSpelers: number): string {
+    return renderToStaticMarkup(<RegelVenster aantalSpelers={aantalSpelers} onSluiten={() => {}} />)
+  }
+
+  it('is vanaf het tafelscherm te openen', () => {
+    bewaarToernooi()
+    const html = renderToStaticMarkup(
+      <AppStateProvider>
+        <TournamentScreen />
+      </AppStateProvider>,
+    )
+    expect(html).toContain('>Regels</button>')
+  })
+
+  it('toont de posities voor het aantal spelers dat er nog zit', () => {
+    const html = venster(5)
+    expect(html).toContain('Posities met 5 spelers')
+    for (const naam of ['Button', 'Small blind', 'Big blind', 'Under the gun', 'Cut-off']) {
+      expect(html).toContain(`>${naam}</span>`)
+    }
+  })
+
+  it('laat heads-up de namen weg die er dan niet meer zijn', () => {
+    const html = venster(2)
+    expect(html).toContain('>Button / Small blind</span>')
+    expect(html).toContain('>Big blind</span>')
+    expect(html).not.toContain('Under the gun')
+    expect(html).not.toContain('Cut-off')
+  })
+
+  it('zegt hoeveel spelers er tussenin geen naam hebben', () => {
+    expect(venster(5)).not.toContain('zonder vaste naam')
+    expect(venster(6)).toContain('zit nog 1 speler zonder vaste naam')
+    expect(venster(9)).toContain('zitten nog 4 spelers zonder vaste naam')
+  })
+
+  it('houdt de procedure over als er geen tafel meer is', () => {
+    const html = venster(1)
+    expect(html).not.toContain('Posities')
+    expect(html).toContain('Minimum raise')
+    expect(html).toContain('Side pots')
   })
 })
