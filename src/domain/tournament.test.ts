@@ -6,6 +6,8 @@ import {
   createTournament,
   currentLevel,
   expectedEndAt,
+  stackdruk,
+  stackdrukBij,
   isAfgelopen,
   isLastLevel,
   aftelMs,
@@ -281,6 +283,36 @@ describe('gemiddelde stack', () => {
   it('rekent om naar big blinds', () => {
     const t = maak()
     expect(averageStackInBigBlinds(t)).toBeCloseTo(100 / currentLevel(t)!.bigBlind)
+  })
+})
+
+describe('stackdruk', () => {
+  it('legt de grenzen op 30, 15 en 9 big blinds', () => {
+    expect(stackdrukBij(30)).toBe('ruim')
+    expect(stackdrukBij(29)).toBe('krapper')
+    expect(stackdrukBij(15)).toBe('krapper')
+    expect(stackdrukBij(14)).toBe('krap')
+    expect(stackdrukBij(9)).toBe('krap')
+    expect(stackdrukBij(8)).toBe('allesOfNiets')
+    expect(stackdrukBij(0)).toBe('allesOfNiets')
+  })
+
+  it('kiest de zone bij het getal dat op tafel staat', () => {
+    // 29,6 staat als 30 BB op het scherm; dan hoort er geen geel naast.
+    expect(stackdrukBij(29.6)).toBe('ruim')
+    expect(stackdrukBij(8.4)).toBe('allesOfNiets')
+  })
+
+  it('volgt het level en de spelers die nog meedoen', () => {
+    let t = maak()
+    expect(stackdruk(t)).toBe(stackdrukBij(averageStackInBigBlinds(t)))
+    // Hogere blinds drukken harder, een afvaller geeft de rest weer lucht.
+    while (averageStackInBigBlinds(t) >= 9) t = reduce(t, { type: 'advanceLevel', now: T0 })
+    expect(stackdruk(t)).toBe('allesOfNiets')
+    const voor = averageStackInBigBlinds(t)
+    t = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    expect(averageStackInBigBlinds(t)).toBeGreaterThan(voor)
+    expect(stackdruk(t)).toBe(stackdrukBij(averageStackInBigBlinds(t)))
   })
 })
 
