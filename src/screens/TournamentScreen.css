@@ -114,9 +114,9 @@
 }
 
 /*
- * Lichte tinten en niet het rood van de knoppen: dit is kleine tekst op donker
- * vilt, en `--rood` valt daar bijna tegen weg. Het woord staat er altijd bij,
- * dus de kleur is nooit het enige wat het verschil maakt.
+ * Lichte tinten, net als de tekst op de gevaarknop: dit is kleine tekst op
+ * donker vilt, en `--rood` zelf valt daar bijna tegen weg. Het woord staat er
+ * altijd bij, dus de kleur is nooit het enige wat het verschil maakt.
  */
 .tafel__druk {
   font-weight: 600;
@@ -134,7 +134,7 @@
   color: #f5a35c;
 }
 
-.tafel__druk--allesOfNiets {
+.tafel__druk--alles-of-niets {
   color: #ff8a7a;
 }
 

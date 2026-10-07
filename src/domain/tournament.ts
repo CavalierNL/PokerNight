@@ -454,20 +454,19 @@ export function averageStackInBigBlinds(state: Tournament): number {
   return bb === 0 ? 0 : averageStack(state) / bb
 }
 
-/**
- * Hoe hard de blinds op de gemiddelde stack drukken, van ruim naar krap.
- *
- * De zones komen uit de M-ratio: de stack gedeeld door wat een rondje blinds
- * kost. Zonder antes is dat rondje anderhalve big blind, dus de bekende grenzen
- * van 20, 10 en 6 liggen hier op 30, 15 en 9 big blinds.
- */
+/** Hoe hard de blinds op een stack drukken, van ruim naar krap. */
 export type Stackdruk = 'ruim' | 'krapper' | 'krap' | 'allesOfNiets'
 
 /**
  * De zone bij een stack in big blinds.
  *
+ * De grenzen komen uit de M-ratio: de stack gedeeld door wat een rondje blinds
+ * kost. Zonder antes is dat rondje anderhalve big blind, dus de bekende grenzen
+ * van 20, 10 en 6 liggen hier op 30, 15 en 9 big blinds.
+ *
  * Eerst afgerond, want het scherm toont hele big blinds: de kleur hoort bij het
- * getal dat ernaast staat en niet bij de decimalen die niemand ziet.
+ * getal dat ernaast staat en niet bij de decimalen die niemand ziet. 29,5 telt
+ * dus al als 30.
  */
 export function stackdrukBij(bigBlinds: number): Stackdruk {
   const zichtbaar = Math.round(bigBlinds)
@@ -477,6 +476,7 @@ export function stackdrukBij(bigBlinds: number): Stackdruk {
   return 'allesOfNiets'
 }
 
+/** De zone van de gemiddelde stack op het huidige level. */
 export function stackdruk(state: Tournament): Stackdruk {
   return stackdrukBij(averageStackInBigBlinds(state))
 }

@@ -298,21 +298,24 @@ describe('stackdruk', () => {
   })
 
   it('kiest de zone bij het getal dat op tafel staat', () => {
-    // 29,6 staat als 30 BB op het scherm; dan hoort er geen geel naast.
+    // 29,6 staat als 30 BB op het scherm; dan hoort er geen 'krapper' naast.
+    // En 8,4 staat er als 8, dus onder de grens van 9.
     expect(stackdrukBij(29.6)).toBe('ruim')
     expect(stackdrukBij(8.4)).toBe('allesOfNiets')
   })
 
   it('volgt het level en de spelers die nog meedoen', () => {
+    // Vier spelers van 100, big blinds van 2, 4, 8 en 16.
     let t = maak()
-    expect(stackdruk(t)).toBe(stackdrukBij(averageStackInBigBlinds(t)))
-    // Hogere blinds drukken harder, een afvaller geeft de rest weer lucht.
-    while (averageStackInBigBlinds(t) >= 9) t = reduce(t, { type: 'advanceLevel', now: T0 })
-    expect(stackdruk(t)).toBe('allesOfNiets')
-    const voor = averageStackInBigBlinds(t)
-    t = reduce(t, { type: 'playerOut', index: 0, now: T0 })
-    expect(averageStackInBigBlinds(t)).toBeGreaterThan(voor)
-    expect(stackdruk(t)).toBe(stackdrukBij(averageStackInBigBlinds(t)))
+    expect(stackdruk(t)).toBe('ruim') // 50 BB
+    t = reduce(t, { type: 'advanceLevel', now: T0 })
+    expect(stackdruk(t)).toBe('krapper') // 25 BB
+    t = reduce(t, { type: 'advanceLevel', now: T0 })
+    expect(stackdruk(t)).toBe('krap') // 12,5 BB
+    // Een afvaller geeft de rest weer lucht: 400 chips over drie spelers.
+    const na = reduce(t, { type: 'playerOut', index: 0, now: T0 })
+    expect(stackdruk(na)).toBe('krapper') // 16,7 BB
+    expect(stackdruk(reduce(t, { type: 'advanceLevel', now: T0 }))).toBe('allesOfNiets') // 6,25 BB
   })
 })
 

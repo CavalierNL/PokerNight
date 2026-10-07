@@ -314,6 +314,20 @@ describe('tafelscherm', () => {
     expect(html.slice(html.indexOf('tafel__klok'))).toContain('>10:00<')
     expect(html).not.toContain('tafel__levelklok')
   })
+
+  it('zet de zone als woord en als kleur naast de gemiddelde stack', () => {
+    const html = tafel()
+    expect(html).toContain('tafel__druk--ruim')
+    expect(html).toMatch(/\d+ BB · ruim</)
+  })
+
+  it('noemt de laagste zone voluit, met een klasse die in de CSS bestaat', () => {
+    // De enige zone waar het woord en de klasse anders gespeld zijn dan de naam
+    // in het domein, en dus de enige die bij een hernoeming stil kan breken.
+    const html = tafel({}, { levelIndex: 6 })
+    expect(html).toContain('tafel__druk--alles-of-niets')
+    expect(html).toMatch(/\d+ BB · alles of niets</)
+  })
 })
 
 describe('setup met een grotere startstack', () => {
