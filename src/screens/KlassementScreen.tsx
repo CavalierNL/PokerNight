@@ -119,9 +119,9 @@ export function KlassementScreen({ onClose }: { onClose: () => void }) {
         <Panel title="Stand">
           {stand.length === 0 ? (
             <p className="uitleg">
-              Nog geen avond gespeeld. Een toernooi telt mee zodra er één speler over is; loopt
-              hij af op de klok met meerdere mensen aan tafel, dan is er geen uitslag om punten
-              aan te hangen.
+              Nog geen avond gespeeld. Een toernooi telt mee zodra er één speler over is. Loopt
+              hij af op de klok terwijl er meerderen zitten, dan tik je die op het eindscherm
+              alsnog op volgorde af — de kleinste stack eerst.
             </p>
           ) : (
             <>
