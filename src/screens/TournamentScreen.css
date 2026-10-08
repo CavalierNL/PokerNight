@@ -113,6 +113,31 @@
   color: var(--creme-zacht);
 }
 
+/*
+ * Lichte tinten, net als de tekst op de gevaarknop: dit is kleine tekst op
+ * donker vilt, en `--rood` zelf valt daar bijna tegen weg. Het woord staat er
+ * altijd bij, dus de kleur is nooit het enige wat het verschil maakt.
+ */
+.tafel__druk {
+  font-weight: 600;
+}
+
+.tafel__druk--ruim {
+  color: #8fe0a8;
+}
+
+.tafel__druk--krapper {
+  color: var(--goud);
+}
+
+.tafel__druk--krap {
+  color: #f5a35c;
+}
+
+.tafel__druk--alles-of-niets {
+  color: #ff8a7a;
+}
+
 
 .tafel__voet {
   display: flex;

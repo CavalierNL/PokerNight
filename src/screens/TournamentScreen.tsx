@@ -33,11 +33,25 @@ import {
   nogInHetSpel,
   playersLeft,
   speelduurMs,
+  stackdruk,
   uitslag,
   winnaar,
+  type Stackdruk,
   type Tournament,
 } from '../domain/tournament'
 import './TournamentScreen.css'
+
+/**
+ * Per zone het woord en de klasse. Het woord staat naast de kleur, zodat de
+ * zone ook zonder kleurzicht te lezen is. De klasse staat hier voluit: zo is hij
+ * terug te vinden vanuit de CSS, en een nieuwe zone zonder klasse compileert niet.
+ */
+const DRUK: Record<Stackdruk, { woord: string; klasse: string }> = {
+  ruim: { woord: 'ruim', klasse: 'tafel__druk--ruim' },
+  krapper: { woord: 'krapper', klasse: 'tafel__druk--krapper' },
+  krap: { woord: 'krap', klasse: 'tafel__druk--krap' },
+  allesOfNiets: { woord: 'alles of niets', klasse: 'tafel__druk--alles-of-niets' },
+}
 
 function formatteerTijd(ms: number): string {
   const totaal = Math.max(0, Math.ceil(ms / 1000))
@@ -124,6 +138,7 @@ export function TournamentScreen() {
   const { laatkomers } = tournament.settings
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
   const eindtijd = expectedEndAt(tournament, now)
+  const druk = DRUK[stackdruk(tournament)]
   const bijnaOm = aftellend !== undefined && aftellend <= waarschuwingsGrens
 
   // Twee klokken met elk hun eigen vraag, de avond bovenaan: hoe lang duurt
@@ -250,7 +265,11 @@ export function TournamentScreen() {
                 : 'Laatste level'}
             </span>
             <span>
-              Gemiddelde stack {Math.round(averageStackInBigBlinds(tournament))} BB, ±{' '}
+              Gemiddelde stack{' '}
+              <span className={`tafel__druk ${druk.klasse}`}>
+                {Math.round(averageStackInBigBlinds(tournament))} BB · {druk.woord}
+              </span>
+              , ±{' '}
               {roundToPayable(averageStack(tournament), tournament.kleinsteChip ?? 1)} chips
             </span>
             {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
