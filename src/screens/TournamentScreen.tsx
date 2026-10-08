@@ -10,6 +10,7 @@ import { ColorUpRegel } from '../components/ColorUpRegel'
 import { StructuurTabel } from '../components/StructuurTabel'
 import { HandenVenster } from '../components/HandenVenster'
 import { SidePotVenster } from '../components/SidePotVenster'
+import { RegelVenster } from '../components/RegelVenster'
 import { SoundIcon } from '../components/SoundIcon'
 import { CardBack } from '../components/PlayingCard'
 import { roundToPayable } from '../domain/amounts'
@@ -33,11 +34,25 @@ import {
   nogInHetSpel,
   playersLeft,
   speelduurMs,
+  stackdruk,
   uitslag,
   winnaar,
+  type Stackdruk,
   type Tournament,
 } from '../domain/tournament'
 import './TournamentScreen.css'
+
+/**
+ * Per zone het woord en de klasse. Het woord staat naast de kleur, zodat de
+ * zone ook zonder kleurzicht te lezen is. De klasse staat hier voluit: zo is hij
+ * terug te vinden vanuit de CSS, en een nieuwe zone zonder klasse compileert niet.
+ */
+const DRUK: Record<Stackdruk, { woord: string; klasse: string }> = {
+  ruim: { woord: 'ruim', klasse: 'tafel__druk--ruim' },
+  krapper: { woord: 'krapper', klasse: 'tafel__druk--krapper' },
+  krap: { woord: 'krap', klasse: 'tafel__druk--krap' },
+  allesOfNiets: { woord: 'alles of niets', klasse: 'tafel__druk--alles-of-niets' },
+}
 
 function formatteerTijd(ms: number): string {
   const totaal = Math.max(0, Math.ceil(ms / 1000))
@@ -79,6 +94,7 @@ export function TournamentScreen() {
   const [laatkomerOpen, setLaatkomerOpen] = useState(false)
   const [handenOpen, setHandenOpen] = useState(false)
   const [sidePotsOpen, setSidePotsOpen] = useState(false)
+  const [regelsOpen, setRegelsOpen] = useState(false)
   // Het level waarvoor iemand het geluid heeft stilgezet. Bewaard als index en
   // niet als vlag, zodat het volgende level vanzelf weer geluid geeft zonder dat
   // er ergens een reset hoeft te staan die vergeten kan worden.
@@ -124,6 +140,7 @@ export function TournamentScreen() {
   const { laatkomers } = tournament.settings
   const colorUp = colorUpAt(tournament, tournament.levelIndex)
   const eindtijd = expectedEndAt(tournament, now)
+  const druk = DRUK[stackdruk(tournament)]
   const bijnaOm = aftellend !== undefined && aftellend <= waarschuwingsGrens
 
   // Twee klokken met elk hun eigen vraag, de avond bovenaan: hoe lang duurt
@@ -189,23 +206,29 @@ export function TournamentScreen() {
           </span>
           <span>{playersLeft(tournament)} spelers</span>
           {/*
-            "Wat wint?" en "Side pots" staan hier samen, en het schema staat
-            bewust ver weg onder de klok. De as is: deze twee gaan over de hand
-            die nu op tafel ligt, het schema gaat over de avond. Ze naast elkaar
-            zetten scheelt zoeken op het moment dat een pot wordt uitbetaald.
+            "Wat wint?", "Side pots" en "Regels" staan hier samen, en het schema
+            staat bewust ver weg onder de klok. De as is: deze links gaan over de
+            hand die nu op tafel ligt, het schema gaat over de avond. Ze naast
+            elkaar zetten scheelt zoeken midden in een hand.
 
             Dat botst niet met de reden dat het schema apart staat — daar zou een
             misgreep je uit de hand halen terwijl je moet uitbetalen. Hier openen
-            beide knoppen alleen een leesvenster, dus een misgreep kost een tik.
+            de knoppen alleen een venster dat niets aan het toernooi verandert,
+            dus een misgreep kost een tik.
             Vergelijk de levelknoppen hierboven, die juist klein blijven omdat
             een misgreep dáár de blinds verzet.
           */}
-          <button className="tafel__balklink" onClick={() => setHandenOpen(true)}>
-            Wat wint?
-          </button>
-          <button className="tafel__balklink" onClick={() => setSidePotsOpen(true)}>
-            Side pots
-          </button>
+          <span className="tafel__balklinks">
+            <button className="tafel__balklink" onClick={() => setHandenOpen(true)}>
+              Wat wint?
+            </button>
+            <button className="tafel__balklink" onClick={() => setSidePotsOpen(true)}>
+              Side pots
+            </button>
+            <button className="tafel__balklink" onClick={() => setRegelsOpen(true)}>
+              Regels
+            </button>
+          </span>
         </div>
 
         <div className="tafel__midden">
@@ -250,7 +273,11 @@ export function TournamentScreen() {
                 : 'Laatste level'}
             </span>
             <span>
-              Gemiddelde stack {Math.round(averageStackInBigBlinds(tournament))} BB, ±{' '}
+              Gemiddelde stack{' '}
+              <span className={`tafel__druk ${druk.klasse}`}>
+                {Math.round(averageStackInBigBlinds(tournament))} BB · {druk.woord}
+              </span>
+              , ±{' '}
               {roundToPayable(averageStack(tournament), tournament.kleinsteChip ?? 1)} chips
             </span>
             {eindtijd !== undefined && <span>Klaar rond {klokTijd(eindtijd)}</span>}
@@ -417,6 +444,15 @@ export function TournamentScreen() {
           // afgetikt is kan deze hand niets in de pot hebben.
           spelers={nogInHetSpel(tournament).map((speler) => speler.name)}
           onSluiten={() => setSidePotsOpen(false)}
+        />
+      )}
+
+      {regelsOpen && (
+        <RegelVenster
+          // Wie nu nog zit, niet wie er begon: met elke afvaller schuiven de
+          // namen op, en heads-up gelden andere regels dan met drie.
+          aantalSpelers={playersLeft(tournament)}
+          onSluiten={() => setRegelsOpen(false)}
         />
       )}
 

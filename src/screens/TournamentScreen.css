@@ -15,6 +15,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* Level, spelers en de links passen op een telefoon niet naast elkaar. Dan
+     zakken de links als groep naar een eigen regel, in plaats van dat elk
+     woord in zijn eigen vakje afbreekt. */
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  white-space: nowrap;
   font-size: 0.8rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -111,6 +117,31 @@
   gap: 0.15rem;
   font-size: clamp(0.8rem, min(1.9vw, 2.4vh), 1.05rem);
   color: var(--creme-zacht);
+}
+
+/*
+ * Lichte tinten, net als de tekst op de gevaarknop: dit is kleine tekst op
+ * donker vilt, en `--rood` zelf valt daar bijna tegen weg. Het woord staat er
+ * altijd bij, dus de kleur is nooit het enige wat het verschil maakt.
+ */
+.tafel__druk {
+  font-weight: 600;
+}
+
+.tafel__druk--ruim {
+  color: #8fe0a8;
+}
+
+.tafel__druk--krapper {
+  color: var(--goud);
+}
+
+.tafel__druk--krap {
+  color: #f5a35c;
+}
+
+.tafel__druk--alles-of-niets {
+  color: #ff8a7a;
 }
 
 
@@ -482,6 +513,14 @@
   justify-content: center;
 }
 
+/* De links als één groep, zodat ze samen naar de volgende regel zakken. Zonder
+   eigen marge: een `margin-left: auto` zet ze daar wel rechts, maar slokt op een
+   breed scherm ook de ruimte op die het spelersaantal in het midden houdt. */
+.tafel__balklinks {
+  display: flex;
+  gap: 1.1rem;
+}
+
 /* De link in de balk. Zelfde gewicht als de tekst ernaast: het is een verwijzing
    en geen knop die iets aan het toernooi verandert. */
 .tafel__balklink {
@@ -826,4 +865,65 @@
 
 .potten__regel--totaal .potten__bedrag {
   color: var(--creme);
+}
+
+/*
+ * De regels. Links uitgelijnd, anders dan de rest van de kaart: dit is het enige
+ * venster dat vooral uit lopende tekst bestaat, en gecentreerde zinnen van drie
+ * regels lees je aan tafel niet in één blik.
+ */
+.regels {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.regels__kop {
+  margin: 0 0 0.45rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--felt-licht);
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--goud-donker);
+}
+
+.posities {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+/* Naam boven rol en niet ernaast: "Under the gun / Cut-off" met zijn twee
+   rollen past op een telefoon niet op één regel, en dan breekt de ene positie
+   anders af dan de andere. */
+.posities__regel {
+  display: flex;
+  flex-direction: column;
+}
+
+.posities__rol {
+  font-size: 0.8rem;
+  color: var(--creme-zacht);
+}
+
+.procedure {
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.procedure__kop {
+  color: var(--goud);
+}
+
+.procedure__tekst {
+  margin: 0;
+  color: var(--creme-zacht);
+  line-height: 1.4;
 }
