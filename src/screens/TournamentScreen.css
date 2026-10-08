@@ -605,6 +605,105 @@
 }
 
 /*
+ * De tabbladen staan waar bij de andere vensters de kop staat, en zien er ook
+ * zo uit: het gekozen tabblad ís de kop, met een streep eronder. Het andere is
+ * dezelfde tekst, gedimd; dat er naast de kop nog een woord staat is de hint
+ * dat je erop kunt tikken.
+ */
+.tabbladen {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.tabbladen__tab {
+  background: none;
+  border: 0;
+  /* Hoger dan de tekst: het is het enige tikdoel in dit venster dat er niet
+     als knop uitziet, en het zit vlak onder de rand van het scherm. */
+  padding: 0.35rem 0.1rem;
+  font: inherit;
+  font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--creme-zacht);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tabbladen__tab[aria-selected='true'] {
+  color: var(--goud-donker);
+  border-bottom-color: var(--goud-donker);
+}
+
+/*
+ * Het tabblad met de kansen. Hier is de tekst het lange deel en zijn de kaarten
+ * kort, andersom dan bij de rangorde: de naam krijgt wat er over is en breekt
+ * af, de kaarten houden hun eigen breedte.
+ */
+.handen--breed {
+  grid-template-columns: 1fr auto;
+  row-gap: 0.6rem;
+}
+
+.kansen__kop {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--goud-donker);
+}
+
+/* De uitleg hoort bij de tabel erboven, niet bij de kop die erna komt. */
+.uitleg.kansen__uitleg {
+  margin: 0.6rem 0 1.25rem;
+  text-align: left;
+}
+
+.uitleg.kansen__uitleg:last-child {
+  margin-bottom: 0;
+}
+
+/* Het aantal outs is het getal dat je onthoudt; de kansen volgen eruit. */
+.kansen__outs {
+  color: var(--creme);
+  margin-right: 0.2rem;
+}
+
+.kansen__paar {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* De twee handen naast elkaar, elk met zijn percentage eronder. */
+.matchup {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.matchup__kant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.matchup__kans {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--creme-zacht);
+}
+
+/* Je hand en de flop: twee groepjes met lucht ertussen. */
+.draw {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/*
  * Op de smalste telefoons is de rij kaartjes niet meer in te korten zonder er
  * een af te snijden, en juist het aantal kaartjes is de hele boodschap. Dan
  * maar de tekst ernaast krap zetten: de kansen op hun eigen breedte in plaats

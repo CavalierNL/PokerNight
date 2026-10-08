@@ -396,6 +396,56 @@ test.describe.serial('de gepubliceerde site', () => {
     await expect(page.locator('.handen')).toHaveCount(0)
   })
 
+  test('zoekt matchups en outs op, ook op een smalle telefoon', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 })
+    await page.goto('./')
+    await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
+    await startEnGaZitten(page)
+
+    await page.getByRole('button', { name: 'Wat wint?' }).click()
+    await page.getByRole('tab', { name: 'Kansen' }).click()
+    await expect(page.getByRole('tab', { name: 'Kansen' })).toHaveAttribute('aria-selected', 'true')
+
+    // De matchups en de draws, met de getallen uit de rekenkern. Apart geteld:
+    // samen zijn het er toevallig net zoveel als er handen in de rangorde staan.
+    const regels = page.locator('.handen__regel')
+    await expect(page.locator('.matchup')).toHaveCount(6)
+    await expect(page.locator('.draw')).toHaveCount(4)
+    await expect(regels.first()).toContainText('Hoog paar tegen twee lagere kaarten')
+    // Elk percentage onder zijn eigen hand, niet alleen ergens in de regel.
+    const kanten = regels.first().locator('.matchup__kant')
+    await expect(kanten.first()).toContainText('A♠A♥')
+    await expect(kanten.first()).toContainText('86%')
+    await expect(kanten.last()).toContainText('K♦Q♣')
+    await expect(kanten.last()).toContainText('14%')
+    const flushDraw = regels.filter({ hasText: 'Flush draw' })
+    await expect(flushDraw).toContainText('9 outs')
+    await expect(flushDraw).toContainText('19%')
+    await expect(flushDraw).toContainText('35%')
+
+    // Niets steekt opzij uit: het venster past in beeld, en de lijst erin
+    // scrollt alleen van boven naar beneden. Het venster zelf knipt af wat te
+    // breed is, dus daar is meten de enige manier om het te zien.
+    const venster = page.locator('.schema')
+    const rand = await venster.boundingBox()
+    expect(rand!.x).toBeGreaterThanOrEqual(0)
+    expect(rand!.x + rand!.width).toBeLessThanOrEqual(320)
+    for (const vak of [venster, page.locator('.schema__lijst')]) {
+      expect(await vak.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0)
+    }
+
+    // Terug naar de rangorde, en het venster opent daar ook altijd op.
+    await page.getByRole('tab', { name: 'Wat wint' }).click()
+    await expect(regels.first()).toContainText('Royal flush')
+    // Met het toetsenbord: een pijltje wisselt en neemt de focus mee.
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByRole('tab', { name: 'Kansen' })).toBeFocused()
+    await expect(page.locator('.matchup')).toHaveCount(6)
+    await page.locator('.schema').getByRole('button', { name: 'Sluiten' }).click()
+    await page.getByRole('button', { name: 'Wat wint?' }).click()
+    await expect(regels.first()).toContainText('Royal flush')
+  })
+
   test('toont de posities voor wie er nog aan tafel zit', async ({ page }) => {
     await page.goto('./')
     await page.getByRole('button', { name: 'Toernooi', exact: true }).click()
